@@ -1,0 +1,28 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: edugen-backend
+    env_file:
+      - ./.env
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - ./edugen_data:/app/data
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://127.0.0.1:8000
+    container_name: edugen-frontend
+    environment:
+      NEXT_PUBLIC_API_URL: http://127.0.0.1:8000
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      - backend
+    restart: unless-stopped
