@@ -17,19 +17,26 @@ from app.config import settings
 def get_current_user(
     db: DBSession = Depends(get_db),
     session_token: Optional[str] = Cookie(None, alias="session_token"),
+    edugen_auth: Optional[str] = Cookie(None, alias="edugen-auth"),
     authorization: Optional[str] = Header(None),
 ) -> User:
     """Extract and validate the session token, return the authenticated user.
 
-    Supports token from cookie (``session_token``) or Bearer header.
+    Token lookup priority:
+    1. ``session_token`` HttpOnly cookie (set by backend on login)
+    2. ``edugen-auth`` cookie (set by frontend, contains the JWT)
+    3. ``Authorization: Bearer`` header
+
     Implements rolling expiration: every authenticated request extends
     ``expires_at`` by SESSION_TIMEOUT_MINUTES.
     """
     token: str | None = None
 
-    # Try cookie first, then Authorization header
+    # Priority: HttpOnly session cookie → frontend auth cookie → Bearer header
     if session_token:
         token = session_token
+    elif edugen_auth:
+        token = edugen_auth
     elif authorization and authorization.startswith("Bearer "):
         token = authorization[7:]
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
 import os
 from datetime import datetime, timezone
@@ -18,6 +19,7 @@ from sqlalchemy.orm import Session as DBSession
 from app.config import settings
 from app.encryption import decrypt_api_key
 from app.models.source_file import SourceFile
+from app.models.file_content_cache import FileContentCache
 from app.models.settings import UserSettings
 from app.models.ai_request import AIRequest
 
@@ -40,6 +42,11 @@ MIME_TO_TYPE = {
 def detect_mime(file_bytes: bytes) -> str:
     """Detect MIME type of uploaded file."""
     return magic.from_buffer(file_bytes, mime=True)
+
+
+def compute_file_hash(file_bytes: bytes) -> str:
+    """Compute SHA-256 hash of file bytes for deduplication."""
+    return hashlib.sha256(file_bytes).hexdigest()
 
 
 def validate_file(file_bytes: bytes, filename: str) -> tuple[str, str]:
@@ -176,10 +183,27 @@ def get_api_key_and_model(db: DBSession) -> tuple[str, str]:
 
 
 def process_file_extraction(db: DBSession, source_file_id: str) -> None:
-    """Background task: extract text from a file and generate summary."""
+    """Background task: extract text from a file and generate summary.
+
+    Checks the global FileContentCache first (keyed on SHA-256 of file bytes).
+    If cached data is found the expensive AI calls are skipped entirely.
+    """
     source_file = db.query(SourceFile).filter(SourceFile.id == source_file_id).first()
     if not source_file:
         return
+
+    # --- Cache hit: reuse already-extracted content --------------------------
+    if source_file.file_hash:
+        cache_entry = db.query(FileContentCache).filter(
+            FileContentCache.file_hash == source_file.file_hash
+        ).first()
+        if cache_entry:
+            source_file.extracted_text = cache_entry.extracted_text
+            source_file.summary = cache_entry.summary
+            source_file.page_count = cache_entry.page_count
+            db.commit()
+            return
+    # -------------------------------------------------------------------------
 
     try:
         api_key, model = get_api_key_and_model(db)
@@ -221,11 +245,34 @@ def process_file_extraction(db: DBSession, source_file_id: str) -> None:
         source_file.extracted_text = extracted_text
 
         # Generate summary if we have text and API key
+        summary = None
         if extracted_text.strip() and not extracted_text.startswith("[OCR_ERROR:") and api_key:
             summary = generate_summary(extracted_text, api_key, model)
             source_file.summary = summary
 
         db.commit()
+
+        # --- Populate cache so future uploads of the same file are instant ---
+        if source_file.file_hash and not extracted_text.startswith("[OCR_ERROR:"):
+            try:
+                existing = db.query(FileContentCache).filter(
+                    FileContentCache.file_hash == source_file.file_hash
+                ).first()
+                if not existing:
+                    cache_entry = FileContentCache(
+                        file_hash=source_file.file_hash,
+                        file_type=source_file.file_type,
+                        extracted_text=extracted_text,
+                        summary=summary,
+                        page_count=page_count,
+                        created_at=datetime.now(timezone.utc).isoformat(),
+                    )
+                    db.add(cache_entry)
+                    db.commit()
+            except Exception:
+                # Cache write failure is non-critical
+                db.rollback()
+        # ---------------------------------------------------------------------
 
     except RateLimitError:
         source_file.extracted_text = "[OCR_ERROR:RATE_LIMIT]"

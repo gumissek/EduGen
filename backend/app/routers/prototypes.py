@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -107,6 +108,7 @@ def reprompt(
     try:
         result = call_openai_reprompt(
             db, generation, current_content, body.prompt, api_key, model,
+            raw_questions_json=prototype.raw_questions_json,
         )
 
         # Update prototype
@@ -115,6 +117,7 @@ def reprompt(
 
         prototype.edited_content = new_content
         prototype.answer_key = new_answer_key
+        prototype.raw_questions_json = json.dumps(result, ensure_ascii=False)
         prototype.updated_at = datetime.now(timezone.utc).isoformat()
         db.commit()
         db.refresh(prototype)

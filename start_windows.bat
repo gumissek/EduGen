@@ -18,13 +18,13 @@ if %ERRORLEVEL% NEQ 0 (
     exit /b 1
 )
 
-:: Sprawdz czy Docker Desktop dziala (demon dockera)
+:: Sprawdz czy Docker Desktop dziala
 docker info >nul 2>&1
 if %ERRORLEVEL% NEQ 0 (
     echo [BLAD] Docker Desktop nie jest uruchomiony.
     echo.
-    echo Uruchom Docker Desktop i poczekaj az ikona w zasobniku systemowym
-    echo przestanie sie animowac, a nastepnie uruchom ponownie ten skrypt.
+    echo Uruchom Docker Desktop i poczekaj az sie w pelni uruchomi,
+    echo a nastepnie uruchom ponownie ten skrypt.
     echo.
     pause
     exit /b 1
@@ -70,11 +70,32 @@ echo.
 echo   Frontend (interfejs):  http://localhost:3000
 echo   Backend  (API):        http://localhost:8000
 echo.
+
 echo Otwieranie aplikacji w przegladarce za 5 sekund...
 timeout /t 5 /nobreak >nul
 start http://localhost:3000
+
 echo.
-echo Aby zatrzymac aplikacje, uruchom:
-echo   docker compose down
+echo ============================================
+echo        Jak zamknac aplikacje
+echo ============================================
 echo.
+echo Jesli aplikacja jest uruchomiona w tym oknie terminala,
+echo mozesz ja zatrzymac naciskajac:
+echo.
+echo    CTRL + C
+echo.
+echo Aby zatrzymac aplikacje i usunac kontenery:
+echo.
+echo    docker compose down
+echo.
+echo Jesli chcesz dodatkowo usunac wolumeny (np. baze danych):
+echo.
+echo    docker compose down -v
+echo.
+echo Jesli aplikacja byla uruchomiona przez ten skrypt,
+echo wystarczy otworzyc terminal w folderze projektu
+echo i wpisac jedna z powyzszych komend.
+echo.
+
 pause

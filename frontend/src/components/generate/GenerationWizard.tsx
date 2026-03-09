@@ -8,6 +8,12 @@ import StepLabel from '@mui/material/StepLabel';
 import Button from '@mui/material/Button';
 import Paper from '@mui/material/Paper';
 import CircularProgress from '@mui/material/CircularProgress';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
+import DialogActions from '@mui/material/DialogActions';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { GenerationParamsSchema, GenerationParamsForm } from '@/schemas/generation';
@@ -36,6 +42,7 @@ const defaultValues: Partial<GenerationParamsForm> = {
 
 export default function GenerationWizard() {
   const [activeStep, setActiveStep] = React.useState(0);
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
   const [draft, setDraft, removeDraft] = useLocalStorage<Partial<GenerationParamsForm>>('edugen-generation-draft', defaultValues);
   
   const methods = useForm<GenerationParamsForm>({
@@ -74,10 +81,18 @@ export default function GenerationWizard() {
     setActiveStep((prevActiveStep) => prevActiveStep - 1);
   };
 
-  const onSubmit = async (data: GenerationParamsForm) => {
+  // Opens confirmation dialog before actually submitting
+  const handleGenerateClick = () => {
+    setConfirmOpen(true);
+  };
+
+  const handleConfirmGenerate = handleSubmit(async (data: GenerationParamsForm) => {
+    setConfirmOpen(false);
     await createGeneration(data as any);
     removeDraft();
-  };
+  });
+
+  const isLastStep = activeStep === steps.length - 1;
 
   return (
     <Paper sx={{ p: 4 }}>
@@ -90,7 +105,8 @@ export default function GenerationWizard() {
       </Stepper>
 
       <FormProvider {...methods}>
-        <form onSubmit={handleSubmit(onSubmit)}>
+        {/* No form submit handler on the form element — submission is triggered explicitly via handleConfirmGenerate */}
+        <form onSubmit={(e) => e.preventDefault()}>
           <Box sx={{ minHeight: 300, py: 2 }}>
             {activeStep === 0 && <StepContentType />}
             {activeStep === 1 && <StepSubjectConfig />}
@@ -110,13 +126,13 @@ export default function GenerationWizard() {
             </Button>
             <Box sx={{ flex: '1 1 auto' }} />
             
-            {activeStep === steps.length - 1 ? (
+            {isLastStep ? (
               <Button 
-                type="submit" 
                 variant="contained" 
                 color="primary"
                 disabled={isCreating}
-                startIcon={isCreating && <CircularProgress size={20} color="inherit" />}
+                onClick={handleGenerateClick}
+                startIcon={isCreating ? <CircularProgress size={20} color="inherit" /> : <AutoAwesomeIcon />}
               >
                 {isCreating ? 'Generowanie...' : 'Generuj materiał'}
               </Button>
@@ -128,6 +144,34 @@ export default function GenerationWizard() {
           </Box>
         </form>
       </FormProvider>
+
+      {/* Confirmation dialog */}
+      <Dialog open={confirmOpen} onClose={() => !isCreating && setConfirmOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <AutoAwesomeIcon color="primary" />
+          Potwierdź generowanie materiału
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Czy na pewno chcesz wygenerować materiał? Operacja wykorzysta tokeny OpenAI i może zająć kilkanaście sekund.
+            Po potwierdzeniu nastąpi przekierowanie do strony statusu generowania.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setConfirmOpen(false)} disabled={isCreating} color="inherit">
+            Anuluj
+          </Button>
+          <Button
+            onClick={handleConfirmGenerate}
+            variant="contained"
+            color="primary"
+            disabled={isCreating}
+            startIcon={isCreating ? <CircularProgress size={18} color="inherit" /> : <AutoAwesomeIcon />}
+          >
+            {isCreating ? 'Generowanie...' : 'Tak, generuj'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Paper>
   );
 }

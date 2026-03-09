@@ -20,6 +20,7 @@ class SourceFile(Base):
     original_path: Mapped[str] = mapped_column(Text, nullable=False)
     file_type: Mapped[str] = mapped_column(String(20), nullable=False)
     file_size: Mapped[int] = mapped_column(Integer, nullable=False)
+    file_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     extracted_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     summary: Mapped[str | None] = mapped_column(Text, nullable=True)
     page_count: Mapped[int | None] = mapped_column(Integer, nullable=True)

@@ -13,6 +13,7 @@ import Brightness7Icon from '@mui/icons-material/Brightness7';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { useColorMode } from '@/theme/ColorModeContext';
 import { usePathname } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
 
 interface TopBarProps {
   onMenuClick: () => void;
@@ -21,6 +22,7 @@ interface TopBarProps {
 export default function TopBar({ onMenuClick }: TopBarProps) {
   const { mode, toggleColorMode } = useColorMode();
   const pathname = usePathname();
+  const { logout } = useAuth();
 
   // Simple title mapping
   let title = 'EduGen Local';
@@ -31,8 +33,7 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
   if (pathname.includes('/diagnostics')) title = 'Diagnostyka';
 
   const handleLogout = () => {
-    localStorage.removeItem('edugen-token');
-    window.location.href = '/login';
+    logout();
   };
 
   return (

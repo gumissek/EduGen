@@ -21,10 +21,11 @@ if ! docker info &>/dev/null; then
     echo "[BLAD] Docker Desktop nie jest uruchomiony."
     echo ""
 
-    # Sprobuj uruchomic Docker Desktop automatycznie na macOS
+    # macOS
     if [[ "$(uname)" == "Darwin" ]]; then
         echo "Proba automatycznego uruchomienia Docker Desktop..."
         open -a Docker
+
         echo "Czekam na uruchomienie Docker Desktop (max 60 sekund)..."
         for i in $(seq 1 12); do
             sleep 5
@@ -41,9 +42,12 @@ if ! docker info &>/dev/null; then
             echo "Uruchom Docker Desktop recznie i sprobuj ponownie."
             exit 1
         fi
+
     else
-        # Linux - sprawdz systemd
-        echo "Na systemie Linux uruchom: sudo systemctl start docker"
+        # Linux
+        echo "Na systemie Linux uruchom:"
+        echo "  sudo systemctl start docker"
+        echo ""
         echo "Lub uruchom Docker Desktop recznie, a nastepnie sprobuj ponownie."
         exit 1
     fi
@@ -79,14 +83,39 @@ echo ""
 echo "  Frontend (interfejs):  http://localhost:3000"
 echo "  Backend  (API):        http://localhost:8000"
 echo ""
+
 echo "Otwieranie aplikacji w przegladarce za 5 sekund..."
 sleep 5
+
 if [[ "$(uname)" == "Darwin" ]]; then
     open "http://localhost:3000"
 else
     xdg-open "http://localhost:3000" &>/dev/null || true
 fi
+
 echo ""
-echo "Aby zatrzymac aplikacje, uruchom:"
+echo "============================================"
+echo "        Jak zamknac aplikacje"
+echo "============================================"
+echo ""
+
+echo "Jesli aplikacja jest uruchomiona w tym oknie terminala,"
+echo "mozesz ja zatrzymac naciskajac:"
+echo ""
+echo "  CTRL + C"
+echo ""
+
+echo "Aby zatrzymac aplikacje i usunac kontenery:"
+echo ""
 echo "  docker compose down"
+echo ""
+
+echo "Jesli chcesz dodatkowo usunac wolumeny (np. baze danych):"
+echo ""
+echo "  docker compose down -v"
+echo ""
+
+echo "Jesli aplikacja byla uruchomiona przez ten skrypt,"
+echo "wystarczy otworzyc terminal w folderze projektu"
+echo "i wpisac jedna z powyzszych komend."
 echo ""

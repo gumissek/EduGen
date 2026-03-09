@@ -13,7 +13,7 @@ from app.models.user import User
 from app.models.source_file import SourceFile
 from app.models.subject import Subject
 from app.schemas.file import FileResponse, FileListResponse
-from app.services.file_service import validate_file, save_file, process_file_extraction
+from app.services.file_service import validate_file, save_file, process_file_extraction, compute_file_hash
 
 router = APIRouter(prefix="/files", tags=["files"])
 
@@ -76,6 +76,9 @@ async def upload_file(
     # Save to disk
     file_uuid, file_path = save_file(file_bytes, subject_id, ext)
 
+    # Compute content hash for deduplication cache
+    file_hash = compute_file_hash(file_bytes)
+
     # Create DB record
     source_file = SourceFile(
         id=file_uuid,
@@ -84,6 +87,7 @@ async def upload_file(
         original_path=file_path,
         file_type=file_type,
         file_size=len(file_bytes),
+        file_hash=file_hash,
     )
     db.add(source_file)
     db.commit()

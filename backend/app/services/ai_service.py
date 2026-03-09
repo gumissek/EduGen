@@ -149,9 +149,16 @@ def call_openai_reprompt(
     user_prompt: str,
     api_key: str,
     model: str,
+    raw_questions_json: str | None = None,
 ) -> dict:
     """Call OpenAI to modify existing content based on user feedback."""
     client = OpenAI(api_key=api_key)
+
+    # Prefer structured JSON over HTML for reprompting
+    if raw_questions_json:
+        material_context = f"Aktualny materiał (format JSON):\n{raw_questions_json}"
+    else:
+        material_context = f"Aktualny materiał (HTML):\n{current_content}"
 
     messages = [
         {
@@ -159,12 +166,25 @@ def call_openai_reprompt(
             "content": (
                 "Jesteś ekspertem w tworzeniu materiałów edukacyjnych w języku polskim. "
                 "Użytkownik prosi o modyfikację istniejącego materiału. "
-                "Zwróć zmodyfikowany materiał w tym samym formacie JSON."
+                "Zwróć CAŁY zmodyfikowany materiał w formacie JSON:\n"
+                "{\n"
+                '  "title": "Tytuł materiału",\n'
+                '  "questions": [\n'
+                "    {\n"
+                '      "number": 1,\n'
+                '      "type": "open" | "closed",\n'
+                '      "content": "Treść pytania",\n'
+                '      "options": ["a) ...", "b) ...", "c) ...", "d) ..."],\n'
+                '      "correct_answer": "Poprawna odpowiedź",\n'
+                '      "points": 1\n'
+                "    }\n"
+                "  ]\n"
+                "}"
             ),
         },
         {
             "role": "user",
-            "content": f"Aktualny materiał:\n{current_content}\n\nUwagi do modyfikacji:\n{user_prompt}",
+            "content": f"{material_context}\n\nUwagi do modyfikacji:\n{user_prompt}",
         },
     ]
 

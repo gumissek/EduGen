@@ -22,12 +22,13 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     const checkAuth = async () => {
       const authed = isAuthenticated();
       if (!authed) {
-        router.push('/login');
+        // Use replace so the protected route is removed from history
+        router.replace('/login');
         return;
       }
       // Enforce password change before accessing any other page
       if (mustChangePassword() && pathname !== '/change-password') {
-        router.push('/change-password');
+        router.replace('/change-password');
         return;
       }
       setIsChecking(false);

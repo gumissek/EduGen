@@ -5,6 +5,7 @@ from app.models.session import Session
 from app.models.settings import UserSettings
 from app.models.subject import Subject
 from app.models.source_file import SourceFile
+from app.models.file_content_cache import FileContentCache
 from app.models.generation import Generation
 from app.models.generation_source_file import generation_source_files
 from app.models.prototype import Prototype
@@ -19,6 +20,7 @@ __all__ = [
     "UserSettings",
     "Subject",
     "SourceFile",
+    "FileContentCache",
     "Generation",
     "generation_source_files",
     "Prototype",

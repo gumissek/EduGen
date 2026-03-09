@@ -91,6 +91,7 @@ def generate_prototype_task(db: DBSession, generation_id: str) -> None:
             generation_id=generation.id,
             original_content=original_content,
             answer_key=answer_key,
+            raw_questions_json=json.dumps(result, ensure_ascii=False),
         )
         db.add(prototype)
 

@@ -19,6 +19,7 @@ class Prototype(Base):
     original_content: Mapped[str] = mapped_column(Text, nullable=False)
     edited_content: Mapped[str | None] = mapped_column(Text, nullable=True)
     answer_key: Mapped[str] = mapped_column(Text, nullable=False)
+    raw_questions_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[str] = mapped_column(String, nullable=False, default=lambda: datetime.now(timezone.utc).isoformat())
     updated_at: Mapped[str] = mapped_column(String, nullable=False, default=lambda: datetime.now(timezone.utc).isoformat())
 
