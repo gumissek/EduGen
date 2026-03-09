@@ -12,7 +12,7 @@ from uuid import uuid4
 import fitz  # PyMuPDF
 import magic
 from docx import Document as DocxDocument
-from openai import OpenAI
+from openai import OpenAI, RateLimitError
 from sqlalchemy.orm import Session as DBSession
 
 from app.config import settings
@@ -94,16 +94,17 @@ def extract_text_from_docx(file_path: str) -> str:
     return "\n\n".join(paragraphs)
 
 
-def is_scanned_pdf(file_path: str) -> bool:
-    """Check if a PDF is a scan (very little text per page)."""
+def is_scanned_pdf(file_path: str, min_chars_per_page: int = 100) -> bool:
+    """Check if a PDF has very little text per page (likely scanned/image-based)."""
     doc = fitz.open(file_path)
-    for page in doc:
-        text = page.get_text()
-        if len(text.strip()) > 50:
-            doc.close()
-            return False
+    page_count = len(doc)
+    if page_count == 0:
+        doc.close()
+        return True
+    total_chars = sum(len(page.get_text().strip()) for page in doc)
     doc.close()
-    return True
+    avg_chars_per_page = total_chars / page_count
+    return avg_chars_per_page < min_chars_per_page
 
 
 def pdf_pages_to_images(file_path: str, max_pages: int = 5) -> list[bytes]:
@@ -122,7 +123,7 @@ def pdf_pages_to_images(file_path: str, max_pages: int = 5) -> list[bytes]:
 def ocr_image_with_vision(
     image_bytes: bytes,
     api_key: str,
-    model: str = "gpt-4o-mini",
+    model: str = "gpt-5-mini",
 ) -> str:
     """Use OpenAI Vision to OCR an image."""
     client = OpenAI(api_key=api_key)
@@ -144,13 +145,12 @@ def ocr_image_with_vision(
                     },
                 ],
             }
-        ],
-        max_tokens=4096,
+        ]
     )
     return response.choices[0].message.content or ""
 
 
-def generate_summary(text: str, api_key: str, model: str = "gpt-4o-mini") -> str:
+def generate_summary(text: str, api_key: str, model: str = "gpt-5-mini") -> str:
     """Generate a 1-sentence summary of extracted text."""
     client = OpenAI(api_key=api_key)
     response = client.chat.completions.create(
@@ -161,8 +161,7 @@ def generate_summary(text: str, api_key: str, model: str = "gpt-4o-mini") -> str
                 "content": "Provide a 1-sentence descriptive summary of this educational material in the same language as the material.",
             },
             {"role": "user", "content": text[:4000]},  # Limit context
-        ],
-        max_tokens=200,
+        ]
     )
     return response.choices[0].message.content or ""
 
@@ -186,7 +185,7 @@ def process_file_extraction(db: DBSession, source_file_id: str) -> None:
         api_key, model = get_api_key_and_model(db)
     except ValueError:
         api_key = None
-        model = "gpt-4o-mini"
+        model = "gpt-5-mini"
 
     file_path = source_file.original_path
     extracted_text = ""
@@ -198,30 +197,39 @@ def process_file_extraction(db: DBSession, source_file_id: str) -> None:
             source_file.page_count = page_count
 
             # Check if scanned PDF
-            if is_scanned_pdf(file_path) and api_key:
-                images = pdf_pages_to_images(file_path, max_pages=5)
-                ocr_texts = []
-                for img in images:
-                    ocr_text = ocr_image_with_vision(img, api_key, model)
-                    ocr_texts.append(ocr_text)
-                extracted_text = "\n\n".join(ocr_texts)
+            if is_scanned_pdf(file_path):
+                if api_key:
+                    images = pdf_pages_to_images(file_path, max_pages=5)
+                    ocr_texts = []
+                    for img in images:
+                        ocr_text = ocr_image_with_vision(img, api_key, model)
+                        ocr_texts.append(ocr_text)
+                    extracted_text = "\n\n".join(ocr_texts)
+                else:
+                    extracted_text = "[OCR_ERROR:NO_API_KEY]"
 
         elif source_file.file_type == "docx":
             extracted_text = extract_text_from_docx(file_path)
 
-        elif source_file.file_type == "image" and api_key:
-            image_bytes = Path(file_path).read_bytes()
-            extracted_text = ocr_image_with_vision(image_bytes, api_key, model)
+        elif source_file.file_type == "image":
+            if not api_key:
+                extracted_text = "[OCR_ERROR:NO_API_KEY]"
+            else:
+                image_bytes = Path(file_path).read_bytes()
+                extracted_text = ocr_image_with_vision(image_bytes, api_key, model)
 
         source_file.extracted_text = extracted_text
 
         # Generate summary if we have text and API key
-        if extracted_text.strip() and api_key:
+        if extracted_text.strip() and not extracted_text.startswith("[OCR_ERROR:") and api_key:
             summary = generate_summary(extracted_text, api_key, model)
             source_file.summary = summary
 
         db.commit()
 
+    except RateLimitError:
+        source_file.extracted_text = "[OCR_ERROR:RATE_LIMIT]"
+        db.commit()
     except Exception as e:
         # Log error but don't crash
         source_file.extracted_text = f"[Extraction error: {str(e)}]"

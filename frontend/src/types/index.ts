@@ -18,7 +18,8 @@ export interface SourceFile {
   file_type: string;
   file_size: number;
   summary: string | null;
-  extracted_text: string | null;
+  has_extracted_text: boolean;
+  extraction_error: string | null;
   page_count: number | null;
   created_at: string;
 }

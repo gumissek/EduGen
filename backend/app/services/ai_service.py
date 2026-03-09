@@ -107,8 +107,6 @@ def call_openai(
         response = client.chat.completions.create(
             model=model,
             messages=messages,
-            temperature=0.7,
-            max_tokens=4096,
             response_format={"type": "json_object"},
         )
 
@@ -175,7 +173,6 @@ def call_openai_reprompt(
             model=model,
             messages=messages,
             temperature=0.7,
-            max_tokens=4096,
             response_format={"type": "json_object"},
         )
 

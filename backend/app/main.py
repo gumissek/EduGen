@@ -29,11 +29,10 @@ def _ensure_directories():
 
 
 def _seed_database():
-    """Seed default user and subjects if they don't exist."""
+    """Seed default user if it doesn't exist."""
     db = SessionLocal()
     try:
         from app.models.user import User
-        from app.models.subject import Subject
 
         # Seed default user
         user = db.query(User).first()
@@ -45,19 +44,6 @@ def _seed_database():
             )
             db.add(user)
             db.commit()
-
-        # Seed default subjects
-        default_subjects = [
-            "Matematyka",
-            "Fizyka",
-            "Język Polski",
-            "Historia",
-        ]
-        for name in default_subjects:
-            existing = db.query(Subject).filter(Subject.name == name).first()
-            if not existing:
-                db.add(Subject(name=name, is_custom=0))
-        db.commit()
     finally:
         db.close()
 

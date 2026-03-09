@@ -13,7 +13,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 export default function ModelSelector() {
   const { settings, updateSettings, isUpdating } = useSettings();
 
-  const currentModel = settings?.default_model || 'gpt-4o-mini';
+  const currentModel = settings?.default_model || 'gpt-5-mini';
 
   const handleChange = (event: SelectChangeEvent) => {
     updateSettings({ default_model: event.target.value as string });
@@ -35,9 +35,8 @@ export default function ModelSelector() {
           disabled={isUpdating}
         >
           {/* Typically we might get these from /validate-key, but standard options for MVP */}
-          <MenuItem value="gpt-4o-mini">gpt-4o-mini (Zalecany do tekstu)</MenuItem>
-          <MenuItem value="gpt-4o">gpt-4o (Lepsza jakość wizji)</MenuItem>
-          <MenuItem value="gpt-5-mini">gpt-5-mini</MenuItem>
+          <MenuItem value="gpt-5-mini">gpt-5-mini (Zalecany do tekstu)</MenuItem>
+          <MenuItem value="gpt-5.1">gpt-5.1 (Lepsza jakość treści - droższy)</MenuItem>
         </Select>
       </FormControl>
       {isUpdating && <CircularProgress size={24} sx={{ mt: 1 }} />}

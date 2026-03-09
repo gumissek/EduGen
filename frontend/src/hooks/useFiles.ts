@@ -3,6 +3,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { SourceFile } from '@/types';
+
+interface FileListResponse {
+  files: SourceFile[];
+  total: number;
+}
 import { useSnackbar } from '@/components/ui/SnackbarProvider';
 
 export function useFiles(subjectId?: string | null) {
@@ -12,13 +17,15 @@ export function useFiles(subjectId?: string | null) {
   const query = useQuery({
     queryKey: ['files', subjectId],
     queryFn: async () => {
-      const res = await api.get<SourceFile[]>(`/api/files?subject_id=${subjectId}`);
-      return res.data;
+      const res = await api.get<FileListResponse>(`/api/files?subject_id=${subjectId}`);
+      return res.data.files;
     },
     enabled: !!subjectId,
-    // Poll every 5s if any file in the list has extracted_text === null (OCR in progress)
+    // Poll every 5s if any file is still being processed (no text and no error yet)
     refetchInterval: (queryData: any) => {
-      const hasProcessingFiles = queryData.state?.data?.some((f: SourceFile) => f.extracted_text === null);
+      const hasProcessingFiles = queryData.state?.data?.some(
+        (f: SourceFile) => !f.has_extracted_text && !f.extraction_error,
+      );
       return hasProcessingFiles ? 5000 : false;
     },
   });

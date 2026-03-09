@@ -24,7 +24,8 @@ const TipTapEditor = dynamic(() => import('@/components/editor/TipTapEditor'), {
   ),
 });
 
-export default function EditorPage({ params }: { params: { id: string } }) {
+export default function EditorPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = React.use(params);
   const router = useRouter();
   const queryClient = useQueryClient();
   const { success, error } = useSnackbar();
@@ -33,9 +34,9 @@ export default function EditorPage({ params }: { params: { id: string } }) {
 
   // Fetch generation data
   const { data: generation, isLoading } = useQuery({
-    queryKey: ['generation', params.id],
+    queryKey: ['generation', id],
     queryFn: async () => {
-      const res = await api.get(`/api/generations/${params.id}`);
+      const res = await api.get(`/api/generations/${id}`);
       return res.data;
     },
   });
@@ -50,10 +51,10 @@ export default function EditorPage({ params }: { params: { id: string } }) {
   // Save manual edits mutation
   const saveMutation = useMutation({
     mutationFn: async (htmlContent: string) => {
-      await api.put(`/api/generations/${params.id}`, { content: htmlContent });
+      await api.put(`/api/generations/${id}`, { content: htmlContent });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['generation', params.id] });
+      queryClient.invalidateQueries({ queryKey: ['generation', id] });
       success('Zmiany zostały zapisane');
     },
     onError: () => {
@@ -64,13 +65,13 @@ export default function EditorPage({ params }: { params: { id: string } }) {
   // Reprompt mutation
   const repromptMutation = useMutation({
     mutationFn: async (prompt: string) => {
-      const res = await api.post(`/api/generations/${params.id}/reprompt`, { prompt });
+      const res = await api.post(`/api/generations/${id}/reprompt`, { prompt });
       return res.data;
     },
     onSuccess: (data: { content: string }) => {
       setContent(data.content);
       setIsEdited(true);
-      queryClient.invalidateQueries({ queryKey: ['generation', params.id] });
+      queryClient.invalidateQueries({ queryKey: ['generation', id] });
       success('AI zaktualizowało treść');
     },
     onError: () => {
@@ -84,7 +85,7 @@ export default function EditorPage({ params }: { params: { id: string } }) {
       // Save pending edits first
       await saveMutation.mutateAsync(content);
       // Finalize
-      const res = await api.post(`/api/generations/${params.id}/finalize`);
+      const res = await api.post(`/api/generations/${id}/finalize`);
       return res.data;
     },
     onSuccess: (data: { document_id: string }) => {

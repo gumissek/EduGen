@@ -8,15 +8,21 @@ import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import AddIcon from '@mui/icons-material/Add';
 import Divider from '@mui/material/Divider';
+import Alert from '@mui/material/Alert';
+import AlertTitle from '@mui/material/AlertTitle';
+import MuiLink from '@mui/material/Link';
+import NextLink from 'next/link';
 import SubjectList from '@/components/subjects/SubjectList';
 import SubjectDialog from '@/components/subjects/SubjectDialog';
 import FileUploader from '@/components/subjects/FileUploader';
 import FileList from '@/components/subjects/FileList';
 import { useSubjects } from '@/hooks/useSubjects';
 import { useFiles } from '@/hooks/useFiles';
+import { useSettings } from '@/hooks/useSettings';
 
 export default function SubjectsPage() {
   const { subjects, createSubject, deleteSubject, isCreating } = useSubjects();
+  const { settings } = useSettings();
   const [selectedSubjectId, setSelectedSubjectId] = React.useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
 
@@ -79,6 +85,16 @@ export default function SubjectsPage() {
               <>
                 <Box sx={{ mb: 4 }}>
                   <Typography variant="h6" gutterBottom>Dodaj pliki źródłowe</Typography>
+                  {settings && !settings.has_api_key && (
+                    <Alert severity="warning" sx={{ mb: 2 }}>
+                      <AlertTitle>Brak klucza API OpenAI</AlertTitle>
+                      Przetwarzanie plików graficznych (JPG, PNG) oraz skanów PDF wymaga skonfigurowanego klucza OpenAI API.
+                      Pliki DOCX i tekstowe PDF działają bez klucza.{' '}
+                      <MuiLink component={NextLink} href="/settings" underline="hover" fontWeight="bold">
+                        Przejdź do Ustawień →
+                      </MuiLink>
+                    </Alert>
+                  )}
                   <FileUploader subjectId={selectedSubjectId} onUpload={handleUpload} />
                 </Box>
                 <Divider sx={{ mb: 3 }} />

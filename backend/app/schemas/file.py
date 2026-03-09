@@ -17,6 +17,7 @@ class FileResponse(BaseModel):
     page_count: Optional[int] = None
     created_at: str
     has_extracted_text: bool = False
+    extraction_error: Optional[str] = None
 
     class Config:
         from_attributes = True

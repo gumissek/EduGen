@@ -16,7 +16,6 @@ from app.models.settings import UserSettings
 from app.schemas.settings import (
     SettingsResponse,
     SettingsUpdate,
-    ValidateKeyRequest,
     ValidateKeyResponse,
 )
 
@@ -35,7 +34,7 @@ def get_settings(
         .first()
     )
     if not user_settings:
-        return SettingsResponse(default_model="gpt-4o-mini", has_api_key=False)
+        return SettingsResponse(default_model="gpt-5-mini", has_api_key=False)
 
     return SettingsResponse(
         default_model=user_settings.default_model,
@@ -77,10 +76,22 @@ def update_settings(
 
 
 @router.post("/validate-key", response_model=ValidateKeyResponse)
-def validate_key(body: ValidateKeyRequest):
-    """Validate an OpenAI API key by listing models."""
+def validate_key(
+    db: DBSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Validate the stored OpenAI API key by listing models."""
+    user_settings = (
+        db.query(UserSettings)
+        .filter(UserSettings.user_id == current_user.id)
+        .first()
+    )
+    if not user_settings or not user_settings.openai_api_key_encrypted:
+        return ValidateKeyResponse(valid=False, error="Brak skonfigurowanego klucza API")
+
     try:
-        client = OpenAI(api_key=body.openai_api_key)
+        api_key = decrypt_api_key(user_settings.openai_api_key_encrypted)
+        client = OpenAI(api_key=api_key)
         models_response = client.models.list()
         model_ids = sorted([m.id for m in models_response.data if "gpt" in m.id.lower()])
         return ValidateKeyResponse(valid=True, models=model_ids)

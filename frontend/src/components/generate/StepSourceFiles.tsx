@@ -70,7 +70,18 @@ export default function StepSourceFiles() {
 
       <List sx={{ width: '100%', bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', borderRadius: 1, mt: 2 }}>
         {files.map((file: SourceFile) => {
-          const isProcessing = file.extracted_text === null;
+          const isProcessing = !file.has_extracted_text && !file.extraction_error;
+          const hasError = !!file.extraction_error;
+          const isDisabled = isProcessing || hasError;
+
+          const secondaryText = isProcessing
+            ? 'Plik w trakcie wczytywania przez AI...'
+            : file.extraction_error === 'NO_API_KEY'
+              ? '⚠ Brak klucza API OpenAI – skonfiguruj go w Ustawieniach'
+              : file.extraction_error === 'RATE_LIMIT'
+                ? '⚠ Przekroczono limit API OpenAI – spróbuj ponownie później'
+                : file.summary || (file.file_type === 'pdf' ? 'Brak podsumowania.' : '');
+
           return (
             <ListItem
               key={file.id}
@@ -80,7 +91,7 @@ export default function StepSourceFiles() {
                 role={undefined}
                 onClick={handleToggle(file.id)}
                 dense
-                disabled={isProcessing}
+                disabled={isDisabled}
               >
                 <ListItemIcon>
                   <Checkbox
@@ -93,10 +104,11 @@ export default function StepSourceFiles() {
                 <ListItemIcon sx={{ minWidth: 40 }}>
                   {getFileIcon(file.file_type)}
                 </ListItemIcon>
-                <ListItemText 
-                  primary={file.filename} 
-                  secondary={isProcessing ? 'Plik w trakcie wczytywania przez AI...' : file.summary || 'Brak podsumowania'}
+                <ListItemText
+                  primary={file.filename}
+                  secondary={secondaryText}
                   primaryTypographyProps={{ fontWeight: 'medium' }}
+                  secondaryTypographyProps={{ color: hasError ? 'warning.main' : undefined }}
                 />
               </ListItemButton>
             </ListItem>

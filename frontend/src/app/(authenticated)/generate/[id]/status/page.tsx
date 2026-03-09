@@ -4,11 +4,11 @@ import * as React from 'react';
 import Box from '@mui/material/Box';
 import GenerationStatusView from '@/components/generate/GenerationStatusView';
 
-export default function GenerationStatusPage({ params }: { params: { id: string } }) {
-  // Extract id from params directly on the client side rendering
+export default function GenerationStatusPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = React.use(params);
   return (
     <Box sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <GenerationStatusView id={params.id} />
+      <GenerationStatusView id={id} />
     </Box>
   );
 }

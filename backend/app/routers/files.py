@@ -18,7 +18,18 @@ from app.services.file_service import validate_file, save_file, process_file_ext
 router = APIRouter(prefix="/files", tags=["files"])
 
 
+def _parse_extraction_error(extracted_text: str | None) -> str | None:
+    """Return an error code if extracted_text carries an OCR_ERROR marker."""
+    if not extracted_text:
+        return None
+    if extracted_text.startswith("[OCR_ERROR:"):
+        end = extracted_text.find("]")
+        return extracted_text[len("[OCR_ERROR:"):end] if end != -1 else "UNKNOWN"
+    return None
+
+
 def _to_response(sf: SourceFile) -> FileResponse:
+    error = _parse_extraction_error(sf.extracted_text)
     return FileResponse(
         id=sf.id,
         subject_id=sf.subject_id,
@@ -28,7 +39,8 @@ def _to_response(sf: SourceFile) -> FileResponse:
         summary=sf.summary,
         page_count=sf.page_count,
         created_at=sf.created_at,
-        has_extracted_text=bool(sf.extracted_text),
+        has_extracted_text=bool(sf.extracted_text) and error is None,
+        extraction_error=error,
     )
 
 

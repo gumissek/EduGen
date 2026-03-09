@@ -7,7 +7,7 @@ export const SourceFileSchema = z.object({
   file_type: z.string(),
   file_size: z.number(),
   summary: z.string().nullable(),
-  extracted_text: z.string().nullable(),
+  has_extracted_text: z.boolean(),
   page_count: z.number().nullable(),
   created_at: z.string().datetime(),
 });

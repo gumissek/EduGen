@@ -5,6 +5,13 @@ import api from '@/lib/api';
 import { Document } from '@/schemas/document';
 import { useSnackbar } from '@/components/ui/SnackbarProvider';
 
+interface DocumentListResponse {
+  documents: Document[];
+  total: number;
+  page: number;
+  per_page: number;
+}
+
 export function useDocuments(subjectId?: string) {
   const queryClient = useQueryClient();
   const { success, error } = useSnackbar();
@@ -13,8 +20,8 @@ export function useDocuments(subjectId?: string) {
     queryKey: ['documents', subjectId],
     queryFn: async () => {
       const url = subjectId ? `/api/documents?subject_id=${subjectId}` : '/api/documents';
-      const res = await api.get<Document[]>(url);
-      return res.data;
+      const res = await api.get<DocumentListResponse>(url);
+      return res.data.documents;
     },
   });
 

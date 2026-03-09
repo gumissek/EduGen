@@ -8,11 +8,14 @@ import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
+import Alert from '@mui/material/Alert';
+import Link from '@mui/material/Link';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import DescriptionIcon from '@mui/icons-material/Description';
 import ImageIcon from '@mui/icons-material/Image';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CircularProgress from '@mui/material/CircularProgress';
+import NextLink from 'next/link';
 import { SourceFile } from '@/types';
 import { format } from 'date-fns';
 
@@ -36,9 +39,80 @@ const formatBytes = (bytes: number) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
-export default function FileCard({ file, onDelete }: FileCardProps) {
-  const isProcessing = file.extracted_text === null;
+function FileStatusSection({ file }: { file: SourceFile }) {
+  if (file.extraction_error === 'NO_API_KEY') {
+    return (
+      <Alert severity="warning" sx={{ mt: 2, fontSize: '0.75rem', py: 0.5 }}>
+        Brak klucza API OpenAI. Skonfiguruj go w{' '}
+        <Link component={NextLink} href="/settings" underline="hover">
+          Ustawieniach
+        </Link>
+        , aby przetworzyć ten plik.
+      </Alert>
+    );
+  }
 
+  if (file.extraction_error === 'RATE_LIMIT') {
+    return (
+      <Alert severity="error" sx={{ mt: 2, fontSize: '0.75rem', py: 0.5 }}>
+        Przekroczono limit zapytań API OpenAI (Rate Limit). Usuń plik i spróbuj ponownie za chwilę.
+      </Alert>
+    );
+  }
+
+  if (!file.has_extracted_text) {
+    const processingLabel =
+      file.file_type === 'image'
+        ? 'Odczytywanie obrazu...'
+        : file.file_type === 'pdf'
+          ? 'Odczytywanie pliku...'
+          : 'Przetwarzanie dokumentu...';
+
+    return (
+      <Box sx={{ display: 'flex', alignItems: 'center', mt: 2, gap: 1 }}>
+        <CircularProgress size={16} />
+        <Typography variant="caption" color="text.secondary">
+          {processingLabel}
+        </Typography>
+      </Box>
+    );
+  }
+
+  const summaryText =
+    file.summary ||
+    (file.file_type === 'pdf' ? 'Brak podsumowania.' : null);
+
+  return (
+    <Box sx={{ mt: 2 }}>
+      <Chip
+        label="Gotowy"
+        size="small"
+        color="success"
+        variant="outlined"
+        sx={{ mb: 1, mr: 1 }}
+      />
+      {file.page_count && (
+        <Chip label={`${file.page_count} str.`} size="small" variant="outlined" sx={{ mb: 1 }} />
+      )}
+      {summaryText && (
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          sx={{
+            display: '-webkit-box',
+            WebkitLineClamp: 3,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          }}
+        >
+          {summaryText}
+        </Typography>
+      )}
+    </Box>
+  );
+}
+
+export default function FileCard({ file, onDelete }: FileCardProps) {
   return (
     <Card variant="outlined" sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <CardContent sx={{ flexGrow: 1 }}>
@@ -54,39 +128,7 @@ export default function FileCard({ file, onDelete }: FileCardProps) {
           </Box>
         </Box>
 
-        {isProcessing ? (
-          <Box sx={{ display: 'flex', alignItems: 'center', mt: 2, gap: 1 }}>
-            <CircularProgress size={16} />
-            <Typography variant="caption" color="text.secondary">
-              Przetwarzanie OCR...
-            </Typography>
-          </Box>
-        ) : (
-          <Box sx={{ mt: 2 }}>
-            <Chip 
-              label="Gotowy" 
-              size="small" 
-              color="success" 
-              variant="outlined" 
-              sx={{ mb: 1, mr: 1 }} 
-            />
-            {file.page_count && (
-              <Chip label={`${file.page_count} str.`} size="small" variant="outlined" sx={{ mb: 1 }} />
-            )}
-            <Typography 
-              variant="body2" 
-              color="text.secondary" 
-              sx={{ 
-                display: '-webkit-box', 
-                WebkitLineClamp: 3, 
-                WebkitBoxOrient: 'vertical', 
-                overflow: 'hidden' 
-              }}
-            >
-              {file.summary || 'Brak podsumowania.'}
-            </Typography>
-          </Box>
-        )}
+        <FileStatusSection file={file} />
       </CardContent>
       <CardActions sx={{ justifyContent: 'flex-end', px: 2, pb: 2 }}>
         <IconButton size="small" onClick={() => onDelete(file.id)} color="error" title="Usuń plik">
