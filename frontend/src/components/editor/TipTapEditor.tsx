@@ -53,7 +53,7 @@ export default function TipTapEditor({ initialContent, onChange, readOnly = fals
     },
     editorProps: {
       attributes: {
-        class: 'prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none p-4',
+        class: 'tiptap-editor',
       },
     },
   });
@@ -126,33 +126,7 @@ export default function TipTapEditor({ initialContent, onChange, readOnly = fals
         </Box>
       )}
       
-      <Box sx={{ flexGrow: 1, overflowY: 'auto', p: 2, bgcolor: 'background.paper' }}>
-        <style jsx global>{`
-          .ProseMirror {
-            min-height: 400px;
-          }
-          .ProseMirror table {
-            border-collapse: collapse;
-            table-layout: fixed;
-            width: 100%;
-            margin: 0;
-            overflow: hidden;
-          }
-          .ProseMirror table td,
-          .ProseMirror table th {
-            min-width: 1em;
-            border: 1px solid #ddd;
-            padding: 3px 5px;
-            vertical-align: top;
-            box-sizing: border-box;
-            position: relative;
-          }
-          .ProseMirror table th {
-            font-weight: bold;
-            text-align: left;
-            background-color: #f1f3f5;
-          }
-        `}</style>
+      <Box sx={{ flexGrow: 1, overflowY: 'auto', bgcolor: 'background.paper' }}>
         <EditorContent editor={editor} />
       </Box>
     </Paper>

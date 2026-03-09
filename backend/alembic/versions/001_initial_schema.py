@@ -46,7 +46,7 @@ def upgrade() -> None:
         sa.Column("id", sa.String(36), primary_key=True),
         sa.Column("user_id", sa.String(36), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
         sa.Column("openai_api_key_encrypted", sa.Text, nullable=False, server_default=""),
-        sa.Column("default_model", sa.String(100), nullable=False, server_default="gpt-4o-mini"),
+        sa.Column("default_model", sa.String(100), nullable=False, server_default="gpt-5-mini"),
         sa.Column("created_at", sa.String, nullable=False),
         sa.Column("updated_at", sa.String, nullable=False),
     )

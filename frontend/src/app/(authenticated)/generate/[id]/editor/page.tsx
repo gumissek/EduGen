@@ -5,6 +5,7 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
+import Alert from '@mui/material/Alert';
 import SaveIcon from '@mui/icons-material/Save';
 import CheckIcon from '@mui/icons-material/Check';
 import { useRouter } from 'next/navigation';
@@ -24,6 +25,25 @@ const TipTapEditor = dynamic(() => import('@/components/editor/TipTapEditor'), {
   ),
 });
 
+interface PrototypeData {
+  id: string;
+  generation_id: string;
+  original_content: string;
+  edited_content: string | null;
+  answer_key: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface DocumentData {
+  id: string;
+  generation_id: string;
+  filename: string;
+  file_path: string;
+  variants_count: number;
+  created_at: string;
+}
+
 export default function EditorPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = React.use(params);
   const router = useRouter();
@@ -32,29 +52,32 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
   const [content, setContent] = React.useState('');
   const [isEdited, setIsEdited] = React.useState(false);
 
-  // Fetch generation data
-  const { data: generation, isLoading } = useQuery({
-    queryKey: ['generation', id],
+  // Fetch prototype data (contains the generated content)
+  const { data: prototype, isLoading, isError } = useQuery<PrototypeData>({
+    queryKey: ['prototype', id],
     queryFn: async () => {
-      const res = await api.get(`/api/generations/${id}`);
+      const res = await api.get(`/api/prototypes/${id}`);
       return res.data;
     },
+    retry: 3,
+    retryDelay: 2000,
   });
 
-  // Set initial content once loaded
+  // Set initial content once loaded (prefer edited_content over original)
   React.useEffect(() => {
-    if (generation?.content && !isEdited) {
-      setContent(generation.content);
+    if (prototype && !isEdited) {
+      const initialContent = prototype.edited_content || prototype.original_content;
+      setContent(initialContent);
     }
-  }, [generation, isEdited]);
+  }, [prototype, isEdited]);
 
-  // Save manual edits mutation
+  // Save manual edits mutation — PUT /api/prototypes/{generation_id}
   const saveMutation = useMutation({
     mutationFn: async (htmlContent: string) => {
-      await api.put(`/api/generations/${id}`, { content: htmlContent });
+      await api.put(`/api/prototypes/${id}`, { edited_content: htmlContent });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['generation', id] });
+      queryClient.invalidateQueries({ queryKey: ['prototype', id] });
       success('Zmiany zostały zapisane');
     },
     onError: () => {
@@ -62,16 +85,17 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
     },
   });
 
-  // Reprompt mutation
+  // Reprompt mutation — POST /api/prototypes/{generation_id}/reprompt
   const repromptMutation = useMutation({
     mutationFn: async (prompt: string) => {
-      const res = await api.post(`/api/generations/${id}/reprompt`, { prompt });
-      return res.data;
+      const res = await api.post(`/api/prototypes/${id}/reprompt`, { prompt });
+      return res.data as PrototypeData;
     },
-    onSuccess: (data: { content: string }) => {
-      setContent(data.content);
+    onSuccess: (data: PrototypeData) => {
+      const newContent = data.edited_content || data.original_content;
+      setContent(newContent);
       setIsEdited(true);
-      queryClient.invalidateQueries({ queryKey: ['generation', id] });
+      queryClient.invalidateQueries({ queryKey: ['prototype', id] });
       success('AI zaktualizowało treść');
     },
     onError: () => {
@@ -79,18 +103,18 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
     },
   });
 
-  // Finalize mutation
+  // Finalize mutation — POST /api/documents/{generation_id}/finalize
   const finalizeMutation = useMutation({
     mutationFn: async () => {
       // Save pending edits first
       await saveMutation.mutateAsync(content);
-      // Finalize
-      const res = await api.post(`/api/generations/${id}/finalize`);
-      return res.data;
+      // Create final document
+      const res = await api.post(`/api/documents/${id}/finalize`);
+      return res.data as DocumentData;
     },
-    onSuccess: (data: { document_id: string }) => {
+    onSuccess: (data: DocumentData) => {
       success('Materiał sfinalizowany!');
-      router.push(`/documents/${data.document_id}`); // Corrected route
+      router.push(`/documents/${data.id}`);
     },
     onError: () => {
       error('Błąd podczas finalizacji');
@@ -106,8 +130,21 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
     saveMutation.mutate(content);
   };
 
-  if (isLoading) return <CircularProgress />;
-  if (!generation) return <Typography>Nie znaleziono materiału.</Typography>;
+  if (isLoading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (isError || !prototype) {
+    return (
+      <Alert severity="error" sx={{ mt: 2 }}>
+        Nie znaleziono materiału lub wystąpił błąd podczas ładowania. Upewnij się, że generowanie zostało zakończone.
+      </Alert>
+    );
+  }
 
   return (
     <Box sx={{ height: 'calc(100vh - 140px)', display: 'flex', flexDirection: 'column' }}>
@@ -122,21 +159,21 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
             onClick={handleSave}
             disabled={saveMutation.isPending}
           >
-            Zapisz postęp
+            {saveMutation.isPending ? 'Zapisywanie...' : 'Zapisz postęp'}
           </Button>
           <Button 
             variant="contained" 
             color="success"
-            startIcon={<CheckIcon />}
+            startIcon={finalizeMutation.isPending ? <CircularProgress size={18} color="inherit" /> : <CheckIcon />}
             onClick={() => finalizeMutation.mutate()}
-            disabled={finalizeMutation.isPending}
+            disabled={finalizeMutation.isPending || saveMutation.isPending}
           >
-            Finalizuj i Dodaj do Bazy
+            {finalizeMutation.isPending ? 'Finalizowanie...' : 'Finalizuj i Dodaj do Bazy'}
           </Button>
         </Box>
       </Box>
 
-      <Box sx={{ flexGrow: 1, position: 'relative' }}>
+      <Box sx={{ flexGrow: 1, position: 'relative', pb: 10 }}>
         <TipTapEditor 
           initialContent={content} 
           onChange={handleEditorChange} 
