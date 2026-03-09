@@ -20,7 +20,7 @@ from app.models.generation import Generation
 from app.models.prototype import Prototype
 from app.models.settings import UserSettings
 from app.schemas.prototype import PrototypeResponse, PrototypeUpdate, RepromptRequest
-from app.services.ai_service import call_openai_reprompt
+from app.services.ai_service import call_openai_reprompt, call_openai_reprompt_free_form, TYPES_WITHOUT_QUESTIONS
 from app.services.generation_service import _render_content_html, _build_answer_key
 
 router = APIRouter(prefix="/prototypes", tags=["prototypes"])
@@ -110,13 +110,24 @@ def reprompt(
     current_content = prototype.edited_content or prototype.original_content
 
     try:
+        if generation.content_type in TYPES_WITHOUT_QUESTIONS:
+            # Free-form types (worksheet / lesson_materials) — update HTML directly
+            new_html = call_openai_reprompt_free_form(
+                db, generation, current_content, body.prompt, api_key, model
+            )
+            prototype.edited_content = new_html
+            prototype.updated_at = datetime.now(timezone.utc).isoformat()
+            db.commit()
+            db.refresh(prototype)
+            return PrototypeResponse.model_validate(prototype)
+
         result = call_openai_reprompt(
             db, generation, current_content, body.prompt, api_key, model,
             raw_questions_json=prototype.raw_questions_json,
         )
 
         # Update prototype
-        new_content = _render_content_html(result)
+        new_content = _render_content_html(result, generation.content_type)
         new_answer_key = _build_answer_key(result)
 
         prototype.edited_content = new_content

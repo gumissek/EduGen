@@ -19,6 +19,7 @@ from app.models.user import User
 from app.models.document import Document
 from app.models.generation import Generation
 from app.models.prototype import Prototype
+from app.models.subject import Subject
 from app.schemas.document import (
     DocumentResponse,
     DocumentDetailResponse,
@@ -36,6 +37,7 @@ def _build_detail(document: Document, db: DBSession) -> DocumentDetailResponse:
     """Build a DocumentDetailResponse by joining Generation and Prototype data."""
     generation = db.query(Generation).filter(Generation.id == document.generation_id).first()
     prototype = db.query(Prototype).filter(Prototype.generation_id == document.generation_id).first()
+    subject = db.query(Subject).filter(Subject.id == generation.subject_id).first() if generation else None
 
     content = ""
     updated_at = document.created_at
@@ -47,8 +49,10 @@ def _build_detail(document: Document, db: DBSession) -> DocumentDetailResponse:
         id=document.id,
         generation_id=document.generation_id,
         subject_id=generation.subject_id if generation else "",
+        subject_name=subject.name if subject else "",
         title=generation.topic if generation else document.filename,
         content_type=generation.content_type if generation else "",
+        class_level=generation.class_level if generation else 0,
         content=content,
         filename=document.filename,
         variants_count=document.variants_count,
@@ -61,14 +65,17 @@ def _build_list_item(document: Document, db: DBSession) -> DocumentListItemRespo
     """Build a DocumentListItemResponse (no content body) by joining Generation data."""
     generation = db.query(Generation).filter(Generation.id == document.generation_id).first()
     prototype = db.query(Prototype).filter(Prototype.generation_id == document.generation_id).first()
+    subject = db.query(Subject).filter(Subject.id == generation.subject_id).first() if generation else None
     updated_at = prototype.updated_at if prototype else document.created_at
 
     return DocumentListItemResponse(
         id=document.id,
         generation_id=document.generation_id,
         subject_id=generation.subject_id if generation else "",
+        subject_name=subject.name if subject else "",
         title=generation.topic if generation else document.filename,
         content_type=generation.content_type if generation else "",
+        class_level=generation.class_level if generation else 0,
         filename=document.filename,
         variants_count=document.variants_count,
         created_at=document.created_at,
@@ -202,6 +209,8 @@ def list_documents(
     page: int = 1,
     per_page: int = 20,
     subject_id: str | None = None,
+    content_type: str | None = None,
+    class_level: int | None = None,
     sort_by: str = "created_at",
     db: DBSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -209,8 +218,14 @@ def list_documents(
     """List finalized documents with pagination."""
     query = db.query(Document).filter(Document.deleted_at.is_(None))
 
-    if subject_id:
-        query = query.join(Generation).filter(Generation.subject_id == subject_id)
+    if subject_id or content_type or class_level is not None:
+        query = query.join(Generation)
+        if subject_id:
+            query = query.filter(Generation.subject_id == subject_id)
+        if content_type:
+            query = query.filter(Generation.content_type == content_type)
+        if class_level is not None:
+            query = query.filter(Generation.class_level == class_level)
 
     # Sort
     sort_column = getattr(Document, sort_by, Document.created_at)

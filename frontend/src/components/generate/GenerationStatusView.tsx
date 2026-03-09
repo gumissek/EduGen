@@ -55,7 +55,7 @@ export default function GenerationStatusView({ id }: { id: string }) {
         <>
           <CircularProgress size={64} sx={{ mb: 4 }} />
           <Typography variant="h5" gutterBottom>
-            Trwa generowanie materiałów przez AI...
+            Trwa generowanie materiałów przez...
           </Typography>
           <Typography variant="body1" color="text.secondary">
             Ten proces może potrwać do 60 sekund. Nie odświeżaj strony.

@@ -40,6 +40,10 @@ class GenerationCreate(BaseModel):
     @classmethod
     def validate_questions(cls, v: int, info) -> int:
         data = info.data
+        content_type = data.get("content_type", "")
+        free_form_types = {"worksheet", "lesson_materials"}
+        if content_type in free_form_types:
+            return v  # no validation for free-form types
         if "total_questions" in data and "open_questions" in data:
             if data["open_questions"] + v != data["total_questions"]:
                 raise ValueError("total_questions must equal open_questions + closed_questions")

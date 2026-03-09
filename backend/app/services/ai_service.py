@@ -23,12 +23,20 @@ DIFFICULTY_LABELS = {
 }
 
 CONTENT_TYPE_LABELS = {
+    "worksheet": "karta pracy",
+    "test": "sprawdzian",
+    "quiz": "kartkówka",
+    "exam": "test",
+    "lesson_materials": "materiały na zajęcia",
+    # legacy keys
     "karta_pracy": "karta pracy",
     "sprawdzian": "sprawdzian",
     "kartkowka": "kartkówka",
-    "test": "test",
     "materialy": "materiały na zajęcia",
 }
+
+# Types that don't use the questions format (no Q&A, no variants)
+TYPES_WITHOUT_QUESTIONS = {"worksheet", "lesson_materials"}
 
 
 def build_system_prompt(generation: Generation, source_texts: list[str]) -> str:
@@ -36,7 +44,13 @@ def build_system_prompt(generation: Generation, source_texts: list[str]) -> str:
     content_label = CONTENT_TYPE_LABELS.get(generation.content_type, generation.content_type)
     difficulty_label = DIFFICULTY_LABELS.get(generation.difficulty, "średni")
 
-    education_label = "szkoła podstawowa" if generation.education_level == "podstawowa" else "szkoła średnia (liceum/technikum)"
+    education_label = (
+        "szkoła podstawowa" if generation.education_level in ("primary", "podstawowa")
+        else "szkoła średnia (liceum/technikum)"
+    )
+
+    if generation.content_type in TYPES_WITHOUT_QUESTIONS:
+        return _build_free_form_prompt(generation, source_texts, content_label, difficulty_label, education_label)
 
     prompt_parts = [
         "Jesteś ekspertem w tworzeniu materiałów edukacyjnych w języku polskim.",
@@ -82,6 +96,84 @@ def build_system_prompt(generation: Generation, source_texts: list[str]) -> str:
         "    }\n"
         "  ]\n"
         "}"
+    )
+
+    return "\n\n".join(prompt_parts)
+
+
+def _build_free_form_prompt(
+    generation: Generation,
+    source_texts: list[str],
+    content_label: str,
+    difficulty_label: str,
+    education_label: str,
+) -> str:
+    """Build a system prompt for worksheet or lesson_materials (no questions format)."""
+    is_worksheet = generation.content_type == "worksheet"
+
+    if is_worksheet:
+        role_desc = (
+            "Jesteś ekspertem w tworzeniu materiałów edukacyjnych w języku polskim. "
+            "Tworzysz kartę pracy dla UCZNIÓW. "
+            "Karta pracy to interaktywny arkusz ćwiczeń przeznaczony dla uczniów, "
+            "który zawiera różnorodne zadania (uzupełnianie luk, dopasowywanie, opis, obliczenia, ćwiczenia praktyczne itp.). "
+            "NIE twórz pytań w formacie testowym. Twórz angażujące ćwiczenia edukacyjne."
+        )
+        structure_desc = (
+            "Struktura karty pracy powinna zawierać:\n"
+            "- Tytuł i metryczkę ucznia (imię, klasa, data)\n"
+            "- Cel lekcji (krótko)\n"
+            "- Kilka różnorodnych sekcji z ćwiczeniami (np. Zadanie 1, Zadanie 2...)\n"
+            "- Każde zadanie z jasną instrukcją i miejscem na odpowiedź\n"
+            "- Opcjonalnie: ciekawostkę lub podsumowanie"
+        )
+    else:
+        role_desc = (
+            "Jesteś ekspertem w tworzeniu materiałów edukacyjnych w języku polskim. "
+            "Tworzysz materiał na zajęcia (scenariusz lekcji) dla NAUCZYCIELA. "
+            "Dokument powinien pomóc nauczycielowi poprowadzić lekcję — zawierać plan przebiegu lekcji, "
+            "wskazówki metodyczne, propozycje aktywności i metody pracy z uczniami."
+        )
+        structure_desc = (
+            "Struktura materiałów na zajęcia powinna zawierać:\n"
+            "- Temat lekcji, czas trwania, klasa\n"
+            "- Cele lekcji (ogólne i szczegółowe)\n"
+            "- Metody i formy pracy\n"
+            "- Potrzebne materiały/środki dydaktyczne\n"
+            "- Plan przebiegu lekcji (wstęp, rozwinięcie, podsumowanie) z szacowanym czasem każdego etapu\n"
+            "- Propozycje aktywności dla uczniów\n"
+            "- Wskazówki dla nauczyciela\n"
+            "- Praca domowa (opcjonalnie)"
+        )
+
+    prompt_parts = [
+        role_desc,
+        f"Poziom edukacyjny: {education_label}, klasa {generation.class_level}.",
+        f"Poziom trudności materiału: {difficulty_label}.",
+    ]
+
+    if generation.language_level:
+        prompt_parts.append(f"Poziom językowy: {generation.language_level}.")
+
+    prompt_parts.append(f"Temat: {generation.topic}.")
+
+    if generation.instructions:
+        prompt_parts.append(f"Dodatkowe zalecenia: {generation.instructions}")
+
+    if source_texts:
+        combined = "\n\n---\n\n".join(source_texts)
+        prompt_parts.append(f"Materiał źródłowy:\n{combined}")
+
+    prompt_parts.append(structure_desc)
+
+    prompt_parts.append(
+        "Odpowiedz w formacie JSON z następującą strukturą:\n"
+        "{\n"
+        '  "title": "Tytuł materiału",\n'
+        '  "content_html": "<p>Treść w formacie HTML...</p>"\n'
+        "}\n"
+        "Użyj tagów HTML: <h1>, <h2>, <h3>, <p>, <ul>, <ol>, <li>, <strong>, <em>, <br>. "
+        "Nie używaj bloków kodu Markdown. Zwróć czyste HTML w polu content_html."
     )
 
     return "\n\n".join(prompt_parts)
@@ -167,6 +259,81 @@ def _normalize_reprompt_response(data: dict) -> dict:
             f"Klucz 'questions' nie jest listą: {type(data.get('questions'))}"
         )
     return data
+
+
+def call_openai_reprompt_free_form(
+    db: DBSession,
+    generation: Generation,
+    current_content: str,
+    user_prompt: str,
+    api_key: str,
+    model: str,
+) -> str:
+    """Call OpenAI to modify free-form (worksheet/lesson_materials) content based on user feedback.
+
+    Returns the modified HTML content string.
+    """
+    client = OpenAI(api_key=api_key)
+
+    is_worksheet = generation.content_type == "worksheet"
+    type_hint = "karta pracy (dla uczniów)" if is_worksheet else "materiał na zajęcia (dla nauczyciela)"
+
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                f"Jesteś ekspertem w tworzeniu materiałów edukacyjnych w języku polskim. "
+                f"Użytkownik prosi o modyfikację istniejącego dokumentu: {type_hint}. "
+                "Zwróć CAŁY zmodyfikowany materiał w formacie JSON:\n"
+                '{"title": "Tytuł materiału", "content_html": "<p>Treść w HTML...</p>"}\n'
+                "Użyj tagów HTML: <h1>, <h2>, <h3>, <p>, <ul>, <ol>, <li>, <strong>, <em>, <br>. "
+                "Nie używaj bloków kodu Markdown."
+            ),
+        },
+        {
+            "role": "user",
+            "content": f"Aktualny materiał (HTML):\n{current_content}\n\nUwagi do modyfikacji:\n{user_prompt}",
+        },
+    ]
+
+    try:
+        response = client.chat.completions.create(
+            model=model,
+            messages=messages,
+            response_format={"type": "json_object"},
+        )
+
+        content = response.choices[0].message.content or "{}"
+        usage = response.usage
+
+        parsed = json.loads(content)
+        html_content = parsed.get("content_html", "")
+
+        ai_request = AIRequest(
+            generation_id=generation.id,
+            model_name=model,
+            prompt_tokens=usage.prompt_tokens if usage else None,
+            completion_tokens=usage.completion_tokens if usage else None,
+            total_tokens=usage.total_tokens if usage else None,
+            request_type="reprompt_free_form",
+            request_payload=json.dumps({"messages": messages}, ensure_ascii=False)[:10000],
+            response_payload=content[:10000],
+        )
+        db.add(ai_request)
+        db.commit()
+
+        return html_content
+
+    except Exception as e:
+        ai_request = AIRequest(
+            generation_id=generation.id,
+            model_name=model,
+            request_type="reprompt_free_form",
+            request_payload=json.dumps({"messages": messages, "error": str(e)}, ensure_ascii=False)[:10000],
+        )
+        db.add(ai_request)
+        db.commit()
+        raise
 
 
 def call_openai_reprompt(

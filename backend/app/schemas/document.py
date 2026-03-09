@@ -24,8 +24,10 @@ class DocumentDetailResponse(BaseModel):
     id: str
     generation_id: str
     subject_id: str
+    subject_name: str
     title: str
     content_type: str
+    class_level: int
     content: str
     filename: str
     variants_count: int
@@ -41,8 +43,10 @@ class DocumentListItemResponse(BaseModel):
     id: str
     generation_id: str
     subject_id: str
+    subject_name: str
     title: str
     content_type: str
+    class_level: int
     filename: str
     variants_count: int
     created_at: str

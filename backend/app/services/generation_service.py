@@ -14,13 +14,23 @@ from app.models.prototype import Prototype
 from app.models.settings import UserSettings
 from app.models.source_file import SourceFile
 from app.models.diagnostic_log import DiagnosticLog
-from app.services.ai_service import build_system_prompt, call_openai
+from app.services.ai_service import build_system_prompt, call_openai, TYPES_WITHOUT_QUESTIONS
 
 
-def _render_content_html(data: dict) -> str:
+def _render_content_html(data: dict, content_type: str = "") -> str:
     """Render AI-generated JSON into HTML content for the WYSIWYG editor."""
     if not isinstance(data, dict):
         return "<p><em>Błąd renderowania: nieprawidłowy format danych AI.</em></p>"
+
+    # Free-form types return content_html directly
+    if content_type in TYPES_WITHOUT_QUESTIONS or "content_html" in data:
+        html = data.get("content_html") or ""
+        if not html:
+            # Fallback: wrap title if no content_html
+            title = data.get("title") or "Materiał edukacyjny"
+            return f"<h1>{title}</h1>"
+        return html
+
     html_parts = []
     title = data.get("title") or "Materiał edukacyjny"
     html_parts.append(f"<h1>{title}</h1>")
@@ -92,14 +102,17 @@ def generate_prototype_task(db: DBSession, generation_id: str) -> None:
         result = call_openai(db, generation, system_prompt, api_key, model)
 
         # Create prototype
-        original_content = _render_content_html(result)
-        answer_key = _build_answer_key(result)
+        is_free_form = generation.content_type in TYPES_WITHOUT_QUESTIONS
+        original_content = _render_content_html(result, generation.content_type)
+        answer_key = "" if is_free_form else _build_answer_key(result)
+        # For free-form types, don't store raw questions JSON (there are none)
+        raw_json = None if is_free_form else json.dumps(result, ensure_ascii=False)
 
         prototype = Prototype(
             generation_id=generation.id,
             original_content=original_content,
             answer_key=answer_key,
-            raw_questions_json=json.dumps(result, ensure_ascii=False),
+            raw_questions_json=raw_json,
         )
         db.add(prototype)
 

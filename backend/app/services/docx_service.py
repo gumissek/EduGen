@@ -20,6 +20,16 @@ from app.models.generation import Generation
 from app.models.prototype import Prototype
 from app.models.document import Document
 from app.models.subject import Subject
+from app.services.ai_service import TYPES_WITHOUT_QUESTIONS
+
+
+CONTENT_TYPE_FOLDER_NAMES = {
+    "worksheet": "Karta_pracy",
+    "test": "Sprawdzian",
+    "quiz": "Kartkowka",
+    "exam": "Test",
+    "lesson_materials": "Materialy_na_zajeciach",
+}
 
 
 def _parse_content_to_questions(content: str) -> list[dict]:
@@ -86,6 +96,77 @@ def _parse_answer_key(answer_key_text: str) -> dict[int, str]:
 
 
 _OPTION_LETTERS = {0: "a", 1: "b", 2: "c", 3: "d", 4: "e", 5: "f"}
+
+
+def _add_free_form_content_to_docx(doc: DocxDocument, html_content: str, generation: Generation):
+    """Convert basic HTML content to DOCX paragraphs for free-form types (worksheet/lesson_materials)."""
+    from html.parser import HTMLParser
+
+    class _HtmlDocxParser(HTMLParser):
+        def __init__(self, doc: DocxDocument):
+            super().__init__()
+            self._doc = doc
+            self._current_para = None
+            self._current_run = None
+            self._bold = False
+            self._italic = False
+            self._in_li = False
+            self._heading_level = 0
+
+        def _ensure_para(self):
+            if self._current_para is None:
+                self._current_para = self._doc.add_paragraph()
+
+        def handle_starttag(self, tag, attrs):
+            if tag in ("h1", "h2", "h3"):
+                self._heading_level = int(tag[1])
+                self._current_para = self._doc.add_heading(level=self._heading_level)
+                self._current_run = None
+            elif tag == "p":
+                self._current_para = self._doc.add_paragraph()
+                self._current_run = None
+            elif tag in ("ul", "ol"):
+                pass
+            elif tag == "li":
+                self._in_li = True
+                self._current_para = self._doc.add_paragraph(style="List Bullet")
+                self._current_run = None
+            elif tag == "strong" or tag == "b":
+                self._bold = True
+            elif tag in ("em", "i"):
+                self._italic = True
+            elif tag == "br":
+                self._ensure_para()
+                self._current_para.add_run("\n")
+
+        def handle_endtag(self, tag):
+            if tag in ("h1", "h2", "h3", "p", "li"):
+                self._current_para = None
+                self._current_run = None
+                self._in_li = False
+                self._heading_level = 0
+            elif tag in ("strong", "b"):
+                self._bold = False
+            elif tag in ("em", "i"):
+                self._italic = False
+
+        def handle_data(self, data):
+            text = data
+            if not text.strip() and not text:
+                return
+            self._ensure_para()
+            run = self._current_para.add_run(text)
+            run.bold = self._bold
+            run.italic = self._italic
+
+    parser = _HtmlDocxParser(doc)
+    parser.feed(html_content)
+
+
+def _generate_free_form_docx(doc: DocxDocument, prototype: Prototype, generation: Generation):
+    """Generate DOCX content for worksheet or lesson_materials (HTML-based, not Q&A)."""
+    content = prototype.edited_content or prototype.original_content or ""
+    _add_free_form_content_to_docx(doc, content, generation)
 
 
 def _strip_letter_prefix(text: str) -> str:
@@ -205,6 +286,42 @@ def generate_docx(db: DBSession, generation_id: str) -> Document:
     if not prototype:
         raise ValueError("Prototype not found")
 
+    doc = DocxDocument()
+
+    # Free-form types (worksheet / lesson_materials) — render HTML content, no variants
+    if generation.content_type in TYPES_WITHOUT_QUESTIONS:
+        _generate_free_form_docx(doc, prototype, generation)
+
+        # Build path and save
+        subject = db.query(Subject).filter(Subject.id == generation.subject_id).first()
+        subject_folder = re.sub(r'[<>:"/\\|?*]', '_', subject.name) if subject else generation_id
+        content_type_folder = CONTENT_TYPE_FOLDER_NAMES.get(
+            generation.content_type,
+            re.sub(r'[<>:"/\\|?*]', '_', generation.content_type),
+        )
+        class_folder = f"klasa_{generation.class_level}"
+        docs_dir = Path(settings.DATA_DIR) / "documents" / content_type_folder / subject_folder / class_folder
+        docs_dir.mkdir(parents=True, exist_ok=True)
+
+        filename = f"{generation.topic[:50].replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.docx"
+        filename = re.sub(r'[<>:"/\\|?*]', '_', filename)
+        file_path = docs_dir / filename
+        doc.save(str(file_path))
+
+        document = Document(
+            generation_id=generation_id,
+            filename=filename,
+            file_path=str(file_path),
+            variants_count=1,
+        )
+        db.add(document)
+        generation.status = "finalized"
+        generation.updated_at = datetime.now(timezone.utc).isoformat()
+        db.commit()
+        db.refresh(document)
+        return document
+
+    # Question-based types (test / quiz / exam / sprawdzian) — use variants
     # Prefer raw JSON (no HTML artifacts); fall back to HTML-parsed edited content
     questions = []
     answer_map = {}
@@ -226,7 +343,6 @@ def generate_docx(db: DBSession, generation_id: str) -> Document:
         questions = _parse_content_to_questions(content)
         answer_map = _parse_answer_key(prototype.answer_key)
 
-    doc = DocxDocument()
     variants_count = generation.variants_count
     group_labels = [chr(65 + i) for i in range(variants_count)]  # A, B, C, ...
     all_variants_answers = []
@@ -249,10 +365,12 @@ def generate_docx(db: DBSession, generation_id: str) -> Document:
     # Add answer key
     _add_answer_key_to_docx(doc, all_variants_answers)
 
-    # Save file under the subject name directory
+    # Save file under hierarchical directory: content_type / subject / klasa_N /
     subject = db.query(Subject).filter(Subject.id == generation.subject_id).first()
     subject_folder = re.sub(r'[<>:"/\\|?*]', '_', subject.name) if subject else generation_id
-    docs_dir = Path(settings.DATA_DIR) / "documents" / subject_folder
+    content_type_folder = CONTENT_TYPE_FOLDER_NAMES.get(generation.content_type, re.sub(r'[<>:"/\\|?*]', '_', generation.content_type))
+    class_folder = f"klasa_{generation.class_level}"
+    docs_dir = Path(settings.DATA_DIR) / "documents" / content_type_folder / subject_folder / class_folder
     docs_dir.mkdir(parents=True, exist_ok=True)
 
     filename = f"{generation.topic[:50].replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.docx"
