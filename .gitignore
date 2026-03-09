@@ -1,0 +1,58 @@
+# =========================
+# Backend (Python / uv)
+# =========================
+backend/__pycache__/
+backend/**/__pycache__/
+backend/*.py[cod]
+backend/.venv/
+backend/*.egg-info/
+backend/dist/
+backend/build/
+backend/.eggs/
+backend/data/
+
+# =========================
+# Frontend (Node / Next.js)
+# =========================
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/.pnp/
+frontend/.pnp.js
+
+# =========================
+# Zmienne �rodowiskowe
+# =========================
+backend/.env
+frontend/.env
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+*.env
+!*.env.example
+
+# =========================
+# Logi
+# =========================
+*.log
+logs/
+
+# =========================
+# OS
+# =========================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# =========================
+# IDE / Edytory
+# =========================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
