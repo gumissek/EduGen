@@ -1,0 +1,116 @@
+"""Generation service — orchestrates the AI generation background task."""
+
+from __future__ import annotations
+
+import json
+import traceback
+from datetime import datetime, timezone
+
+from sqlalchemy.orm import Session as DBSession
+
+from app.encryption import decrypt_api_key
+from app.models.generation import Generation
+from app.models.prototype import Prototype
+from app.models.settings import UserSettings
+from app.models.source_file import SourceFile
+from app.models.diagnostic_log import DiagnosticLog
+from app.services.ai_service import build_system_prompt, call_openai
+
+
+def _render_content_html(data: dict) -> str:
+    """Render AI-generated JSON into HTML content for the WYSIWYG editor."""
+    html_parts = []
+    title = data.get("title", "Materiał edukacyjny")
+    html_parts.append(f"<h1>{title}</h1>")
+
+    for q in data.get("questions", []):
+        number = q.get("number", "")
+        content = q.get("content", "")
+        q_type = q.get("type", "open")
+        points = q.get("points", 1)
+
+        html_parts.append(f"<p><strong>Pytanie {number}.</strong> ({points} pkt) {content}</p>")
+
+        if q_type == "closed" and q.get("options"):
+            html_parts.append("<ul>")
+            for opt in q["options"]:
+                html_parts.append(f"<li>{opt}</li>")
+            html_parts.append("</ul>")
+
+        if q_type == "open":
+            html_parts.append('<p style="margin-left: 20px;"><em>[Miejsce na odpowiedź]</em></p>')
+
+    return "\n".join(html_parts)
+
+
+def _build_answer_key(data: dict) -> str:
+    """Build an answer key from the AI response."""
+    lines = ["Klucz odpowiedzi:", ""]
+    for q in data.get("questions", []):
+        number = q.get("number", "")
+        answer = q.get("correct_answer", "")
+        lines.append(f"{number}. {answer}")
+    return "\n".join(lines)
+
+
+def generate_prototype_task(db: DBSession, generation_id: str) -> None:
+    """Background task: generate AI prototype for a given generation."""
+    generation = db.query(Generation).filter(Generation.id == generation_id).first()
+    if not generation:
+        return
+
+    try:
+        # Update status
+        generation.status = "processing"
+        generation.updated_at = datetime.now(timezone.utc).isoformat()
+        db.commit()
+
+        # Get API key
+        user_settings = db.query(UserSettings).first()
+        if not user_settings or not user_settings.openai_api_key_encrypted:
+            raise ValueError("OpenAI API key not configured")
+
+        api_key = decrypt_api_key(user_settings.openai_api_key_encrypted)
+        model = user_settings.default_model
+
+        # Gather source texts
+        source_texts = []
+        for sf in generation.source_files:
+            if sf.extracted_text and sf.deleted_at is None:
+                source_texts.append(sf.extracted_text)
+
+        # Build prompt and call OpenAI
+        system_prompt = build_system_prompt(generation, source_texts)
+        result = call_openai(db, generation, system_prompt, api_key, model)
+
+        # Create prototype
+        original_content = _render_content_html(result)
+        answer_key = _build_answer_key(result)
+
+        prototype = Prototype(
+            generation_id=generation.id,
+            original_content=original_content,
+            answer_key=answer_key,
+        )
+        db.add(prototype)
+
+        generation.status = "ready"
+        generation.updated_at = datetime.now(timezone.utc).isoformat()
+        db.commit()
+
+    except Exception as e:
+        generation.status = "error"
+        generation.error_message = str(e)
+        generation.updated_at = datetime.now(timezone.utc).isoformat()
+
+        # Log to diagnostics
+        log = DiagnosticLog(
+            level="ERROR",
+            message=f"Generation failed: {str(e)}",
+            metadata_json=json.dumps({
+                "generation_id": generation_id,
+                "traceback": traceback.format_exc(),
+            }),
+        )
+        db.add(log)
+        db.commit()

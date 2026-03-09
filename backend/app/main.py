@@ -1,0 +1,172 @@
+"""FastAPI application — lifespan, middleware, router registration."""
+
+from __future__ import annotations
+
+import json
+import traceback
+from contextlib import asynccontextmanager
+from pathlib import Path
+
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+
+from app.config import settings
+from app.database import Base, engine, SessionLocal
+from app.models import *  # noqa: F401, F403 — register all models
+
+
+def _ensure_directories():
+    """Create required data directories."""
+    dirs = [
+        Path(settings.DATA_DIR),
+        Path(settings.DATA_DIR) / "subjects",
+        Path(settings.DATA_DIR) / "documents",
+        Path(settings.DATA_DIR) / "backups",
+    ]
+    for d in dirs:
+        d.mkdir(parents=True, exist_ok=True)
+
+
+def _seed_database():
+    """Seed default user and subjects if they don't exist."""
+    db = SessionLocal()
+    try:
+        from app.models.user import User
+        from app.models.subject import Subject
+
+        # Seed default user
+        user = db.query(User).first()
+        if not user:
+            user = User(password_hash=settings.DEFAULT_PASSWORD_HASH)
+            db.add(user)
+            db.commit()
+
+        # Seed default subjects
+        default_subjects = [
+            "Matematyka",
+            "Fizyka",
+            "Język Polski",
+            "Historia",
+        ]
+        for name in default_subjects:
+            existing = db.query(Subject).filter(Subject.name == name).first()
+            if not existing:
+                db.add(Subject(name=name, is_custom=0))
+        db.commit()
+    finally:
+        db.close()
+
+
+def _start_backup_scheduler():
+    """Start APScheduler for periodic backups."""
+    try:
+        from apscheduler.schedulers.background import BackgroundScheduler
+        from app.services.backup_service import create_backup, cleanup_old_backups
+
+        def _backup_job():
+            db = SessionLocal()
+            try:
+                create_backup(db)
+                cleanup_old_backups(db)
+            except Exception:
+                pass
+            finally:
+                db.close()
+
+        scheduler = BackgroundScheduler()
+        scheduler.add_job(_backup_job, "interval", hours=24, id="daily_backup")
+        scheduler.start()
+        return scheduler
+    except Exception:
+        return None
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan: startup and shutdown."""
+    # Startup
+    _ensure_directories()
+
+    # Create tables
+    Base.metadata.create_all(bind=engine)
+
+    # Seed data
+    _seed_database()
+
+    # Start backup scheduler
+    scheduler = _start_backup_scheduler()
+
+    yield
+
+    # Shutdown
+    if scheduler:
+        scheduler.shutdown(wait=False)
+
+
+app = FastAPI(
+    title="EduGen Local API",
+    description="Backend API for educational content generation",
+    version="0.1.0",
+    lifespan=lifespan,
+)
+
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins_list,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# Global exception handler — logs to diagnostic_logs
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Catch unhandled exceptions, log them, and return 500."""
+    db = SessionLocal()
+    try:
+        from app.models.diagnostic_log import DiagnosticLog
+
+        log = DiagnosticLog(
+            level="ERROR",
+            message=f"Unhandled exception: {str(exc)}",
+            metadata_json=json.dumps({
+                "path": str(request.url),
+                "method": request.method,
+                "traceback": traceback.format_exc(),
+            }),
+        )
+        db.add(log)
+        db.commit()
+    except Exception:
+        pass
+    finally:
+        db.close()
+
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"},
+    )
+
+
+# Health check
+@app.get("/api/health", tags=["health"])
+def health_check():
+    """Health check endpoint."""
+    return {"status": "ok"}
+
+
+# Register routers
+from app.routers import auth, settings as settings_router, subjects, files, generations, prototypes, documents, backups, diagnostics  # noqa: E402
+
+app.include_router(auth.router, prefix="/api")
+app.include_router(settings_router.router, prefix="/api")
+app.include_router(subjects.router, prefix="/api")
+app.include_router(files.router, prefix="/api")
+app.include_router(generations.router, prefix="/api")
+app.include_router(prototypes.router, prefix="/api")
+app.include_router(documents.router, prefix="/api")
+app.include_router(backups.router, prefix="/api")
+app.include_router(diagnostics.router, prefix="/api")
