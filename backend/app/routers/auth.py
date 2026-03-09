@@ -2,13 +2,28 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, Response, Cookie, Header, status
 from sqlalchemy.orm import Session as DBSession
 from typing import Optional
 
 from app.database import get_db
-from app.schemas.auth import LoginRequest, LoginResponse, LogoutResponse
-from app.services.auth_service import authenticate_user, create_session, invalidate_session
+from app.dependencies import get_current_user
+from app.models.user import User
+from app.schemas.auth import (
+    LoginRequest,
+    LoginResponse,
+    LogoutResponse,
+    ChangePasswordRequest,
+    ChangePasswordResponse,
+)
+from app.services.auth_service import (
+    authenticate_user,
+    create_session,
+    invalidate_session,
+    hash_password,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -42,7 +57,22 @@ def login(
     return LoginResponse(
         token=session.token,
         expires_at=session.expires_at,
+        must_change_password=user.must_change_password,
     )
+
+
+@router.post("/change-password", response_model=ChangePasswordResponse)
+def change_password(
+    body: ChangePasswordRequest,
+    db: DBSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Change the current user's password. Clears the must_change_password flag."""
+    current_user.password_hash = hash_password(body.new_password)
+    current_user.must_change_password = False
+    current_user.updated_at = datetime.now(timezone.utc).isoformat()
+    db.commit()
+    return ChangePasswordResponse()
 
 
 @router.post("/logout", response_model=LogoutResponse)

@@ -7,7 +7,7 @@ import Box from '@mui/material/Box';
 import CircularProgress from '@mui/material/CircularProgress';
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, mustChangePassword } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [isChecking, setIsChecking] = useState(true);
@@ -23,13 +23,18 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       const authed = isAuthenticated();
       if (!authed) {
         router.push('/login');
-      } else {
-        setIsChecking(false);
+        return;
       }
+      // Enforce password change before accessing any other page
+      if (mustChangePassword() && pathname !== '/change-password') {
+        router.push('/change-password');
+        return;
+      }
+      setIsChecking(false);
     };
 
     checkAuth();
-  }, [isAuthenticated, pathname, router]);
+  }, [isAuthenticated, mustChangePassword, pathname, router]);
 
   if (isChecking) {
     return (

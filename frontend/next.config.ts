@@ -4,15 +4,13 @@ const nextConfig: NextConfig = {
   output: 'standalone',
   transpilePackages: ['@mui/material', '@mui/system', '@mui/icons-material'],
   async rewrites() {
-    if (process.env.NODE_ENV !== 'production') {
-      return [
-        {
-          source: '/api/:path*',
-          destination: 'http://localhost:8000/api/:path*',
-        },
-      ];
-    }
-    return [];
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:8000';
+    return [
+      {
+        source: '/api/:path*',
+        destination: `${backendUrl}/api/:path*`,
+      },
+    ];
   },
 };
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
-from passlib.hash import bcrypt
+import bcrypt
 from sqlalchemy.orm import Session as DBSession
 
 from app.config import settings
@@ -15,12 +15,12 @@ from app.models.session import Session
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a plain-text password against a bcrypt hash."""
-    return bcrypt.verify(plain_password, hashed_password)
+    return bcrypt.checkpw(plain_password.encode(), hashed_password.encode())
 
 
 def hash_password(plain_password: str) -> str:
     """Hash a plain-text password with bcrypt."""
-    return bcrypt.hash(plain_password)
+    return bcrypt.hashpw(plain_password.encode(), bcrypt.gensalt()).decode()
 
 
 def authenticate_user(db: DBSession, password: str) -> User | None:

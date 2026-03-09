@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.config import settings
-from app.database import Base, engine, SessionLocal
+from app.database import SessionLocal
 from app.models import *  # noqa: F401, F403 — register all models
 
 
@@ -38,7 +38,11 @@ def _seed_database():
         # Seed default user
         user = db.query(User).first()
         if not user:
-            user = User(password_hash=settings.DEFAULT_PASSWORD_HASH)
+            from app.services.auth_service import hash_password
+            user = User(
+                password_hash=hash_password("Start1234!"),
+                must_change_password=True,
+            )
             db.add(user)
             db.commit()
 
@@ -82,14 +86,46 @@ def _start_backup_scheduler():
         return None
 
 
+def _run_migrations():
+    """Ensure the DB schema is up to date.
+
+    Uses SQLAlchemy create_all (idempotent) for the base tables, then
+    applies any missing columns manually.  This avoids Alembic multi-worker
+    race conditions on SQLite while still being safe to run in every worker.
+    """
+    from sqlalchemy import inspect, text
+    from app.database import Base, engine
+
+    # create_all creates missing tables; wrapped in try/except to handle
+    # the rare race condition when two uvicorn workers start simultaneously.
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception:
+        pass  # Another worker already created the tables — safe to ignore
+
+    # --- migration 002: add must_change_password if missing ---
+    with engine.connect() as conn:
+        inspector = inspect(engine)
+        columns = [c["name"] for c in inspector.get_columns("users")]
+        if "must_change_password" not in columns:
+            try:
+                conn.execute(
+                    text("ALTER TABLE users ADD COLUMN must_change_password INTEGER NOT NULL DEFAULT 1")
+                )
+                conn.commit()
+            except Exception:
+                # Another worker already added the column — safe to ignore
+                pass
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan: startup and shutdown."""
     # Startup
     _ensure_directories()
 
-    # Create tables
-    Base.metadata.create_all(bind=engine)
+    # Run DB migrations (creates tables + applies any new columns)
+    _run_migrations()
 
     # Seed data
     _seed_database()
