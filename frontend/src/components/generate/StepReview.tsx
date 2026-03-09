@@ -12,18 +12,25 @@ import SchoolIcon from '@mui/icons-material/School';
 import PersonIcon from '@mui/icons-material/Person';
 import { GenerationParamsForm, TYPES_WITHOUT_QUESTIONS } from '@/schemas/generation';
 import { useSubjects } from '@/hooks/useSubjects';
-import { CONTENT_TYPES, DIFFICULTY_LEVELS, EDUCATION_LEVELS } from '@/lib/constants';
-import { Subject } from '@/types';
+import { useFiles } from '@/hooks/useFiles';
+import { CONTENT_TYPES, DIFFICULTY_LEVELS } from '@/lib/constants';
+import { useLevels } from '@/hooks/useLevels';
+import { Subject, SourceFile } from '@/types';
 
 export default function StepReview() {
   const { getValues } = useFormContext<GenerationParamsForm>();
   const values = getValues();
   const { subjects } = useSubjects();
 
+  const { educationLevels } = useLevels();
+
   const contentTypeLabel = CONTENT_TYPES.find(c => c.value === values.content_type)?.label;
   const subjectName = subjects.find((s: Subject) => s.id === values.subject_id)?.name;
-  const educationLevel = EDUCATION_LEVELS.find(l => l.value === values.education_level)?.label;
+  const educationLevel = educationLevels.find(l => l.value === values.education_level)?.label || values.education_level;
   const difficultyLabel = DIFFICULTY_LEVELS.find(d => d.value === values.difficulty)?.label;
+
+  const { files: allFiles } = useFiles(values.subject_id);
+  const selectedFiles = (allFiles ?? []).filter((f: SourceFile) => (values.source_file_ids ?? []).includes(f.id));
 
   const isFreeForm = (TYPES_WITHOUT_QUESTIONS as readonly string[]).includes(values.content_type);
   const isWorksheet = values.content_type === 'worksheet';
@@ -56,8 +63,12 @@ export default function StepReview() {
             <Typography variant="body1" fontWeight="medium">{subjectName}</Typography>
           </Grid>
           <Grid item xs={6} sm={4}>
-            <Typography variant="caption" color="text.secondary">Klasa</Typography>
-            <Typography variant="body1" fontWeight="medium">{values.class_level} {educationLevel}</Typography>
+            <Typography variant="caption" color="text.secondary">Poziom edukacji</Typography>
+            <Typography variant="body1" fontWeight="medium">{educationLevel}</Typography>
+          </Grid>
+          <Grid item xs={6} sm={4}>
+            <Typography variant="caption" color="text.secondary">Klasa / Semestr</Typography>
+            <Typography variant="body1" fontWeight="medium">{values.class_level}</Typography>
           </Grid>
           
           <Grid item xs={12}><Divider /></Grid>
@@ -114,11 +125,17 @@ export default function StepReview() {
 
           <Grid item xs={12}>
             <Typography variant="caption" color="text.secondary">Wybrane pliki źródłowe</Typography>
-            <Typography variant="body1" fontWeight="medium">
-              {(values.source_file_ids && values.source_file_ids.length > 0) 
-                ? `${values.source_file_ids.length} plików` 
-                : 'Brak (generowanie na bazie wiedzy własnej AI i instrukcji)'}
-            </Typography>
+            {selectedFiles.length > 0 ? (
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                {selectedFiles.map((f: SourceFile) => (
+                  <Chip key={f.id} label={f.filename} size="small" variant="outlined" />
+                ))}
+              </Box>
+            ) : (
+              <Typography variant="body1" fontWeight="medium">
+                Brak (generowanie na bazie wiedzy własnej AI i instrukcji)
+              </Typography>
+            )}
           </Grid>
         </Grid>
       </Paper>

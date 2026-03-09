@@ -18,6 +18,7 @@ import AlertTitle from '@mui/material/AlertTitle';
 import Chip from '@mui/material/Chip';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
+import SchoolIcon from '@mui/icons-material/School';
 import NextLink from 'next/link';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -25,6 +26,7 @@ import { GenerationParamsSchema, GenerationParamsForm, TYPES_WITHOUT_QUESTIONS }
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useGenerations } from '@/hooks/useGenerations';
 import { useSubjects } from '@/hooks/useSubjects';
+import { useLevels } from '@/hooks/useLevels';
 import { CONTENT_TYPES } from '@/lib/constants';
 
 import StepContentType from './StepContentType';
@@ -65,8 +67,13 @@ export default function GenerationWizard() {
   const { createGeneration, isCreating } = useGenerations();
 
   const contentType = watch('content_type');
+  const educationLevel = watch('education_level');
+  const classLevel = watch('class_level');
   const isFreeForm = (TYPES_WITHOUT_QUESTIONS as readonly string[]).includes(contentType);
   const contentTypeLabel = CONTENT_TYPES.find(t => t.value === contentType)?.label;
+
+  const { educationLevels } = useLevels();
+  const educationLevelLabel = educationLevels.find(l => l.value === educationLevel)?.label || educationLevel;
 
   // Last content step index (4 total, but step 2 is skipped for free-form types)
   const lastStep = ALL_STEPS.length - 1;
@@ -175,12 +182,34 @@ export default function GenerationWizard() {
     <Paper sx={{ p: 4 }}>
       {/* Selected content type badge – visible after step 0 */}
       {activeStep > 0 && contentTypeLabel && (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3, p: 1.5, borderRadius: 1, bgcolor: 'primary.50', border: 1, borderColor: 'primary.200' }}>
-          <AutoAwesomeIcon color="primary" fontSize="small" />
-          <Box>
-            <Box component="span" sx={{ fontSize: 11, color: 'text.secondary', display: 'block', lineHeight: 1 }}>Typ materiału</Box>
-            <Chip label={contentTypeLabel} color="primary" size="small" sx={{ mt: 0.5 }} />
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3, p: 1.5, borderRadius: 1, bgcolor: 'primary.50', border: 1, borderColor: 'primary.200', flexWrap: 'wrap' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <AutoAwesomeIcon color="primary" fontSize="small" />
+            <Box>
+              <Box component="span" sx={{ fontSize: 11, color: 'text.secondary', display: 'block', lineHeight: 1 }}>Typ treści</Box>
+              <Chip label={contentTypeLabel} color="primary" size="small" sx={{ mt: 0.5 }} />
+            </Box>
           </Box>
+
+          {activeStep > 1 && educationLevelLabel && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <SchoolIcon color="secondary" fontSize="small" />
+              <Box>
+                <Box component="span" sx={{ fontSize: 11, color: 'text.secondary', display: 'block', lineHeight: 1 }}>Poziom edukacji</Box>
+                <Chip label={educationLevelLabel} color="secondary" size="small" sx={{ mt: 0.5 }} />
+              </Box>
+            </Box>
+          )}
+
+          {activeStep > 1 && classLevel && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <SchoolIcon color="info" fontSize="small" />
+              <Box>
+                <Box component="span" sx={{ fontSize: 11, color: 'text.secondary', display: 'block', lineHeight: 1 }}>Klasa / Semestr</Box>
+                <Chip label={classLevel} color="info" size="small" sx={{ mt: 0.5 }} />
+              </Box>
+            </Box>
+          )}
         </Box>
       )}
 

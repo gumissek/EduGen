@@ -6,8 +6,14 @@ import Grid from '@mui/material/Grid';
 import TextField from '@mui/material/TextField';
 import MenuItem from '@mui/material/MenuItem';
 import Autocomplete, { createFilterOptions } from '@mui/material/Autocomplete';
+import IconButton from '@mui/material/IconButton';
+import Tooltip from '@mui/material/Tooltip';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { GenerationParamsForm } from '@/schemas/generation';
 import { useSubjects } from '@/hooks/useSubjects';
+import { useLevels, EducationLevelItem, ClassLevelItem } from '@/hooks/useLevels';
 import { LANGUAGE_LEVELS } from '@/lib/constants';
 import CircularProgress from '@mui/material/CircularProgress';
 import { Subject } from '@/types';
@@ -19,11 +25,6 @@ interface EduLevelOption {
   classRange?: [number, number];
 }
 
-const EDUCATION_LEVEL_OPTIONS: EduLevelOption[] = [
-  { value: 'primary',   label: 'Szkoła podstawowa', classRange: [1, 8] },
-  { value: 'secondary', label: 'Szkoła średnia',    classRange: [1, 4] },
-];
-
 interface ClassOption {
   value: string;
   label: string;
@@ -33,25 +34,40 @@ interface ClassOption {
 const filterEduOptions   = createFilterOptions<EduLevelOption>();
 const filterClassOptions = createFilterOptions<ClassOption>();
 
-/** Build preset class options with string values ("Klasa 1", "Klasa 2", ...) */
-function buildClassOptions(classRange: [number, number]): ClassOption[] {
-  return Array.from(
-    { length: classRange[1] - classRange[0] + 1 },
-    (_, i) => ({ value: `Klasa ${classRange[0] + i}`, label: `Klasa ${classRange[0] + i}` }),
-  );
-}
-
 export default function StepSubjectConfig() {
   const { register, watch, setValue, control, formState: { errors } } = useFormContext<GenerationParamsForm>();
   const { subjects, isLoading } = useSubjects();
+  const {
+    educationLevels,
+    isLoadingEdu,
+    createEducationLevel,
+    deleteEducationLevel,
+    classLevels,
+    isLoadingClass,
+    createClassLevel,
+    deleteClassLevel,
+  } = useLevels();
 
   const selectedEducationLevel = watch('education_level');
   const selectedSubjectId      = watch('subject_id');
 
-  const knownLevel = EDUCATION_LEVEL_OPTIONS.find(l => l.value === selectedEducationLevel);
-  const classRange: [number, number] = knownLevel?.classRange ?? [1, 8];
-  // For known edu levels show preset "Klasa X" options; for custom levels let user type freely
-  const classOptions = knownLevel ? buildClassOptions(classRange) : [];
+  // Build education level options from CSV data
+  const eduOptions: EduLevelOption[] = React.useMemo(
+    () => educationLevels.map((l) => ({
+      value: l.value,
+      label: l.label,
+      classRange: [l.class_range_start, l.class_range_end] as [number, number],
+    })),
+    [educationLevels],
+  );
+
+  const knownLevel = eduOptions.find(l => l.value === selectedEducationLevel);
+
+  // Build class options from CSV data filtered by selected education level
+  const classOptions: ClassOption[] = React.useMemo(() => {
+    const filtered = classLevels.filter(c => c.education_level === selectedEducationLevel);
+    return filtered.map(c => ({ value: c.value, label: c.label }));
+  }, [classLevels, selectedEducationLevel]);
 
   const selectedSubject   = subjects.find((s: Subject) => s.id === selectedSubjectId);
   const isLanguageSubject = selectedSubject?.name.toLowerCase().includes('jez') ||
@@ -63,7 +79,7 @@ export default function StepSubjectConfig() {
     }
   }, [subjects, selectedSubjectId, setValue]);
 
-  if (isLoading) return <CircularProgress />;
+  if (isLoading || isLoadingEdu || isLoadingClass) return <CircularProgress />;
 
   return (
     <Grid container spacing={3}>
@@ -94,14 +110,14 @@ export default function StepSubjectConfig() {
           control={control}
           render={({ field }) => {
             const currentOption: EduLevelOption | undefined =
-              EDUCATION_LEVEL_OPTIONS.find(o => o.value === field.value) ??
+              eduOptions.find(o => o.value === field.value) ??
               (field.value ? { value: field.value, label: field.value } : undefined);
 
             return (
               <Autocomplete<EduLevelOption, false, true, true>
                 freeSolo
                 value={currentOption}
-                options={EDUCATION_LEVEL_OPTIONS}
+                options={eduOptions}
                 getOptionLabel={(opt) => (typeof opt === 'string' ? opt : opt.label)}
                 filterOptions={(options, params) => {
                   const filtered = filterEduOptions(options, params);
@@ -113,19 +129,61 @@ export default function StepSubjectConfig() {
                   return filtered;
                 }}
                 disableClearable
-                onChange={(_e, newValue) => {
-                  if (newValue === null || newValue === '') {
-                    // disableClearable prevents this, but guard just in case
-                    return;
-                  } else if (typeof newValue === 'string') {
+                onChange={async (_e, newValue) => {
+                  if (newValue === null || newValue === '') return;
+
+                  let selectedValue: string;
+                  if (typeof newValue === 'string') {
                     if (newValue.trim() === '') return;
-                    field.onChange(newValue.trim());
-                    setValue('class_level', 'Klasa 1');
+                    selectedValue = newValue.trim();
                   } else {
-                    field.onChange(newValue.inputValue ?? newValue.value);
-                    setValue('class_level', 'Klasa 1');
+                    selectedValue = newValue.inputValue ?? newValue.value;
                   }
+
+                  // If this is a new custom level, persist it to CSV
+                  const isNew = !eduOptions.some(o => o.value === selectedValue);
+                  if (isNew && selectedValue) {
+                    try {
+                      await createEducationLevel({
+                        value: selectedValue,
+                        label: selectedValue,
+                        class_range_start: 1,
+                        class_range_end: 8,
+                      });
+                    } catch {
+                      // already exists or error — proceed anyway
+                    }
+                  }
+
+                  field.onChange(selectedValue);
+                  setValue('class_level', 'Klasa 1');
                 }}
+                renderOption={(props, option) => (
+                  <Box component="li" {...props} key={option.value} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                    <Typography sx={{ flex: 1 }}>{option.label}</Typography>
+                    {!option.inputValue && (
+                      <Tooltip title="Usuń poziom edukacji">
+                        <IconButton
+                          size="small"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            await deleteEducationLevel(option.value);
+                            if (field.value === option.value) {
+                              const remaining = eduOptions.filter(o => o.value !== option.value);
+                              if (remaining.length > 0) {
+                                field.onChange(remaining[0].value);
+                                setValue('class_level', 'Klasa 1');
+                              }
+                            }
+                          }}
+                          sx={{ ml: 1, color: 'error.main' }}
+                        >
+                          <DeleteOutlineIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                  </Box>
+                )}
                 renderInput={(params) => (
                   <TextField
                     {...params}
@@ -169,14 +227,61 @@ export default function StepSubjectConfig() {
                   return filtered;
                 }}
                 disableClearable
-                onChange={(_e, newValue) => {
+                onChange={async (_e, newValue) => {
                   if (newValue === null) return;
+
+                  let selectedValue: string;
                   if (typeof newValue === 'string') {
-                    if (newValue.trim()) field.onChange(newValue.trim());
+                    if (!newValue.trim()) return;
+                    selectedValue = newValue.trim();
                   } else {
-                    field.onChange(newValue.inputValue ?? newValue.value);
+                    selectedValue = newValue.inputValue ?? newValue.value;
                   }
+
+                  // Persist new custom class level to CSV
+                  const isNew = !classOptions.some(o => o.value === selectedValue);
+                  if (isNew && selectedValue && selectedEducationLevel) {
+                    try {
+                      await createClassLevel({
+                        value: selectedValue,
+                        label: selectedValue,
+                        education_level: selectedEducationLevel,
+                      });
+                    } catch {
+                      // already exists or error — proceed anyway
+                    }
+                  }
+
+                  field.onChange(selectedValue);
                 }}
+                renderOption={(props, option) => (
+                  <Box component="li" {...props} key={option.value} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                    <Typography sx={{ flex: 1 }}>{option.label}</Typography>
+                    {!option.inputValue && (
+                      <Tooltip title="Usuń klasę / semestr">
+                        <IconButton
+                          size="small"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            await deleteClassLevel({
+                              educationLevel: selectedEducationLevel,
+                              value: option.value,
+                            });
+                            if (field.value === option.value) {
+                              const remaining = classOptions.filter(o => o.value !== option.value);
+                              if (remaining.length > 0) {
+                                field.onChange(remaining[0].value);
+                              }
+                            }
+                          }}
+                          sx={{ ml: 1, color: 'error.main' }}
+                        >
+                          <DeleteOutlineIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                  </Box>
+                )}
                 renderInput={(params) => (
                   <TextField
                     {...params}
