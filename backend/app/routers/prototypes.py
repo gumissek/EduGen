@@ -3,10 +3,14 @@
 from __future__ import annotations
 
 import json
+import logging
+import traceback
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session as DBSession
+
+logger = logging.getLogger(__name__)
 
 from app.database import get_db
 from app.dependencies import get_current_user
@@ -100,7 +104,7 @@ def reprompt(
         )
 
     api_key = decrypt_api_key(user_settings.openai_api_key_encrypted)
-    model = user_settings.default_model
+    model = user_settings.default_model or "gpt-5-mini"
 
     # Use edited content if available, otherwise original
     current_content = prototype.edited_content or prototype.original_content
@@ -125,7 +129,14 @@ def reprompt(
         return PrototypeResponse.model_validate(prototype)
 
     except Exception as e:
+        logger.error(
+            "Reprompt error for generation %s [%s]: %s\n%s",
+            generation_id,
+            type(e).__name__,
+            e,
+            traceback.format_exc(),
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Reprompt failed: {str(e)}",
+            detail=f"Reprompt failed ({type(e).__name__}): {str(e)}",
         )

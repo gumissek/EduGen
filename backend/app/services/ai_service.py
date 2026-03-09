@@ -142,6 +142,33 @@ def call_openai(
         raise
 
 
+import json as _json
+import logging as _logging
+_reprompt_logger = _logging.getLogger(__name__)
+
+
+def _normalize_reprompt_response(data: dict) -> dict:
+    """Ensure the reprompt response has the expected structure."""
+    # Sometimes the model wraps the result under a nested key
+    if "questions" not in data:
+        # Try to find questions under a nested key
+        for key in ("material", "content", "result", "data"):
+            if key in data and isinstance(data[key], dict) and "questions" in data[key]:
+                data = data[key]
+                break
+        else:
+            # Give a meaningful error so the caller can surface it
+            raise ValueError(
+                f"Odpowiedź AI nie zawiera klucza 'questions'. "
+                f"Otrzymane klucze: {list(data.keys())}"
+            )
+    if not isinstance(data.get("questions"), list):
+        raise ValueError(
+            f"Klucz 'questions' nie jest listą: {type(data.get('questions'))}"
+        )
+    return data
+
+
 def call_openai_reprompt(
     db: DBSession,
     generation: Generation,
@@ -192,12 +219,48 @@ def call_openai_reprompt(
         response = client.chat.completions.create(
             model=model,
             messages=messages,
-            temperature=0.7,
             response_format={"type": "json_object"},
         )
 
         content = response.choices[0].message.content or "{}"
         usage = response.usage
+
+        # Parse and validate structure before persisting
+        try:
+            parsed = json.loads(content)
+        except json.JSONDecodeError as json_err:
+            _reprompt_logger.error(
+                "Reprompt JSON decode error. Raw content (first 500 chars): %s",
+                content[:500],
+            )
+            ai_request_err = AIRequest(
+                generation_id=generation.id,
+                model_name=model,
+                request_type="reprompt",
+                request_payload=json.dumps({"messages": messages}, ensure_ascii=False)[:10000],
+                response_payload=content[:10000],
+            )
+            db.add(ai_request_err)
+            db.commit()
+            raise ValueError(
+                f"AI zwróciło nieprawidłowy JSON: {json_err}. "
+                f"Fragment odpowiedzi: {content[:200]}"
+            ) from json_err
+
+        try:
+            parsed = _normalize_reprompt_response(parsed)
+        except ValueError as struct_err:
+            _reprompt_logger.error("Reprompt response structure invalid: %s", struct_err)
+            ai_request_err = AIRequest(
+                generation_id=generation.id,
+                model_name=model,
+                request_type="reprompt",
+                request_payload=json.dumps({"messages": messages}, ensure_ascii=False)[:10000],
+                response_payload=content[:10000],
+            )
+            db.add(ai_request_err)
+            db.commit()
+            raise
 
         ai_request = AIRequest(
             generation_id=generation.id,
@@ -212,15 +275,21 @@ def call_openai_reprompt(
         db.add(ai_request)
         db.commit()
 
-        return json.loads(content)
+        return parsed
 
     except Exception as e:
-        ai_request = AIRequest(
-            generation_id=generation.id,
-            model_name=model,
-            request_type="reprompt",
-            request_payload=json.dumps({"messages": messages, "error": str(e)}, ensure_ascii=False)[:10000],
-        )
-        db.add(ai_request)
-        db.commit()
+        # Only log & persist if not already handled above
+        if not isinstance(e, (ValueError, json.JSONDecodeError)):
+            _reprompt_logger.error("Reprompt OpenAI error: %s", e)
+            try:
+                ai_request = AIRequest(
+                    generation_id=generation.id,
+                    model_name=model,
+                    request_type="reprompt",
+                    request_payload=json.dumps({"messages": messages, "error": str(e)}, ensure_ascii=False)[:10000],
+                )
+                db.add(ai_request)
+                db.commit()
+            except Exception:
+                pass
         raise

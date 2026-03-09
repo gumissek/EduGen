@@ -57,8 +57,8 @@ export default function StepReview() {
             <Typography variant="body1" fontWeight="medium">{values.total_questions}</Typography>
           </Grid>
           <Grid item xs={4} sm={3}>
-            <Typography variant="caption" color="text.secondary">Z jakich: Otwarte</Typography>
-            <Typography variant="body1" fontWeight="medium">{values.open_questions}</Typography>
+            <Typography variant="caption" color="text.secondary">Pytania Otwarte | Zamknięte</Typography>
+            <Typography variant="body1" fontWeight="medium">{values.open_questions} | {values.closed_questions}</Typography>
           </Grid>
           <Grid item xs={4} sm={3}>
             <Typography variant="caption" color="text.secondary">Trudność</Typography>

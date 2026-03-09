@@ -19,11 +19,15 @@ from app.services.ai_service import build_system_prompt, call_openai
 
 def _render_content_html(data: dict) -> str:
     """Render AI-generated JSON into HTML content for the WYSIWYG editor."""
+    if not isinstance(data, dict):
+        return "<p><em>Błąd renderowania: nieprawidłowy format danych AI.</em></p>"
     html_parts = []
-    title = data.get("title", "Materiał edukacyjny")
+    title = data.get("title") or "Materiał edukacyjny"
     html_parts.append(f"<h1>{title}</h1>")
 
-    for q in data.get("questions", []):
+    for q in data.get("questions") or []:
+        if not isinstance(q, dict):
+            continue
         number = q.get("number", "")
         content = q.get("content", "")
         q_type = q.get("type", "open")
@@ -45,8 +49,12 @@ def _render_content_html(data: dict) -> str:
 
 def _build_answer_key(data: dict) -> str:
     """Build an answer key from the AI response."""
+    if not isinstance(data, dict):
+        return "Klucz odpowiedzi: (brak danych)"
     lines = ["Klucz odpowiedzi:", ""]
-    for q in data.get("questions", []):
+    for q in data.get("questions") or []:
+        if not isinstance(q, dict):
+            continue
         number = q.get("number", "")
         answer = q.get("correct_answer", "")
         lines.append(f"{number}. {answer}")

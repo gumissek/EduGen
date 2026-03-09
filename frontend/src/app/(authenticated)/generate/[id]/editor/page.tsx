@@ -98,8 +98,27 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
       queryClient.invalidateQueries({ queryKey: ['prototype', id] });
       success('AI zaktualizowało treść');
     },
-    onError: () => {
-      error('Błąd podczas próby aktualizacji przez AI');
+    onError: (err: unknown) => {
+      const axiosErr = err as { response?: { data?: { detail?: string } } };
+      const detail: string = axiosErr?.response?.data?.detail ?? '';
+
+      if (
+        detail.includes('nieprawidłowy JSON') ||
+        detail.includes('JSONDecodeError') ||
+        detail.includes('nie zawiera klucza') ||
+        detail.includes('nie jest listą')
+      ) {
+        // OpenAI returned malformed / unexpected JSON — safe to retry
+        error('AI zwróciło niepoprawną odpowiedź (błąd formatu JSON). Spróbuj wysłać poprawkę ponownie – zwykle wystarczy powtórzyć zapytanie.');
+      } else if (detail.includes('API key') || detail.includes('api_key') || detail.includes('Incorrect API key')) {
+        error('Brak lub nieprawidłowy klucz API OpenAI. Sprawdź konfigurację w Ustawieniach.');
+      } else if (detail.includes('Rate limit') || detail.includes('rate_limit') || detail.includes('429')) {
+        error('Przekroczono limit zapytań OpenAI (Rate Limit). Poczekaj chwilę i spróbuj ponownie.');
+      } else if (detail) {
+        error(`Błąd aktualizacji AI: ${detail}`);
+      } else {
+        error('Błąd podczas próby aktualizacji przez AI. Spróbuj ponownie.');
+      }
     },
   });
 
