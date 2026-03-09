@@ -45,7 +45,7 @@ EduGen Local is designed as a locally deployed, privacy-first web application ru
 **1. Authentication & Security Module**
 - **Purpose:** Protect the local instance from unauthorized physical/network access. 
 - **Components:** Login screen, Session validator middleware, Auto-logout timer.
-- **Dependencies:** `passlib`, DB (`users`, `sessions`).
+- **Dependencies:** `passlib` - 'bcrypt', DB (`users`, `sessions`).
 
 **2. Core Settings & Diagnostics**
 - **Purpose:** Manage the OpenAI API key, active model selection, and view system health.
@@ -417,7 +417,7 @@ Can paginate through history, trigger bulk ZIP downloads, securely manage model 
 # 10. DEVOPS / INFRASTRUCTURE TASKS
 
 - **Docker:**
-  - `backend.Dockerfile` (`python 3.11-slim`, `uv`, install `poppler-utils` if needed for fitz/pdf).
+  - `backend.Dockerfile` (`python 3.12-slim`, `uv`, install `poppler-utils` if needed for fitz/pdf).
   - `frontend.Dockerfile` (`node 20-alpine`, `npm run build`).
 - **Docker Compose:**
   - `frontend` bound strictly to `127.0.0.1:3000:3000`.
