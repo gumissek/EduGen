@@ -13,12 +13,19 @@ import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogActions from '@mui/material/DialogActions';
+import Alert from '@mui/material/Alert';
+import AlertTitle from '@mui/material/AlertTitle';
+import Chip from '@mui/material/Chip';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import FolderOpenIcon from '@mui/icons-material/FolderOpen';
+import NextLink from 'next/link';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { GenerationParamsSchema, GenerationParamsForm, TYPES_WITHOUT_QUESTIONS } from '@/schemas/generation';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useGenerations } from '@/hooks/useGenerations';
+import { useSubjects } from '@/hooks/useSubjects';
+import { CONTENT_TYPES } from '@/lib/constants';
 
 import StepContentType from './StepContentType';
 import StepSubjectConfig from './StepSubjectConfig';
@@ -46,7 +53,8 @@ export default function GenerationWizard() {
   const [activeStep, setActiveStep] = React.useState(0);
   const [confirmOpen, setConfirmOpen] = React.useState(false);
   const [draft, setDraft, removeDraft] = useLocalStorage<Partial<GenerationParamsForm>>('edugen-generation-draft', defaultValues);
-  
+  const { subjects, isLoading: subjectsLoading } = useSubjects();
+
   const methods = useForm<GenerationParamsForm>({
     resolver: zodResolver(GenerationParamsSchema),
     defaultValues: draft,
@@ -58,6 +66,7 @@ export default function GenerationWizard() {
 
   const contentType = watch('content_type');
   const isFreeForm = (TYPES_WITHOUT_QUESTIONS as readonly string[]).includes(contentType);
+  const contentTypeLabel = CONTENT_TYPES.find(t => t.value === contentType)?.label;
 
   // Last content step index (4 total, but step 2 is skipped for free-form types)
   const lastStep = ALL_STEPS.length - 1;
@@ -125,8 +134,41 @@ export default function GenerationWizard() {
     removeDraft();
   });
 
+  // No subjects yet – show blocking alert
+  if (!subjectsLoading && subjects.length === 0) {
+    return (
+      <Alert
+        severity="warning"
+        icon={<FolderOpenIcon />}
+        action={
+          <Button component={NextLink} href="/subjects" color="inherit" size="small" variant="outlined">
+            Przejdź do Przedmiotów
+          </Button>
+        }
+      >
+        <AlertTitle>Brak przedmiotów</AlertTitle>
+        Aby wygenerować materiał, musisz najpierw dodać co najmniej jeden przedmiot i wgrać pliki
+        źródłowe.{' '}
+        <NextLink href="/subjects" style={{ color: 'inherit', fontWeight: 700 }}>
+          Kliknij tutaj, aby przejść do sekcji Przedmioty →
+        </NextLink>
+      </Alert>
+    );
+  }
+
   return (
     <Paper sx={{ p: 4 }}>
+      {/* Selected content type badge – visible after step 0 */}
+      {activeStep > 0 && contentTypeLabel && (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3, p: 1.5, borderRadius: 1, bgcolor: 'primary.50', border: 1, borderColor: 'primary.200' }}>
+          <AutoAwesomeIcon color="primary" fontSize="small" />
+          <Box>
+            <Box component="span" sx={{ fontSize: 11, color: 'text.secondary', display: 'block', lineHeight: 1 }}>Typ materiału</Box>
+            <Chip label={contentTypeLabel} color="primary" size="small" sx={{ mt: 0.5 }} />
+          </Box>
+        </Box>
+      )}
+
       <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 4 }}>
         {ALL_STEPS.map((label, index) => {
           const isSkipped = index === QUESTIONS_STEP && isFreeForm;

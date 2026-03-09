@@ -19,19 +19,26 @@ import FileList from '@/components/subjects/FileList';
 import { useSubjects } from '@/hooks/useSubjects';
 import { useFiles } from '@/hooks/useFiles';
 import { useSettings } from '@/hooks/useSettings';
+import { useSearchParams } from 'next/navigation';
 
 export default function SubjectsPage() {
   const { subjects, createSubject, deleteSubject, isCreating } = useSubjects();
   const { settings } = useSettings();
+  const searchParams = useSearchParams();
   const [selectedSubjectId, setSelectedSubjectId] = React.useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
 
-  // Set first subject as default if none selected
+  // Pre-select subject from URL param (e.g. coming from dashboard)
+  const urlSubjectId = searchParams.get('subjectId');
+
+  // Set selected subject: prefer URL param, then first subject
   React.useEffect(() => {
-    if (!selectedSubjectId && subjects.length > 0) {
+    if (urlSubjectId && subjects.some((s: { id: string }) => s.id === urlSubjectId)) {
+      setSelectedSubjectId(urlSubjectId);
+    } else if (!selectedSubjectId && subjects.length > 0) {
       setSelectedSubjectId(subjects[0].id);
     }
-  }, [subjects, selectedSubjectId]);
+  }, [subjects, selectedSubjectId, urlSubjectId]);
 
   const { files, uploadFile, deleteFile } = useFiles(selectedSubjectId);
 

@@ -21,7 +21,7 @@ const drawerWidth = 260;
 
 const menuItems = [
   { text: 'Generuj', icon: <AddCircleIcon />, path: '/generate' },
-  { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
+  { text: 'Materiały', icon: <DashboardIcon />, path: '/dashboard' },
   { text: 'Przedmioty i Pliki', icon: <FolderOpenIcon />, path: '/subjects' },
   { text: 'Ustawienia', icon: <SettingsIcon />, path: '/settings' },
   { text: 'Diagnostyka', icon: <BugReportIcon />, path: '/diagnostics' },

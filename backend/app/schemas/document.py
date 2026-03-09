@@ -27,6 +27,7 @@ class DocumentDetailResponse(BaseModel):
     subject_name: str
     title: str
     content_type: str
+    education_level: str
     class_level: int
     content: str
     filename: str
@@ -46,6 +47,7 @@ class DocumentListItemResponse(BaseModel):
     subject_name: str
     title: str
     content_type: str
+    education_level: str
     class_level: int
     filename: str
     variants_count: int

@@ -21,11 +21,16 @@ import QuizIcon from '@mui/icons-material/Quiz';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 import SchoolIcon from '@mui/icons-material/School';
 import ClassIcon from '@mui/icons-material/Class';
+import FolderOpenIcon from '@mui/icons-material/FolderOpen';
+import Tooltip from '@mui/material/Tooltip';
+import IconButton from '@mui/material/IconButton';
+import CardActions from '@mui/material/CardActions';
+import Divider from '@mui/material/Divider';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { Document } from '@/schemas/document';
-import { CONTENT_TYPES } from '@/lib/constants';
+import { CONTENT_TYPES, EDUCATION_LEVELS } from '@/lib/constants';
 import DocumentCard from '@/components/documents/DocumentCard';
 import EmptyState from '@/components/ui/EmptyState';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
@@ -38,13 +43,14 @@ interface DocumentListResponse {
   per_page: number;
 }
 
-type DrillLevel = 'type' | 'subject' | 'class' | 'documents';
+type DrillLevel = 'type' | 'subject' | 'education' | 'class' | 'documents';
 
 interface DrillState {
   level: DrillLevel;
   contentType?: string;
   subjectId?: string;
   subjectName?: string;
+  educationLevel?: string;
   classLevel?: number;
 }
 
@@ -117,24 +123,44 @@ export default function DashboardPage() {
     return Object.entries(map).map(([id, { name, count }]) => ({ id, name, count }));
   }, [allDocs, drill.contentType]);
 
-  // Level 3: class levels for selected content_type + subject
-  const classGroups = React.useMemo(() => {
+  // Level 3: education levels for selected content_type + subject
+  const educationGroups = React.useMemo(() => {
     if (!drill.contentType || !drill.subjectId) return [];
-    const filtered = allDocs.filter(d => d.content_type === drill.contentType && d.subject_id === drill.subjectId);
+    const filtered = allDocs.filter(
+      d => d.content_type === drill.contentType && d.subject_id === drill.subjectId,
+    );
+    const counts: Record<string, number> = {};
+    for (const doc of filtered) {
+      const el = doc.education_level || 'primary';
+      counts[el] = (counts[el] || 0) + 1;
+    }
+    return EDUCATION_LEVELS.filter(el => counts[el.value]).map(el => ({ ...el, count: counts[el.value] }));
+  }, [allDocs, drill.contentType, drill.subjectId]);
+
+  // Level 4: class levels for selected content_type + subject + education_level
+  const classGroups = React.useMemo(() => {
+    if (!drill.contentType || !drill.subjectId || !drill.educationLevel) return [];
+    const filtered = allDocs.filter(
+      d =>
+        d.content_type === drill.contentType &&
+        d.subject_id === drill.subjectId &&
+        (d.education_level || 'primary') === drill.educationLevel,
+    );
     const counts: Record<number, number> = {};
     for (const doc of filtered) counts[doc.class_level ?? 0] = (counts[doc.class_level ?? 0] || 0) + 1;
     return Object.entries(counts)
       .map(([cl, count]) => ({ classLevel: Number(cl), count }))
       .sort((a, b) => a.classLevel - b.classLevel);
-  }, [allDocs, drill.contentType, drill.subjectId]);
+  }, [allDocs, drill.contentType, drill.subjectId, drill.educationLevel]);
 
-  // Level 4: actual documents
+  // Level 5: actual documents
   const visibleDocs = React.useMemo(() => {
     if (drill.level !== 'documents') return [];
     return allDocs.filter(
       d =>
         d.content_type === drill.contentType &&
         d.subject_id === drill.subjectId &&
+        (d.education_level || 'primary') === drill.educationLevel &&
         (d.class_level ?? 0) === drill.classLevel,
     );
   }, [allDocs, drill]);
@@ -144,8 +170,11 @@ export default function DashboardPage() {
   const goToSubjects = (contentType: string) =>
     setDrill({ level: 'subject', contentType });
 
-  const goToClasses = (subjectId: string, subjectName: string) =>
-    setDrill({ ...drill, level: 'class', subjectId, subjectName });
+  const goToEducation = (subjectId: string, subjectName: string) =>
+    setDrill({ ...drill, level: 'education', subjectId, subjectName });
+
+  const goToClasses = (educationLevel: string) =>
+    setDrill({ ...drill, level: 'class', educationLevel });
 
   const goToDocuments = (classLevel: number) =>
     setDrill({ ...drill, level: 'documents', classLevel });
@@ -153,10 +182,12 @@ export default function DashboardPage() {
   const goTo = (level: DrillLevel) => {
     if (level === 'type') setDrill({ level: 'type' });
     else if (level === 'subject') setDrill({ level: 'subject', contentType: drill.contentType });
-    else if (level === 'class') setDrill({ level: 'class', contentType: drill.contentType, subjectId: drill.subjectId, subjectName: drill.subjectName });
+    else if (level === 'education') setDrill({ level: 'education', contentType: drill.contentType, subjectId: drill.subjectId, subjectName: drill.subjectName });
+    else if (level === 'class') setDrill({ level: 'class', contentType: drill.contentType, subjectId: drill.subjectId, subjectName: drill.subjectName, educationLevel: drill.educationLevel });
   };
 
   const currentTypeLabel = CONTENT_TYPES.find(t => t.value === drill.contentType)?.label;
+  const currentEducationLabel = EDUCATION_LEVELS.find(e => e.value === drill.educationLevel)?.label;
 
   if (isLoading) {
     return (
@@ -188,18 +219,30 @@ export default function DashboardPage() {
           <Link underline="hover" sx={{ cursor: 'pointer' }} onClick={() => goTo('type')}>
             Typy treści
           </Link>
-          {drill.level !== 'subject' && (
+          {drill.level === 'subject' ? (
+            <Typography color="text.primary">{currentTypeLabel}</Typography>
+          ) : (
             <Link underline="hover" sx={{ cursor: 'pointer' }} onClick={() => goTo('subject')}>
               {currentTypeLabel}
             </Link>
           )}
-          {drill.level === 'subject' && (
-            <Typography color="text.primary">{currentTypeLabel}</Typography>
+          {drill.level !== 'subject' && (
+            drill.level === 'education' ? (
+              <Typography color="text.primary">{drill.subjectName}</Typography>
+            ) : (
+              <Link underline="hover" sx={{ cursor: 'pointer' }} onClick={() => goTo('education')}>
+                {drill.subjectName}
+              </Link>
+            )
           )}
           {(drill.level === 'class' || drill.level === 'documents') && (
-            <Link underline="hover" sx={{ cursor: 'pointer' }} onClick={() => goTo('class')}>
-              {drill.subjectName}
-            </Link>
+            drill.level === 'class' ? (
+              <Typography color="text.primary">{currentEducationLabel}</Typography>
+            ) : (
+              <Link underline="hover" sx={{ cursor: 'pointer' }} onClick={() => goTo('class')}>
+                {currentEducationLabel}
+              </Link>
+            )
           )}
           {drill.level === 'documents' && (
             <Typography color="text.primary">Klasa {drill.classLevel}</Typography>
@@ -243,12 +286,46 @@ export default function DashboardPage() {
         <Grid container spacing={3}>
           {subjectGroups.map((s) => (
             <Grid item xs={12} sm={6} md={4} key={s.id}>
-              <Card variant="outlined" sx={{ transition: 'all 0.2s', '&:hover': { borderColor: 'secondary.main', boxShadow: 2 } }}>
-                <CardActionArea onClick={() => goToClasses(s.id, s.name)} sx={{ p: 3 }}>
+              <Card variant="outlined" sx={{ transition: 'all 0.2s', '&:hover': { borderColor: 'secondary.main', boxShadow: 2 }, display: 'flex', flexDirection: 'column' }}>
+                <CardActionArea onClick={() => goToEducation(s.id, s.name)} sx={{ p: 3, flexGrow: 1 }}>
                   <CardContent sx={{ textAlign: 'center' }}>
                     <Box sx={{ color: 'secondary.main', mb: 2 }}><SchoolIcon fontSize="large" /></Box>
                     <Typography variant="h6" fontWeight="bold">{s.name}</Typography>
                     <Chip label={`${s.count} materiałów`} size="small" sx={{ mt: 1 }} />
+                  </CardContent>
+                </CardActionArea>
+                <Divider />
+                <CardActions sx={{ justifyContent: 'flex-end', px: 2, py: 0.5 }}>
+                  <Tooltip title="Zarządzaj plikami źródłowymi">
+                    <IconButton
+                      size="small"
+                      color="primary"
+                      onClick={() => router.push(`/subjects?subjectId=${s.id}`)}
+                    >
+                      <FolderOpenIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                  <Typography variant="caption" color="text.secondary">
+                    Pliki źródłowe
+                  </Typography>
+                </CardActions>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      )}
+
+      {/* Level 3 — Education levels */}
+      {drill.level === 'education' && (
+        <Grid container spacing={3}>
+          {educationGroups.map((el) => (
+            <Grid item xs={12} sm={6} key={el.value}>
+              <Card variant="outlined" sx={{ transition: 'all 0.2s', '&:hover': { borderColor: 'warning.main', boxShadow: 2 } }}>
+                <CardActionArea onClick={() => goToClasses(el.value)} sx={{ p: 3 }}>
+                  <CardContent sx={{ textAlign: 'center' }}>
+                    <Box sx={{ color: 'warning.main', mb: 2 }}><SchoolIcon fontSize="large" /></Box>
+                    <Typography variant="h6" fontWeight="bold">{el.label}</Typography>
+                    <Chip label={`${el.count} materiałów`} size="small" sx={{ mt: 1 }} />
                   </CardContent>
                 </CardActionArea>
               </Card>
@@ -257,7 +334,7 @@ export default function DashboardPage() {
         </Grid>
       )}
 
-      {/* Level 3 — Classes */}
+      {/* Level 4 — Classes */}
       {drill.level === 'class' && (
         <Grid container spacing={3}>
           {classGroups.map((cg) => (
@@ -276,7 +353,7 @@ export default function DashboardPage() {
         </Grid>
       )}
 
-      {/* Level 4 — Documents */}
+      {/* Level 5 — Documents */}
       {drill.level === 'documents' && (
         <>
           {visibleDocs.length === 0 ? (

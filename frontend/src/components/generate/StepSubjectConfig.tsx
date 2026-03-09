@@ -1,36 +1,60 @@
-'use client';
+﻿'use client';
 
 import * as React from 'react';
-import { useFormContext } from 'react-hook-form';
+import { useFormContext, Controller } from 'react-hook-form';
 import Grid from '@mui/material/Grid';
 import TextField from '@mui/material/TextField';
 import MenuItem from '@mui/material/MenuItem';
-import FormControl from '@mui/material/FormControl';
-import FormLabel from '@mui/material/FormLabel';
-import RadioGroup from '@mui/material/RadioGroup';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import Radio from '@mui/material/Radio';
+import Autocomplete, { createFilterOptions } from '@mui/material/Autocomplete';
 import { GenerationParamsForm } from '@/schemas/generation';
 import { useSubjects } from '@/hooks/useSubjects';
-import { EDUCATION_LEVELS, LANGUAGE_LEVELS } from '@/lib/constants';
+import { LANGUAGE_LEVELS } from '@/lib/constants';
 import CircularProgress from '@mui/material/CircularProgress';
 import { Subject } from '@/types';
 
+interface EduLevelOption {
+  value: string;
+  label: string;
+  inputValue?: string;
+  classRange?: [number, number];
+}
+
+const EDUCATION_LEVEL_OPTIONS: EduLevelOption[] = [
+  { value: 'primary',   label: 'Szkoła podstawowa', classRange: [1, 8] },
+  { value: 'secondary', label: 'Szkoła średnia',    classRange: [1, 4] },
+];
+
+interface ClassOption {
+  value: number | string;
+  label: string;
+  inputValue?: string;
+}
+
+const filterEduOptions   = createFilterOptions<EduLevelOption>();
+const filterClassOptions = createFilterOptions<ClassOption>();
+
+function buildClassOptions(classRange: [number, number]): ClassOption[] {
+  return Array.from(
+    { length: classRange[1] - classRange[0] + 1 },
+    (_, i) => ({ value: classRange[0] + i, label: `Klasa ${classRange[0] + i}` }),
+  );
+}
+
 export default function StepSubjectConfig() {
-  const { register, watch, setValue, formState: { errors } } = useFormContext<GenerationParamsForm>();
+  const { register, watch, setValue, control, formState: { errors } } = useFormContext<GenerationParamsForm>();
   const { subjects, isLoading } = useSubjects();
-  
+
   const selectedEducationLevel = watch('education_level');
-  const selectedSubjectId = watch('subject_id');
-  
-  const classRange = EDUCATION_LEVELS.find(l => l.value === selectedEducationLevel)?.classRange || [1, 8];
-  const classes = Array.from({ length: classRange[1] - classRange[0] + 1 }, (_, i) => classRange[0] + i);
+  const selectedSubjectId      = watch('subject_id');
 
-  // Simple heuristic for language subject (if subject name contains 'język' or 'j.')
-  const selectedSubject = subjects.find((s: Subject) => s.id === selectedSubjectId);
-  const isLanguageSubject = selectedSubject?.name.toLowerCase().includes('jęz') || selectedSubject?.name.toLowerCase().includes('j.');
+  const knownLevel = EDUCATION_LEVEL_OPTIONS.find(l => l.value === selectedEducationLevel);
+  const classRange: [number, number] = knownLevel?.classRange ?? [1, 8];
+  const classOptions = buildClassOptions(classRange);
 
-  // Initialize selected item on load if not set
+  const selectedSubject   = subjects.find((s: Subject) => s.id === selectedSubjectId);
+  const isLanguageSubject = selectedSubject?.name.toLowerCase().includes('jez') ||
+                            selectedSubject?.name.toLowerCase().includes('j.');
+
   React.useEffect(() => {
     if (!selectedSubjectId && subjects.length > 0) {
       setValue('subject_id', subjects[0].id);
@@ -41,6 +65,8 @@ export default function StepSubjectConfig() {
 
   return (
     <Grid container spacing={3}>
+
+      {/* Subject */}
       <Grid item xs={12} md={6}>
         <TextField
           select
@@ -58,45 +84,113 @@ export default function StepSubjectConfig() {
           ))}
         </TextField>
       </Grid>
-      
+
+      {/* Education level (enum + custom) */}
       <Grid item xs={12} md={6}>
-        <FormControl component="fieldset">
-          <FormLabel component="legend">Poziom edukacji</FormLabel>
-          <RadioGroup
-            row
-            name="education_level"
-            value={selectedEducationLevel}
-            onChange={(e) => {
-              setValue('education_level', e.target.value as any);
-              // Reset class level to 1 when changing education level
-              setValue('class_level', 1);
-            }}
-          >
-            {EDUCATION_LEVELS.map((level) => (
-              <FormControlLabel key={level.value} value={level.value} control={<Radio />} label={level.label} />
-            ))}
-          </RadioGroup>
-        </FormControl>
+        <Controller
+          name="education_level"
+          control={control}
+          render={({ field }) => {
+            const currentOption: EduLevelOption | null =
+              EDUCATION_LEVEL_OPTIONS.find(o => o.value === field.value) ??
+              (field.value ? { value: field.value, label: field.value } : null);
+
+            return (
+              <Autocomplete<EduLevelOption, false, false, true>
+                freeSolo
+                value={currentOption}
+                options={EDUCATION_LEVEL_OPTIONS}
+                getOptionLabel={(opt) => (typeof opt === 'string' ? opt : opt.label)}
+                filterOptions={(options, params) => {
+                  const filtered = filterEduOptions(options, params);
+                  const { inputValue } = params;
+                  const exists = options.some(o => o.label === inputValue || o.value === inputValue);
+                  if (inputValue !== '' && !exists) {
+                    filtered.push({ value: inputValue, label: `Dodaj: "${inputValue}"`, inputValue });
+                  }
+                  return filtered;
+                }}
+                onChange={(_e, newValue) => {
+                  if (newValue === null) {
+                    field.onChange('');
+                  } else if (typeof newValue === 'string') {
+                    field.onChange(newValue);
+                    setValue('class_level', 1);
+                  } else {
+                    field.onChange(newValue.inputValue ?? newValue.value);
+                    setValue('class_level', 1);
+                  }
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Poziom edukacji"
+                    required
+                    error={!!errors.education_level}
+                    helperText={errors.education_level?.message ?? 'Wybierz z listy lub wpisz własny poziom'}
+                  />
+                )}
+              />
+            );
+          }}
+        />
       </Grid>
 
+      {/* Class level (enum + custom) */}
       <Grid item xs={12} md={6}>
-        <TextField
-          select
-          fullWidth
-          label="Klasa"
-          error={!!errors.class_level}
-          helperText={errors.class_level?.message}
-          {...register('class_level', { valueAsNumber: true })}
-          value={watch('class_level')}
-        >
-          {classes.map((cls) => (
-            <MenuItem key={cls} value={cls}>
-              {cls} {selectedEducationLevel === 'primary' ? 'Szkoła Podstawowa' : 'Szkoła Średnia'}
-            </MenuItem>
-          ))}
-        </TextField>
+        <Controller
+          name="class_level"
+          control={control}
+          render={({ field }) => {
+            const numVal = Number(field.value);
+            const currentOption: ClassOption | null =
+              classOptions.find(o => o.value === numVal) ??
+              (field.value != null ? { value: numVal, label: `Klasa ${field.value}` } : null);
+
+            return (
+              <Autocomplete<ClassOption, false, false, true>
+                freeSolo
+                value={currentOption}
+                options={classOptions}
+                getOptionLabel={(opt) => (typeof opt === 'string' ? opt : opt.label)}
+                filterOptions={(options, params) => {
+                  const filtered = filterClassOptions(options, params);
+                  const { inputValue } = params;
+                  const num = Number(inputValue);
+                  const isValidNum =
+                    inputValue !== '' && !isNaN(num) && Number.isInteger(num) && num > 0;
+                  const exists = options.some(o => String(o.value) === inputValue);
+                  if (isValidNum && !exists) {
+                    filtered.push({ value: num, label: `Dodaj: klasa ${num}`, inputValue });
+                  }
+                  return filtered;
+                }}
+                onChange={(_e, newValue) => {
+                  if (newValue === null) {
+                    field.onChange(1);
+                  } else if (typeof newValue === 'string') {
+                    const n = parseInt(newValue, 10);
+                    field.onChange(isNaN(n) ? 1 : n);
+                  } else {
+                    field.onChange(Number(newValue.value) || 1);
+                  }
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Klasa"
+                    required
+                    error={!!errors.class_level}
+                    helperText={errors.class_level?.message ?? 'Wybierz z listy lub wpisz własną klasę'}
+                  />
+                )}
+              />
+            );
+          }}
+        />
       </Grid>
 
+      {/* Language level (conditional) */}
       {isLanguageSubject && (
         <Grid item xs={12} md={6}>
           <TextField
@@ -116,6 +210,7 @@ export default function StepSubjectConfig() {
         </Grid>
       )}
 
+      {/* Topic */}
       <Grid item xs={12}>
         <TextField
           fullWidth
@@ -124,6 +219,19 @@ export default function StepSubjectConfig() {
           helperText={errors.topic?.message}
           {...register('topic')}
           required
+        />
+      </Grid>
+
+      {/* Optional instructions */}
+      <Grid item xs={12}>
+        <TextField
+          fullWidth
+          multiline
+          minRows={2}
+          label="Dodatkowe wskazówki (opcjonalne)"
+          error={!!errors.instructions}
+          helperText={errors.instructions?.message}
+          {...register('instructions')}
         />
       </Grid>
     </Grid>

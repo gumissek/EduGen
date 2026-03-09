@@ -5,8 +5,10 @@ export const TYPES_WITHOUT_QUESTIONS = ['worksheet', 'lesson_materials'] as cons
 export const GenerationParamsSchema = z.object({
   content_type: z.enum(['worksheet', 'test', 'quiz', 'exam', 'lesson_materials']),
   subject_id: z.string().uuid(),
-  education_level: z.enum(['primary', 'secondary']),
-  class_level: z.number().int().min(1).max(8),
+  // education_level accepts predefined values ('primary', 'secondary') or any custom string
+  education_level: z.string().min(1, 'Poziom edukacji jest wymagany'),
+  // class_level accepts predefined integers or any positive integer (incl. custom)
+  class_level: z.number().int().min(1, 'Klasa jest wymagana').max(99),
   language_level: z.enum(['A1', 'A2', 'B1', 'B2', 'C1', 'C2']).nullable().optional(),
   topic: z.string().min(1, 'Temat jest wymagany').max(500),
   instructions: z.string().max(2000).optional(),
@@ -22,12 +24,6 @@ export const GenerationParamsSchema = z.object({
     return data.open_questions + data.closed_questions === data.total_questions;
   },
   { message: 'Suma pytań otwartych i zamkniętych musi być równa łącznej liczbie pytań', path: ['total_questions'] }
-).refine(
-  (data) => {
-    if (data.education_level === 'primary') return data.class_level >= 1 && data.class_level <= 8;
-    return data.class_level >= 1 && data.class_level <= 4;
-  },
-  { message: 'Nieprawidłowy zakres klasy', path: ['class_level'] }
 );
 
 export type GenerationParamsForm = z.infer<typeof GenerationParamsSchema>;

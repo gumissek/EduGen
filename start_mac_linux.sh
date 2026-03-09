@@ -72,50 +72,35 @@ echo "Budowanie i uruchamianie aplikacji..."
 echo "(Pierwsze uruchomienie moze trwac kilka minut - trwa pobieranie obrazow)"
 echo ""
 
-# Budowanie i uruchamianie kontenerow
-docker compose up --build -d
+# ── Obsluga CTRL+C: zatrzymaj kontenery przy wyjsciu ─────────────────────────
+trap 'echo ""; echo "Zatrzymywanie kontenerow..."; docker compose down; exit 0' INT TERM
+
+# ── Otworz przegladarke w tle po 15 sekundach ────────────────────────────────
+(
+  sleep 15
+  if [[ "$(uname)" == "Darwin" ]]; then
+    open "http://localhost:3000"
+  else
+    xdg-open "http://localhost:3000" &>/dev/null || true
+  fi
+) &
 
 echo ""
 echo "============================================"
-echo "  Aplikacja zostala uruchomiona pomyslnie!"
+echo "  Aplikacja uruchamia sie - czekaj na logi"
 echo "============================================"
 echo ""
 echo "  Frontend (interfejs):  http://localhost:3000"
 echo "  Backend  (API):        http://localhost:8000"
 echo ""
+echo "Nacisnij CTRL + C aby zatrzymac aplikacje."
+echo ""
 
-echo "Otwieranie aplikacji w przegladarce za 5 sekund..."
-sleep 5
-
-if [[ "$(uname)" == "Darwin" ]]; then
-    open "http://localhost:3000"
-else
-    xdg-open "http://localhost:3000" &>/dev/null || true
-fi
+# Uruchamianie w trybie interaktywnym (CTRL+C zatrzyma kontenery)
+docker compose up --build
 
 echo ""
 echo "============================================"
-echo "        Jak zamknac aplikacje"
+echo "  Aplikacja zostala zatrzymana."
 echo "============================================"
-echo ""
-
-echo "Jesli aplikacja jest uruchomiona w tym oknie terminala,"
-echo "mozesz ja zatrzymac naciskajac:"
-echo ""
-echo "  CTRL + C"
-echo ""
-
-echo "Aby zatrzymac aplikacje i usunac kontenery:"
-echo ""
-echo "  docker compose down"
-echo ""
-
-echo "Jesli chcesz dodatkowo usunac wolumeny (np. baze danych):"
-echo ""
-echo "  docker compose down -v"
-echo ""
-
-echo "Jesli aplikacja byla uruchomiona przez ten skrypt,"
-echo "wystarczy otworzyc terminal w folderze projektu"
-echo "i wpisac jedna z powyzszych komend."
 echo ""

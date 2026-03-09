@@ -18,7 +18,7 @@ Niniejsza instrukcja przeprowadzi Cię przez proces uruchomienia aplikacji EduGe
 ## 1. Co będzie potrzebne
 
 - Komputer z systemem **Windows 10/11**, **macOS** lub **Linux**
-- Połączenie z Internetem (tylko przy pierwszym uruchomieniu – pobieranie składników)
+- Połączenie z Internetem 
 - Plik konfiguracyjny **`.env`** dostarczony przez administratora
 
 ---
@@ -51,26 +51,7 @@ Docker Desktop to program, który pozwala uruchamiać aplikacje w izolowanych ko
 
 ---
 
-## Krok 2 – Konfiguracja aplikacji
-
-Przed pierwszym uruchomieniem musisz umieścić plik konfiguracyjny w odpowiednim miejscu.
-
-1. Otrzymaj plik **`.env`** od administratora aplikacji
-2. Umieść go w folderze **`backend`** wewnątrz folderu EduGen:
-
-```
-EduGen/
-  backend/
-    .env         ← tutaj wklej plik
-  frontend/
-  ...
-```
-
-> **Uwaga:** Plik o nazwie `.env` może być niewidoczny w systemie Windows, ponieważ system ukrywa pliki zaczynające się od kropki. Jeśli masz problem z jego umieszczeniem, poproś o pomoc kogoś technicznego.
-
----
-
-## Krok 3 – Uruchomienie aplikacji
+## Krok 2 – Uruchomienie aplikacji
 
 ### Windows
 
