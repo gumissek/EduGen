@@ -22,7 +22,8 @@ const TipTapEditor = dynamic(() => import('@/components/editor/TipTapEditor'), {
   ),
 });
 
-export default function DocumentDetailsPage({ params }: { params: { id: string } }) {
+export default function DocumentDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = React.use(params);
   const router = useRouter();
   const { 
     document, 
@@ -33,14 +34,14 @@ export default function DocumentDetailsPage({ params }: { params: { id: string }
     isExportingPDF, 
     exportWord, 
     isExportingWord 
-  } = useDocumentDetails(params.id);
+  } = useDocumentDetails(id);
 
   const [content, setContent] = React.useState('');
   const [isEdited, setIsEdited] = React.useState(false);
 
   React.useEffect(() => {
     if (document?.content && !isEdited) {
-      setContent(document.content);
+      setContent(document.content ?? '');
     }
   }, [document, isEdited]);
 
@@ -101,7 +102,7 @@ export default function DocumentDetailsPage({ params }: { params: { id: string }
           initialContent={content} 
           onChange={(html) => {
             setContent(html);
-            if (html !== document.content) setIsEdited(true);
+            if (html !== (document.content ?? '')) setIsEdited(true);
           }} 
         />
       </Box>

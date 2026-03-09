@@ -49,9 +49,6 @@ export default function DocumentCard({ document, onDelete }: DocumentCardProps) 
           </Box>
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
             <Chip label={typeLabel} size="small" variant="outlined" />
-            {document.subject && (
-              <Chip label={document.subject.name} size="small" color="primary" variant="outlined" />
-            )}
           </Box>
         </CardContent>
       </CardActionArea>

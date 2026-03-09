@@ -119,7 +119,7 @@ export default function StepSubjectConfig() {
       <Grid item xs={12}>
         <TextField
           fullWidth
-          label="Temat zajęć / sprawdzianu"
+          label="Temat przewodni"
           error={!!errors.topic}
           helperText={errors.topic?.message}
           {...register('topic')}

@@ -1,17 +1,16 @@
 import { z } from 'zod';
-import { SubjectSchema } from './subject';
 
 export const DocumentSchema = z.object({
   id: z.string().uuid(),
-  subject_id: z.string().uuid(),
+  generation_id: z.string().uuid(),
+  subject_id: z.string(),
   title: z.string(),
-  content_type: z.enum(['worksheet', 'test', 'quiz', 'exam', 'lesson_materials']),
-  content: z.string(),
-  created_at: z.string().datetime(),
-  updated_at: z.string().datetime(),
-  
-  // Optional relations
-  subject: SubjectSchema.optional(),
+  content_type: z.string(),
+  content: z.string().optional(),
+  filename: z.string(),
+  variants_count: z.number(),
+  created_at: z.string(),
+  updated_at: z.string(),
 });
 
 export type Document = z.infer<typeof DocumentSchema>;

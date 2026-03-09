@@ -127,8 +127,9 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
     mutationFn: async () => {
       // Save pending edits first
       await saveMutation.mutateAsync(content);
-      // Create final document
-      const res = await api.post(`/api/documents/${id}/finalize`);
+      // Create final document — use generation_id from prototype, not prototype id
+      const generationId = prototype!.generation_id;
+      const res = await api.post(`/api/documents/${generationId}/finalize`);
       return res.data as DocumentData;
     },
     onSuccess: (data: DocumentData) => {

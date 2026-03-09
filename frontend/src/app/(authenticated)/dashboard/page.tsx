@@ -70,7 +70,7 @@ export default function DashboardPage() {
       <ConfirmDialog
         open={!!deleteId}
         title="Usuń materiał"
-        message="Czy na pewno chcesz usunąć ten wygenerowany dokument? Tej operacji nie można prościej cofnąć."
+        message="Czy na pewno chcesz usunąć ten wygenerowany dokument? Tej operacji nie można cofnąć."
         confirmLabel="Usuń"
         severity="error"
         onConfirm={handleDeleteConfirm}
