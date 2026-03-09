@@ -27,6 +27,7 @@ class Generation(Base):
     open_questions: Mapped[int] = mapped_column(Integer, nullable=False)
     closed_questions: Mapped[int] = mapped_column(Integer, nullable=False)
     variants_count: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    task_types: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[str] = mapped_column(String, nullable=False, default=lambda: datetime.now(timezone.utc).isoformat(), index=True)
     updated_at: Mapped[str] = mapped_column(String, nullable=False, default=lambda: datetime.now(timezone.utc).isoformat())
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="draft", index=True)

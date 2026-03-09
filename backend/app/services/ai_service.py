@@ -100,6 +100,15 @@ def build_system_prompt(generation: Generation, source_texts: list[str]) -> str:
         f"{generation.open_questions} pytań otwartych i {generation.closed_questions} pytań zamkniętych."
     )
 
+    if getattr(generation, "task_types", None):
+        try:
+            tasks_list = json.loads(generation.task_types)
+            if tasks_list:
+                tasks_str = ", ".join(tasks_list)
+                prompt_parts.append(f"Uwzględnij wymieszane następujące typy zadań/pytań ze wskazaną specyfikacją: {tasks_str}.")
+        except Exception:
+            prompt_parts.append(f"Uwzględnij wymieszane następujące typy zadań/pytań ze wskazaną specyfikacją: {generation.task_types}.")
+
     if generation.closed_questions > 0:
         prompt_parts.append(
             "Dla pytań zamkniętych podaj 4 opcje odpowiedzi (a, b, c, d) z jedną poprawną."

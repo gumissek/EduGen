@@ -17,13 +17,21 @@ export const GenerationParamsSchema = z.object({
   open_questions: z.number().int().min(0),
   closed_questions: z.number().int().min(0),
   variants_count: z.number().int().min(1).max(6),
+  task_types: z.array(z.string()).optional(),
   source_file_ids: z.array(z.string().uuid()).optional(),
 }).refine(
   (data) => {
     if ((TYPES_WITHOUT_QUESTIONS as readonly string[]).includes(data.content_type)) return true;
-    return data.open_questions + data.closed_questions === data.total_questions;
+    
+    if (data.total_questions <= 0) return false;
+    
+    const hasOpen = data.open_questions > 0;
+    const hasClosed = data.closed_questions > 0;
+    const hasTaskTypes = data.task_types && data.task_types.length > 0;
+    
+    return hasOpen || hasClosed || hasTaskTypes;
   },
-  { message: 'Suma pytań otwartych i zamkniętych musi być równa łącznej liczbie pytań', path: ['total_questions'] }
+  { message: 'Liczba zadań musi być większa od zera i należy wybrać pytania otwarte, zamknięte lub typ zadań', path: ['total_questions'] }
 );
 
 export type GenerationParamsForm = z.infer<typeof GenerationParamsSchema>;

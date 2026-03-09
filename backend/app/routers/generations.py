@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import json
 
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, status
 from sqlalchemy.orm import Session as DBSession
@@ -39,6 +40,7 @@ def create_generation(
         open_questions=body.open_questions,
         closed_questions=body.closed_questions,
         variants_count=body.variants_count,
+        task_types=json.dumps(body.task_types) if body.task_types else None,
         status="processing",
     )
     db.add(generation)

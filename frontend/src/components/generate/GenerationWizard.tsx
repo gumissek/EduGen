@@ -23,6 +23,7 @@ import NextLink from 'next/link';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { GenerationParamsSchema, GenerationParamsForm, TYPES_WITHOUT_QUESTIONS } from '@/schemas/generation';
+import { GenerationParams } from '@/types';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useGenerations } from '@/hooks/useGenerations';
 import { useSubjects } from '@/hooks/useSubjects';
@@ -48,6 +49,7 @@ const defaultValues: Partial<GenerationParamsForm> = {
   open_questions: 0,
   closed_questions: 10,
   variants_count: 1,
+  task_types: [],
   source_file_ids: [],
 };
 
@@ -94,11 +96,12 @@ export default function GenerationWizard() {
       setValue('open_questions', 0);
       setValue('closed_questions', 0);
       setValue('variants_count', 1);
+      setValue('task_types', []);
     }
   }, [isFreeForm, setValue]);
 
   const handleNext = async () => {
-    let fieldsToValidate: any[] = [];
+    let fieldsToValidate: (keyof GenerationParamsForm)[] = [];
     if (activeStep === 0) fieldsToValidate = ['content_type'];
     if (activeStep === 1) fieldsToValidate = ['subject_id', 'education_level', 'class_level', 'topic'];
     if (activeStep === QUESTIONS_STEP) fieldsToValidate = ['total_questions', 'open_questions', 'closed_questions', 'difficulty', 'variants_count'];
@@ -130,12 +133,14 @@ export default function GenerationWizard() {
   const handleConfirmGenerate = handleSubmit(async (data: GenerationParamsForm) => {
     setConfirmOpen(false);
     // Zero out question-related fields for free-form types before submitting
-    const payload: any = { ...data };
+    const payload = { ...data } as GenerationParams;
     if ((TYPES_WITHOUT_QUESTIONS as readonly string[]).includes(data.content_type)) {
       payload.total_questions = 0;
       payload.open_questions = 0;
       payload.closed_questions = 0;
       payload.variants_count = 1;
+      payload.difficulty = 1;
+      payload.task_types = [];
     }
     await createGeneration(payload);
     removeDraft();

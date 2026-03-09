@@ -93,7 +93,7 @@ export default function StepReview() {
               <Grid item xs={12}><Divider /></Grid>
 
               <Grid item xs={4} sm={3}>
-                <Typography variant="caption" color="text.secondary">Łączna liczba pytań</Typography>
+                <Typography variant="caption" color="text.secondary">Liczba zadań</Typography>
                 <Typography variant="body1" fontWeight="medium">{values.total_questions}</Typography>
               </Grid>
               <Grid item xs={4} sm={3}>
@@ -108,6 +108,16 @@ export default function StepReview() {
                 <Typography variant="caption" color="text.secondary">Liczba wariantów</Typography>
                 <Typography variant="body1" fontWeight="medium">{values.variants_count}</Typography>
               </Grid>
+              {values.task_types && values.task_types.length > 0 && (
+                <Grid item xs={12} sx={{ mt: 1 }}>
+                  <Typography variant="caption" color="text.secondary">Wybrane typy zadań</Typography>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                    {values.task_types.map((type: string) => (
+                      <Chip key={type} label={type} size="small" variant="outlined" color="primary" />
+                    ))}
+                  </Box>
+                </Grid>
+              )}
             </>
           )}
 

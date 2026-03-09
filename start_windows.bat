@@ -1,6 +1,8 @@
 @echo off
 setlocal EnableDelayedExpansion
 
+call check_update.bat
+
 echo ============================================
 echo         EduGen - Uruchamianie aplikacji
 echo ============================================
@@ -71,3 +73,6 @@ echo.
 docker compose up --build
 
 powershell -Command "Write-Host '' ; Write-Host '============================================' -ForegroundColor Yellow ; Write-Host '  Aplikacja zostala zatrzymana.' -ForegroundColor Yellow ; Write-Host '============================================' -ForegroundColor Yellow"
+
+echo.
+pause

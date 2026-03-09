@@ -38,4 +38,5 @@ export interface GenerationParams {
   closed_questions: number;
   variants_count: number;
   source_file_ids?: string[];
+  task_types?: string[];
 }

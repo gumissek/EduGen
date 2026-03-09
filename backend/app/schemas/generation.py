@@ -20,6 +20,7 @@ class GenerationCreate(BaseModel):
     open_questions: int
     closed_questions: int
     variants_count: int = 1
+    task_types: List[str] = []
     source_file_ids: List[str] = []
 
     @field_validator('subject_id', mode='before')
@@ -100,9 +101,18 @@ class GenerationCreate(BaseModel):
         free_form_types = {'worksheet', 'lesson_materials'}
         if content_type in free_form_types:
             return v  # no validation for free-form types
-        if 'total_questions' in data and 'open_questions' in data:
-            if data['open_questions'] + v != data['total_questions']:
-                raise ValueError('Suma pytań otwartych i zamkniętych musi być równa łącznej liczbie pytań')
+            
+        total_q = data.get('total_questions', 0)
+        if total_q <= 0:
+            raise ValueError('Liczba zadań musi być większa od zera')
+            
+        has_open = data.get('open_questions', 0) > 0
+        has_closed = v > 0
+        has_tasks = len(data.get('task_types', [])) > 0
+        
+        if not (has_open or has_closed or has_tasks):
+            raise ValueError('Należy wybrać pytania otwarte, zamknięte lub typ zadań')
+            
         return v
 
 
@@ -120,10 +130,22 @@ class GenerationResponse(BaseModel):
     open_questions: int
     closed_questions: int
     variants_count: int
+    task_types: List[str] = []
     status: str
     error_message: Optional[str] = None
     created_at: str
     updated_at: str
+
+    @field_validator('task_types', mode='before')
+    @classmethod
+    def parse_task_types(cls, v):
+        if isinstance(v, str):
+            import json
+            try:
+                return json.loads(v)
+            except Exception:
+                return []
+        return v or []
 
     class Config:
         from_attributes = True

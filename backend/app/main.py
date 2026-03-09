@@ -92,16 +92,17 @@ def _run_migrations():
     # --- migration 002: add must_change_password if missing ---
     with engine.connect() as conn:
         inspector = inspect(engine)
-        columns = [c["name"] for c in inspector.get_columns("users")]
-        if "must_change_password" not in columns:
-            try:
-                conn.execute(
-                    text("ALTER TABLE users ADD COLUMN must_change_password INTEGER NOT NULL DEFAULT 1")
-                )
-                conn.commit()
-            except Exception:
-                # Another worker already added the column — safe to ignore
-                pass
+        if inspector.has_table("users"):
+            columns = [c["name"] for c in inspector.get_columns("users")]
+            if "must_change_password" not in columns:
+                try:
+                    conn.execute(
+                        text("ALTER TABLE users ADD COLUMN must_change_password INTEGER NOT NULL DEFAULT 1")
+                    )
+                    conn.commit()
+                except Exception:
+                    # Another worker already added the column — safe to ignore
+                    pass
 
 
 @asynccontextmanager
@@ -181,7 +182,7 @@ def health_check():
 
 
 # Register routers
-from app.routers import auth, settings as settings_router, subjects, files, generations, prototypes, documents, backups, diagnostics, levels  # noqa: E402
+from app.routers import auth, settings as settings_router, subjects, files, generations, prototypes, documents, backups, diagnostics, levels, task_types  # noqa: E402
 
 app.include_router(auth.router, prefix="/api")
 app.include_router(settings_router.router, prefix="/api")
@@ -193,3 +194,4 @@ app.include_router(documents.router, prefix="/api")
 app.include_router(backups.router, prefix="/api")
 app.include_router(diagnostics.router, prefix="/api")
 app.include_router(levels.router, prefix="/api")
+app.include_router(task_types.router, prefix="/api")

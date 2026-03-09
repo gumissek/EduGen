@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+bash check_update.sh || true
+
 echo "============================================"
 echo "        EduGen - Uruchamianie aplikacji"
 echo "============================================"
@@ -118,3 +120,6 @@ echo "============================================"
 echo "  Aplikacja zostala zatrzymana."
 echo "============================================"
 echo ""
+
+echo "Nacisnij Enter, aby zamknac to okno..."
+read -r
