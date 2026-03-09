@@ -55,9 +55,9 @@ Skrypty automatyzujące muszą otrzymać najpierw odpowiednie uprawnienia system
 ```bash
 cd ~/Desktop/EduGen
 ``` 
-2. Mając otwartą sesję z wnętrza środowiska aplikacji nadaj skryptowi potrzebne oprogramowaniu autoryzacje zezwalające wprost:
+2. Mając otwartą sesję z wnętrza środowiska aplikacji nadaj skryptom potrzebne oprogramowaniu autoryzacje zezwalające wprost:
 ```bash
-chmod +x start_mac_linux.sh
+chmod +x start_mac_linux.sh Uruchom_Mac.command
 ```
 
 ---
@@ -116,6 +116,7 @@ Mając weryfikację gotowego środowiska Docker oraz poprawne przeniesienie plik
 ### Komputery macOS / Linux
 
 1. Upewnij się, że narzędzie **Docker Desktop jest włączone**.
+> **Porada dla użytkowników Mac:** Zamiast używać terminala (krok 2-5), możesz po prostu wejść do folderu projektu EduGen i dwukrotnie kliknąć plik **`Uruchom_Mac.command`**. Skrypt samodzielnie uruchomi terminal i wykonana poniższe kroki. Pamiętaj tylko o wcześniejszym nadaniu mu uprawnień zgodnie z Krokiem 1 punkt 3.
 2. Otwórz systemowy program **Terminal** (na Macu najszybciej znajdziesz go wpisując `Terminal` po wciśnięciu komendy narzędzia wyszukiwania - `⌘ Cmd + Spacja`).
 3. Przejdź do pobranego folderu. Poprawnie nadano mu już uprawnienia po pobieraniu plików w Kroku 1 (Instrukcja powyżej).
 4. Uruchom skrypt serwerowy wprowadzając wprost do paska konsoli główną komendę i enter:
@@ -124,7 +125,7 @@ Mając weryfikację gotowego środowiska Docker oraz poprawne przeniesienie plik
 bash start_mac_linux.sh
 ```
 
-5. Skrypt automatycznie otworzy nową stronę na przeglądarce po zakończeniu procesu po upływie chwili pod adresem **http://localhost:3000**. Jeżeli tak się nie stanie automatycznie, wystarczy wpisać adres URL do swojej przeglądarki.
+5. Skrypt automatycznie otworzy nową stronę na przeglądarce po zakończeniu procesu po upływie około 15 sekund pod adresem **http://localhost:3000**. Jeżeli tak się nie stanie automatycznie, wystarczy wpisać adres URL do swojej przeglądarki. Interfejs będzie tam na Ciebie czekał, natomiast z tyłu serwer będzie utrzymywany przez backend pod lokalnym adresem **http://localhost:8000**.
 
 ---
 
@@ -139,14 +140,14 @@ Z chwilą zalogowania użytkownika na docelową platformę internetową pod wspo
 Aplikacja pozostaje uruchomiona w tle tak długo, jak aktywne jest okno konsoli terminala. Krok jej bezproblemowego zatrzymania po zakończeniu pracy należy wdrożyć według wytycznych poniżej. Pomyślne zatrzymywanie procesów zachowuje pełną sprawność procesora RAM dla Twojego sprzętu podczas zakończenia projektów na daną sesję roboczą platformy.
 
 ### Komputery Windows:
-1. Przejdź z powrotem do użytego wcześniej, otwartego wiersza poleceń ( konsoli ) wewnątrz którego załadowana został uruchomiony plik **`start_windows.bat`**.
+1. Przejdź z powrotem do użytego wcześniej, otwartego wiersza poleceń (konsoli) wewnątrz którego załadowany został i uruchomiony plik **`start_windows.bat`**.
 2. Na klawiaturze naciśnij jednocześnie klawisze **CTRL + C**.
-3. Gdy konsola zapyta o potwierdzenie procedury zamknięcia środowiskowego procesu wykonawczego pytaniem (Przerwanie działania skryptu wsadowego?) wpisz w dolnej podpowiedzi pole konsoli wiersza na znak **Y** i ostatecznie wciśnij akceptacją poleceniem **Enter**.
+3. Gdy konsola zapyta o potwierdzenie procedury zamknięcia środowiskowego procesu wykonawczego pytaniem ("Przerwanie działania skryptu wsadowego? / Terminate batch job?") wpisz w dolnej podpowiedzi pole konsoli wiersza na znak **T** (lub **Y** w zależności od języka systemu) i ostatecznie wciśnij akceptację poleceniem **Enter**. Skrypt samodzielnie zatrzyma wyodrębnione kontenery i bezpiecznie odłoży środowisko w stan wstrzymania.
 
 ### Komputery macOS / Linux:
-1. Przejdź z powrotem do otwartego okna **Terminal**.
-2. Na klawiaturze naciśnij jednocześnie i przytrzymaj klawisze **CTRL + C**.
-3. Gdy konsola zapyta o potwierdzenie procedury zamknięcia wpisz w dolnej podpowiedzi pole konsoli wiersza na znak **Y** i ostatecznie wciśnij akceptacją poleceniem **Enter**.
+1. Przejdź z powrotem do otwartego okna **Terminal** z procesem wywołującym polecenie dla skryptów **`start_mac_linux.sh`** lub **`Uruchom_Mac.command`**.
+2. Na klawiaturze naciśnij jednocześnie klawisze **CTRL + C**.
+3. Kontenery automatycznie rozpoczną się zatrzymywać dzięki obsłudze tzw. "trapa", informując w terminalu o rozpoczęciu domyślnego wyłączania procesu dla całych architektur aplikacji poprzez funkcje deweloperskie zachowujące pełną niezależność, np. _"Zatrzymywanie kontenerow..."_.
 
 ---
 

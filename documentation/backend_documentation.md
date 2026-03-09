@@ -55,7 +55,7 @@ Konfiguracja silnika SQLAlchemy (SQLite):
 Kod dzieli się na dedykowane pliki modelowe oparte na `DeclarativeBase`. Kluczowe encje:
 - **`user.py`** (Zarządzanie kontami i hasłami, wymuszona zmiana hasła `must_change_password`)
 - **`session.py`** (Aktywne sesje auth dla użytkowników, `expires_at`, `token`)
-- **`generation.py`** & **`prototype.py`** (Logika zadań AI: parametry generacji a zrenderowane rezultaty docelowe JSON/HTML)
+- **`generation.py`** & **`prototype.py`** (Logika zadań AI: parametry generacji a zrenderowane rezultaty docelowe JSON/HTML) - W modelu Generation uwzględniono m.in. pole `task_types` obsługujące typy zadań w edukacyjnych materiałach.
 - **`source_file.py`** & **`document.py`** (Przetwarzanie dokumentów dostarczanych przez użytkownika na tekst używany jako kontekst AI)
 - **`settings.py`** (Klucz API OpenAI zapisywany jako AES encrypted string, konfig modelów LLM np. gpt-4)
 - **`diagnostic_log.py`** (Logowanie wszystkich błędów rzuconych w apce poprzez exception handler).
@@ -76,8 +76,8 @@ Zbiór usług wyizolowany z kontrolerów, separujący szczegóły implementacyjn
 
 ### `ai_service.py` 
 Odpowiada za logikę formowania wytycznych promptów (tzw. inżynierię promptów) i połączenie z zasobami OpenAI. Działa jako pośrednik z AI.
-- Formowanie tzw. **system prompts** m.in. wsparcie dla typów generacji `test`, `worksheet` (karta pracy, oddająca wygenerowany HTML zamiast tablic JSON-owych), `lesson_materials` na określone poziomy wykształcenia i trudności z wykorzystaniem enumów.
-- Formatyzacja oczekiwanej odpowiedzi do modelu API OpenAI - tryb `{"type": "json_object"}`. Zależnie od trybu (Pytania i konwersacje wolnostylowe), budowa JSON-a może przyjmować np: `title`, `questions`, `content_html` czy schemat opcji wariancyjnych ABC.
+- Formowanie tzw. **system prompts** m.in. wsparcie dla typów generacji `test`, `worksheet` (karta pracy, oddająca wygenerowany HTML zamiast tablic JSON-owych), `lesson_materials` na określone poziomy wykształcenia i trudności z wykorzystaniem enumów, a dodatkowo uwzględnianie podanych typów zadań (`task_types`).
+- Formatyzacja oczekiwanej odpowiedzi do modelu API OpenAI - tryb `{"type": "json_object"}`. Zależnie od trybu (Pytania i konwersacje wolnostylowe), budowa JSON-a może przyjmować np: `title`, `questions`, `content_html` czy schemat opcji wariancyjnych ABC. Z uwzględnieniem docelowych typów wprowadzonych przez argumenty.
 - **Logowanie** każdego z żądań/odpowiedzi i błędów w tabeli `AIRequest`.
 - Funkcje `call_openai_reprompt` oraz `call_openai_reprompt_free_form` posługujące udoskonalaniu wcześniej wygenerowanego przez uzytkownika wyniku AI poprzez interaktywne uwagi zwrotne chatbota.
 
@@ -102,6 +102,7 @@ Architektura grupuje endpointy na określone sfery:
 | `/api/auth` | Logowanie (POST) bazujące na cookies lub Bearer, logout. Zmiana hasła przez użytkowników "muszących to zrobić". |
 | `/api/settings` | Ustawienia aplikacji globalne — szyfry AES (klucze OpenAI). |
 | `/api/subjects` | Rejestr edukacyjnych dyscyplin szkolnych/tematyk. |
+| `/api/task-types` | Pobieranie i dodawanie własnych/customowych typów zadań (wspierane przez odczyt/zapis CSV). |
 | `/api/files` | Wrzucanie i cache-owanie plików pomocniczych do generatora kontekstu AI. |
 | `/api/generations` | Rozpoczęcie generatora zadań materiałowych (kierowane do async/await background taska serwisu). |
 | `/api/prototypes` | Interfejs roboczy po wygenerowaniu materiału (edytor). Funkcja AI Reprompt. Zastosowanie modyfikacji po zgłoszeniach usera. |

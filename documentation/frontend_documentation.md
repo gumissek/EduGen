@@ -39,9 +39,9 @@ Komponenty podzielone na domeny ułatwiające ich znalezienie:
 ### `generate/`
 Główny proces biznesowy to generowanie dokumentów. Elementy go wspierające:
 - `GenerationWizard.tsx` — główny komponent kreatora krok po kroku.
-- `StepContentType.tsx` — wybór typu materiału (kartkówka, sprawdzian, test, quiz).
-- `StepSubjectConfig.tsx` — wybór przedmiotu i konfiguracja tematu.
-- `StepQuestionConfig.tsx` — definicja liczby pytań i stopnia trudności.
+- `StepContentType.tsx` — wybór typu materiału (kartkówka, sprawdzian, test, quiz, materiały lekcyjne).
+- `StepSubjectConfig.tsx` — wybór przedmiotu i konfiguracja tematu (obsługa list predefiniowanych z autouzupełnianiem).
+- `StepQuestionConfig.tsx` — definicja liczby pytań, stopnia trudności oraz wybór konkretnych typów zadań (np. Prawda/Fałsz, Esej).
 - `StepSourceFiles.tsx` — wybór i dodawanie własnych plików z bazą wiedzy.
 - `StepReview.tsx` — weryfikacja danych przed uruchomieniem procesu na backendzie.
 - `GenerationStatusView.tsx` — obsługa statusów zadania, podgląd jego trwania.
@@ -76,6 +76,7 @@ Za pobieranie, cache'owanie i mutację danych odpowiedzialny jest pakiet **TanSt
 | `useDocuments.ts` | Wyświetlanie, usuwanie, podgląd detali dla `/api/documents`. Eksporter PDF (zapis Blob jako pobranie). | React Query |
 | `useGenerations.ts` | Wysłanie uformulowanych żądań o generację materiałów oraz pobranie statusu. | React Query |
 | `useSubjects.ts`, `useLevels.ts` | Dane słownikowe (dostępne przedmioty, poziomy zaawansowania dla formularzy). | React Query |
+| `useTaskTypes.ts` | Pobieranie z backendu dostępnych typów zadań do wyboru w formularzu. | React Query |
 | `useFiles.ts` | C.R.U.D plików udostępnionych dla generatorów i dodawanych do bazy (opróżnianych na tematy). | React Query |
 
 ---
@@ -85,8 +86,8 @@ Za pobieranie, cache'owanie i mutację danych odpowiedzialny jest pakiet **TanSt
 ### `src/types/index.ts`
 Znajdują się w nim główne interfejsy TypeScript służące zapewnieniu ochrony typów danych:
 
-- **Enumy / String Typy do Generacji:** `ContentType` (worksheet, test, quiz, exam), `EducationLevel`, `LanguageLevel`
-- **Interfejsy Bazowe:** `Subject`, `SourceFile`, `GenerationParams`
+- **Enumy / String Typy do Generacji:** `ContentType` (worksheet, test, quiz, exam, lesson_materials), `EducationLevel`, `LanguageLevel`
+- **Interfejsy Bazowe:** `Subject`, `SourceFile`, `GenerationParams` (uwzględniający m.in. tablicę `task_types`)
 
 ### `src/schemas/`
 Walidacja formularzy realizowana przez **Zod** we współpracy z **React Hook Form**:

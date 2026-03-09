@@ -34,15 +34,16 @@ This application emphasizes privacy and data control by using local SQLite stora
 
 ---
 
-## � Setup & Quick Start
+##  Setup & Quick Start
 
 EduGen is designed for hybrid or fully containerized local execution.
 
-**Option 1: Docker Compose (Recommended for Full Stack)**
-Starts the database, backend, and frontend containers automatically:
-```bash
-docker compose up -d --build
-```
+**Option 1: Automated Startup (Recommended for Full Stack)**
+The application provides automated scripts that start the database, backend, and frontend containers automatically:
+- **Windows**: Run `start_windows.bat`
+- **macOS / Linux**: Run `bash start_mac_linux.sh`
+- **macOS (Finder)**: You can also double click on `Uruchom_Mac.command` to run the project via UI.
+
 > App runs at `http://localhost:3000` (Frontend) and `http://localhost:8000` (Backend).
 
 **Option 2: Local Development (Manual)**
