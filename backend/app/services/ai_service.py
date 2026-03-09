@@ -22,6 +22,17 @@ DIFFICULTY_LABELS = {
     4: "bardzo trudny",
 }
 
+# Maps frontend enum values → human-readable Polish labels.
+# For any custom (free-form) value not found here the raw value is used as-is.
+EDUCATION_LEVEL_LABELS: dict[str, str] = {
+    "primary":    "szkoła podstawowa",
+    "secondary":  "szkoła średnia",
+    # legacy / alternative spellings kept for backwards compatibility
+    "podstawowa": "szkoła podstawowa",
+    "srednia":    "szkoła średnia",
+    "średnia":    "szkoła średnia",
+}
+
 CONTENT_TYPE_LABELS = {
     "worksheet": "karta pracy",
     "test": "sprawdzian",
@@ -39,15 +50,28 @@ CONTENT_TYPE_LABELS = {
 TYPES_WITHOUT_QUESTIONS = {"worksheet", "lesson_materials"}
 
 
+def _format_education_label(education_level: str, class_level: str | None) -> str:
+    """Return a human-readable education description for use in AI prompts.
+
+    Known enum values ('primary', 'secondary') are translated to Polish labels.
+    Any other value (custom string typed by the user) is passed through as-is.
+    The class_level string is appended verbatim — no unit inference is done.
+    """
+    edu = EDUCATION_LEVEL_LABELS.get(
+        (education_level or "").strip().lower(),
+        (education_level or "").strip() or "nieznany poziom",
+    )
+    cl = (class_level or "").strip()
+    if cl:
+        return f"{edu}, {cl}"
+    return edu
+
+
 def build_system_prompt(generation: Generation, source_texts: list[str]) -> str:
     """Build the system prompt for AI generation."""
     content_label = CONTENT_TYPE_LABELS.get(generation.content_type, generation.content_type)
     difficulty_label = DIFFICULTY_LABELS.get(generation.difficulty, "średni")
-
-    education_label = (
-        "szkoła podstawowa" if generation.education_level in ("primary", "podstawowa")
-        else "szkoła średnia (liceum/technikum)"
-    )
+    education_label = _format_education_label(generation.education_level, generation.class_level)
 
     if generation.content_type in TYPES_WITHOUT_QUESTIONS:
         return _build_free_form_prompt(generation, source_texts, content_label, difficulty_label, education_label)
@@ -55,7 +79,7 @@ def build_system_prompt(generation: Generation, source_texts: list[str]) -> str:
     prompt_parts = [
         "Jesteś ekspertem w tworzeniu materiałów edukacyjnych w języku polskim.",
         f"Tworzysz: {content_label}.",
-        f"Poziom edukacyjny: {education_label}, klasa {generation.class_level}.",
+        f"Poziom edukacyjny: {education_label}.",
         f"Poziom trudności: {difficulty_label}.",
     ]
 
@@ -148,7 +172,7 @@ def _build_free_form_prompt(
 
     prompt_parts = [
         role_desc,
-        f"Poziom edukacyjny: {education_label}, klasa {generation.class_level}.",
+        f"Poziom edukacyjny: {education_label}.",
         f"Poziom trudności materiału: {difficulty_label}.",
     ]
 

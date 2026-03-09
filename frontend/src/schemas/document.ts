@@ -8,7 +8,7 @@ export const DocumentSchema = z.object({
   title: z.string(),
   content_type: z.string(),
   education_level: z.string().optional().default(''),
-  class_level: z.number().optional().default(0),
+  class_level: z.string().optional().default(''),
   content: z.string().optional(),
   filename: z.string(),
   variants_count: z.number(),

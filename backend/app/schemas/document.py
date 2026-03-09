@@ -42,7 +42,7 @@ class DocumentDetailResponse(BaseModel):
     title: str
     content_type: str
     education_level: str
-    class_level: int
+    class_level: str
     content: str
     filename: str
     variants_count: int
@@ -68,11 +68,8 @@ class DocumentDetailResponse(BaseModel):
 
     @field_validator('class_level', mode='before')
     @classmethod
-    def class_level_non_negative(cls, v) -> int:
-        try:
-            return max(0, int(v))
-        except (TypeError, ValueError):
-            return 0
+    def class_level_to_str(cls, v) -> str:
+        return str(v).strip() if v is not None else ''
 
     @field_validator('variants_count', mode='before')
     @classmethod
@@ -94,7 +91,7 @@ class DocumentListItemResponse(BaseModel):
     title: str
     content_type: str
     education_level: str
-    class_level: int
+    class_level: str
     filename: str
     variants_count: int
     created_at: str
@@ -119,11 +116,8 @@ class DocumentListItemResponse(BaseModel):
 
     @field_validator('class_level', mode='before')
     @classmethod
-    def class_level_non_negative(cls, v) -> int:
-        try:
-            return max(0, int(v))
-        except (TypeError, ValueError):
-            return 0
+    def class_level_to_str(cls, v) -> str:
+        return str(v).strip() if v is not None else ''
 
     @field_validator('variants_count', mode='before')
     @classmethod

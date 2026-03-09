@@ -11,7 +11,7 @@ class GenerationCreate(BaseModel):
     subject_id: str
     content_type: str  # worksheet, test, quiz, exam, lesson_materials
     education_level: str  # primary, secondary or custom string
-    class_level: int
+    class_level: str  # raw string as typed by user, e.g. "Klasa 4", "Semestr 2"
     language_level: Optional[str] = None  # A1-C2
     topic: str
     instructions: Optional[str] = None
@@ -38,14 +38,13 @@ class GenerationCreate(BaseModel):
 
     @field_validator('class_level', mode='before')
     @classmethod
-    def validate_class_level(cls, v) -> int:
-        try:
-            n = int(v)
-        except (TypeError, ValueError):
-            raise ValueError('Klasa musi być liczbą całkowitą')
-        if n < 1:
-            raise ValueError('Klasa musi być większa od 0')
-        return n
+    def validate_class_level(cls, v) -> str:
+        s = str(v).strip() if v is not None else ''
+        if not s:
+            raise ValueError('Klasa / semestr jest wymagana')
+        if len(s) > 100:
+            raise ValueError('Wartość klasy / semestru nie może przekraczać 100 znaków')
+        return s
 
     @field_validator('topic', mode='before')
     @classmethod
@@ -112,7 +111,7 @@ class GenerationResponse(BaseModel):
     subject_id: str
     content_type: str
     education_level: str
-    class_level: int
+    class_level: str
     language_level: Optional[str] = None
     topic: str
     instructions: Optional[str] = None

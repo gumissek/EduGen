@@ -18,7 +18,7 @@ class Generation(Base):
     subject_id: Mapped[str] = mapped_column(String(36), ForeignKey("subjects.id"), nullable=False, index=True)
     content_type: Mapped[str] = mapped_column(String(50), nullable=False)
     education_level: Mapped[str] = mapped_column(String(255), nullable=False)
-    class_level: Mapped[int] = mapped_column(Integer, nullable=False)
+    class_level: Mapped[str] = mapped_column(String(100), nullable=False)
     language_level: Mapped[str | None] = mapped_column(String(10), nullable=True)
     topic: Mapped[str] = mapped_column(Text, nullable=False)
     instructions: Mapped[str | None] = mapped_column(Text, nullable=True)

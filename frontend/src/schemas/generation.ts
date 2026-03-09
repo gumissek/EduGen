@@ -7,8 +7,8 @@ export const GenerationParamsSchema = z.object({
   subject_id: z.string().uuid(),
   // education_level accepts predefined values ('primary', 'secondary') or any custom string
   education_level: z.string().min(1, 'Poziom edukacji jest wymagany'),
-  // class_level accepts predefined integers or any positive integer (incl. custom)
-  class_level: z.number().int().min(1, 'Klasa jest wymagana').max(99),
+  // class_level is a free-form string typed by the user (e.g. "Klasa 4", "Semestr 2", "Rok 1")
+  class_level: z.string().min(1, 'Klasa / semestr jest wymagana').max(100),
   language_level: z.enum(['A1', 'A2', 'B1', 'B2', 'C1', 'C2']).nullable().optional(),
   topic: z.string().min(1, 'Temat jest wymagany').max(500),
   instructions: z.string().max(2000).optional(),

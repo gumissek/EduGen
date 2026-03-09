@@ -28,7 +28,7 @@ export interface GenerationParams {
   content_type: ContentType;
   subject_id: string;
   education_level: EducationLevel;
-  class_level: number;
+  class_level: string;
   language_level?: LanguageLevel | null;
   topic: string;
   instructions?: string;

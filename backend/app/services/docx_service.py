@@ -299,7 +299,9 @@ def generate_docx(db: DBSession, generation_id: str) -> Document:
             generation.content_type,
             re.sub(r'[<>:"/\\|?*]', '_', generation.content_type),
         )
-        class_folder = f"klasa_{generation.class_level}"
+        class_level_safe = re.sub(r'[<>:"/\\|?*]', '_', str(generation.class_level).strip()) if generation.class_level else 'brak_klasy'
+        education_level_safe = re.sub(r'[<>:"/\\|?*]', '_', str(generation.education_level).strip()) if generation.education_level else 'brak_poziomu'
+        class_folder = f"{class_level_safe}_{education_level_safe}"
         docs_dir = Path(settings.DATA_DIR) / "documents" / content_type_folder / subject_folder / class_folder
         docs_dir.mkdir(parents=True, exist_ok=True)
 
@@ -365,11 +367,13 @@ def generate_docx(db: DBSession, generation_id: str) -> Document:
     # Add answer key
     _add_answer_key_to_docx(doc, all_variants_answers)
 
-    # Save file under hierarchical directory: content_type / subject / klasa_N /
+    # Save file under hierarchical directory: content_type / subject / class_education /
     subject = db.query(Subject).filter(Subject.id == generation.subject_id).first()
     subject_folder = re.sub(r'[<>:"/\\|?*]', '_', subject.name) if subject else generation_id
     content_type_folder = CONTENT_TYPE_FOLDER_NAMES.get(generation.content_type, re.sub(r'[<>:"/\\|?*]', '_', generation.content_type))
-    class_folder = f"klasa_{generation.class_level}"
+    class_level_safe = re.sub(r'[<>:"/\\|?*]', '_', str(generation.class_level).strip()) if generation.class_level else 'brak_klasy'
+    education_level_safe = re.sub(r'[<>:"/\\|?*]', '_', str(generation.education_level).strip()) if generation.education_level else 'brak_poziomu'
+    class_folder = f"{class_level_safe}_{education_level_safe}"
     docs_dir = Path(settings.DATA_DIR) / "documents" / content_type_folder / subject_folder / class_folder
     docs_dir.mkdir(parents=True, exist_ok=True)
 

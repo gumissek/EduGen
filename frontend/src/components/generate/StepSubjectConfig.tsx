@@ -25,7 +25,7 @@ const EDUCATION_LEVEL_OPTIONS: EduLevelOption[] = [
 ];
 
 interface ClassOption {
-  value: number | string;
+  value: string;
   label: string;
   inputValue?: string;
 }
@@ -33,10 +33,11 @@ interface ClassOption {
 const filterEduOptions   = createFilterOptions<EduLevelOption>();
 const filterClassOptions = createFilterOptions<ClassOption>();
 
+/** Build preset class options with string values ("Klasa 1", "Klasa 2", ...) */
 function buildClassOptions(classRange: [number, number]): ClassOption[] {
   return Array.from(
     { length: classRange[1] - classRange[0] + 1 },
-    (_, i) => ({ value: classRange[0] + i, label: `Klasa ${classRange[0] + i}` }),
+    (_, i) => ({ value: `Klasa ${classRange[0] + i}`, label: `Klasa ${classRange[0] + i}` }),
   );
 }
 
@@ -49,7 +50,8 @@ export default function StepSubjectConfig() {
 
   const knownLevel = EDUCATION_LEVEL_OPTIONS.find(l => l.value === selectedEducationLevel);
   const classRange: [number, number] = knownLevel?.classRange ?? [1, 8];
-  const classOptions = buildClassOptions(classRange);
+  // For known edu levels show preset "Klasa X" options; for custom levels let user type freely
+  const classOptions = knownLevel ? buildClassOptions(classRange) : [];
 
   const selectedSubject   = subjects.find((s: Subject) => s.id === selectedSubjectId);
   const isLanguageSubject = selectedSubject?.name.toLowerCase().includes('jez') ||
@@ -118,10 +120,10 @@ export default function StepSubjectConfig() {
                   } else if (typeof newValue === 'string') {
                     if (newValue.trim() === '') return;
                     field.onChange(newValue.trim());
-                    setValue('class_level', 1);
+                    setValue('class_level', 'Klasa 1');
                   } else {
                     field.onChange(newValue.inputValue ?? newValue.value);
-                    setValue('class_level', 1);
+                    setValue('class_level', 'Klasa 1');
                   }
                 }}
                 renderInput={(params) => (
@@ -145,10 +147,10 @@ export default function StepSubjectConfig() {
           name="class_level"
           control={control}
           render={({ field }) => {
-            const numVal = Number(field.value);
+            const strVal = String(field.value ?? '');
             const currentOption: ClassOption | undefined =
-              classOptions.find(o => o.value === numVal) ??
-              (field.value != null ? { value: numVal, label: `Klasa | Semestr ${field.value}` } : undefined);
+              classOptions.find(o => o.value === strVal) ??
+              (strVal ? { value: strVal, label: strVal } : undefined);
 
             return (
               <Autocomplete<ClassOption, false, true, true>
@@ -159,35 +161,29 @@ export default function StepSubjectConfig() {
                 filterOptions={(options, params) => {
                   const filtered = filterClassOptions(options, params);
                   const { inputValue } = params;
-                  const num = Number(inputValue);
-                  const isValidNum =
-                    inputValue !== '' && !isNaN(num) && Number.isInteger(num) && num > 0;
-                  const exists = options.some(o => String(o.value) === inputValue);
-                  if (isValidNum && !exists) {
-                    filtered.push({ value: num, label: `Dodaj: klasa ${num}`, inputValue });
+                  const trimmed = inputValue.trim();
+                  const exists = options.some(o => o.value === trimmed || o.label === trimmed);
+                  if (trimmed !== '' && !exists) {
+                    filtered.push({ value: trimmed, label: `Dodaj: "${trimmed}"`, inputValue: trimmed });
                   }
                   return filtered;
                 }}
                 disableClearable
                 onChange={(_e, newValue) => {
-                  if (newValue === null) {
-                    // disableClearable prevents this
-                    return;
-                  } else if (typeof newValue === 'string') {
-                    const n = parseInt(newValue, 10);
-                    if (!isNaN(n) && n > 0) field.onChange(n);
+                  if (newValue === null) return;
+                  if (typeof newValue === 'string') {
+                    if (newValue.trim()) field.onChange(newValue.trim());
                   } else {
-                    const n = Number(newValue.value);
-                    if (n > 0) field.onChange(n);
+                    field.onChange(newValue.inputValue ?? newValue.value);
                   }
                 }}
                 renderInput={(params) => (
                   <TextField
                     {...params}
-                    label="Klasa"
+                    label="Klasa / Semestr"
                     required
                     error={!!errors.class_level}
-                    helperText={errors.class_level?.message ?? 'Wybierz z listy lub wpisz własną klasę'}
+                    helperText={errors.class_level?.message ?? 'Wybierz z listy lub wpisz dowolną wartość (np. Semestr 2)'}
                   />
                 )}
               />

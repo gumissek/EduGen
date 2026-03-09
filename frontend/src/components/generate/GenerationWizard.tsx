@@ -40,7 +40,7 @@ const QUESTIONS_STEP = 2;
 const defaultValues: Partial<GenerationParamsForm> = {
   content_type: 'worksheet',
   education_level: 'primary',
-  class_level: 4,
+  class_level: 'Klasa 4',
   difficulty: 2,
   total_questions: 10,
   open_questions: 0,
