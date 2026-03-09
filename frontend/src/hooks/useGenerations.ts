@@ -9,7 +9,7 @@ import { GENERATION_POLL_INTERVAL_MS } from '@/lib/constants';
 
 interface GenerationStatus {
   id: string;
-  status: 'draft' | 'processing' | 'ready' | 'error';
+  status: 'draft' | 'processing' | 'ready' | 'error' | 'pending';
   error_message?: string;
   created_at: string;
 }

@@ -43,8 +43,8 @@ Główny proces biznesowy to generowanie dokumentów. Elementy go wspierające:
 - `StepSubjectConfig.tsx` — wybór przedmiotu i konfiguracja tematu (obsługa list predefiniowanych z autouzupełnianiem).
 - `StepQuestionConfig.tsx` — definicja liczby pytań, stopnia trudności oraz wybór konkretnych typów zadań (np. Prawda/Fałsz, Esej).
 - `StepSourceFiles.tsx` — wybór i dodawanie własnych plików z bazą wiedzy.
-- `StepReview.tsx` — weryfikacja danych przed uruchomieniem procesu na backendzie.
-- `GenerationStatusView.tsx` — obsługa statusów zadania, podgląd jego trwania.
+- `StepReview.tsx` — weryfikacja danych przed uruchomieniem procesu na backendzie. Weryfikacja zezwala na elastyczne definiowanie zadań (wystarczy podać jedno z pól: liczba zadań ogólnie, liczba zadań otwartych lub wybranie z listy typów zadań).
+- `GenerationStatusView.tsx` — obsługa statusów zadania, podgląd jego trwania (reaguje na statusy `processing`, `draft` oraz początkowy `pending` od razu pokazując spinner).
 
 ### `editor/`
 - Edytor dokumentów oparty na silniku **Tiptap** dający interfejs modyfikacji wygenerowanej treści.

@@ -23,15 +23,13 @@ export const GenerationParamsSchema = z.object({
   (data) => {
     if ((TYPES_WITHOUT_QUESTIONS as readonly string[]).includes(data.content_type)) return true;
     
-    if (data.total_questions <= 0) return false;
-    
+    const hasTotal = data.total_questions > 0;
     const hasOpen = data.open_questions > 0;
-    const hasClosed = data.closed_questions > 0;
     const hasTaskTypes = data.task_types && data.task_types.length > 0;
     
-    return hasOpen || hasClosed || hasTaskTypes;
+    return hasTotal || hasOpen || hasTaskTypes;
   },
-  { message: 'Liczba zadań musi być większa od zera i należy wybrać pytania otwarte, zamknięte lub typ zadań', path: ['total_questions'] }
+  { message: 'Należy podać liczbę zadań, liczbę pytań otwartych lub wybrać typy zadań', path: ['total_questions'] }
 );
 
 export type GenerationParamsForm = z.infer<typeof GenerationParamsSchema>;

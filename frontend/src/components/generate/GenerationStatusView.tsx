@@ -51,7 +51,7 @@ export default function GenerationStatusView({ id }: { id: string }) {
 
   return (
     <Paper sx={{ p: 6, textAlign: 'center', maxWidth: 600, mx: 'auto', mt: 4 }}>
-      {status === 'processing' || status === 'draft' ? (
+      {status === 'processing' || status === 'draft' || status === 'pending' ? (
         <>
           <CircularProgress size={64} sx={{ mb: 4 }} />
           <Typography variant="h5" gutterBottom>

@@ -55,7 +55,7 @@ Konfiguracja silnika SQLAlchemy (SQLite):
 Kod dzieli się na dedykowane pliki modelowe oparte na `DeclarativeBase`. Kluczowe encje:
 - **`user.py`** (Zarządzanie kontami i hasłami, wymuszona zmiana hasła `must_change_password`)
 - **`session.py`** (Aktywne sesje auth dla użytkowników, `expires_at`, `token`)
-- **`generation.py`** & **`prototype.py`** (Logika zadań AI: parametry generacji a zrenderowane rezultaty docelowe JSON/HTML) - W modelu Generation uwzględniono m.in. pole `task_types` obsługujące typy zadań w edukacyjnych materiałach.
+- **`generation.py`** & **`prototype.py`** (Logika zadań AI: parametry generacji a zrenderowane rezultaty docelowe JSON/HTML) - W modelu Generation uwzględniono m.in. pole `task_types` obsługujące typy zadań w edukacyjnych materiałach (walidacja API pozwala na bardzo elastyczne definiowanie obciążenia: wymagana jest po prostu przynajmniej jedna zmienna powiązana z zadaniami - np. `total_questions`, `open_questions` albo właśnie `task_types`). Obsługuje bazowe statusy procesu m.in `pending`.
 - **`source_file.py`** & **`document.py`** (Przetwarzanie dokumentów dostarczanych przez użytkownika na tekst używany jako kontekst AI)
 - **`settings.py`** (Klucz API OpenAI zapisywany jako AES encrypted string, konfig modelów LLM np. gpt-4)
 - **`diagnostic_log.py`** (Logowanie wszystkich błędów rzuconych w apce poprzez exception handler).

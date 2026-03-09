@@ -1,7 +1,7 @@
 export type ContentType = 'worksheet' | 'test' | 'quiz' | 'exam' | 'lesson_materials';
 export type EducationLevel = 'primary' | 'secondary';
 export type LanguageLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
-export type Status = 'draft' | 'processing' | 'ready' | 'error';
+export type Status = 'draft' | 'pending' | 'processing' | 'ready' | 'error';
 export type LogLevel = 'info' | 'warning' | 'error';
 
 export interface Subject {

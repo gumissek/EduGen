@@ -83,6 +83,9 @@ def build_system_prompt(generation: Generation, source_texts: list[str]) -> str:
         f"Poziom trudności: {difficulty_label}.",
     ]
 
+    if generation.subject and generation.subject.name:
+        prompt_parts.append(f"Przedmiot: {generation.subject.name}.")
+
     if generation.language_level:
         prompt_parts.append(f"Poziom językowy: {generation.language_level}.")
 
@@ -184,6 +187,9 @@ def _build_free_form_prompt(
         f"Poziom edukacyjny: {education_label}.",
         f"Poziom trudności materiału: {difficulty_label}.",
     ]
+
+    if generation.subject and generation.subject.name:
+        prompt_parts.append(f"Przedmiot: {generation.subject.name}.")
 
     if generation.language_level:
         prompt_parts.append(f"Poziom językowy: {generation.language_level}.")

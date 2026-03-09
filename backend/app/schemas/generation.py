@@ -103,15 +103,11 @@ class GenerationCreate(BaseModel):
             return v  # no validation for free-form types
             
         total_q = data.get('total_questions', 0)
-        if total_q <= 0:
-            raise ValueError('Liczba zadań musi być większa od zera')
-            
         has_open = data.get('open_questions', 0) > 0
-        has_closed = v > 0
         has_tasks = len(data.get('task_types', [])) > 0
         
-        if not (has_open or has_closed or has_tasks):
-            raise ValueError('Należy wybrać pytania otwarte, zamknięte lub typ zadań')
+        if not (total_q > 0 or has_open or has_tasks):
+            raise ValueError('Należy wpisać liczbę zadań, liczbę pytań otwartych lub wybrać typy zadań')
             
         return v
 
