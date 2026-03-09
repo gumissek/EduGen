@@ -43,42 +43,29 @@ interface DocumentListResponse {
 }
 
 /**
- * Drill-down hierarchy (4 levels):
- *   1. type        — content type (worksheet, test, …)
- *   2. subject     — subject name
- *   3. classGroup  — class_level + education_level combined
- *   4. documents   — actual document cards
+ * Drill-down hierarchy (5 levels):
+ *   1. type           — content type (worksheet, test, …)
+ *   2. educationLevel — education level (primary, secondary, or custom)
+ *   3. classLevel     — class level (Klasa 4, Semestr 2, or custom)
+ *   4. subject        — subject name
+ *   5. documents      — actual document cards
  */
-type DrillLevel = 'type' | 'subject' | 'classGroup' | 'documents';
+type DrillLevel = 'type' | 'educationLevel' | 'classLevel' | 'subject' | 'documents';
 
 interface DrillState {
   level: DrillLevel;
   contentType?: string;
+  educationLevel?: string;
+  educationLevelLabel?: string;
+  classLevel?: string;
   subjectId?: string;
   subjectName?: string;
-  /** Composite key "classLevel||educationLevel" used for the classGroup step */
-  classGroupKey?: string;
-  classGroupLabel?: string;
 }
 
-/** Build a unique composite key from class_level + education_level. */
-function classGroupKeyOf(doc: Document): string {
-  const cl = (doc.class_level ?? '').trim();
-  const el = (doc.education_level ?? '').trim();
-  return `${cl}||${el}`;
-}
-
-/** Human-readable label for a class-group key. */
-function classGroupLabelOf(classLevel: string, educationLevel: string): string {
-  const cl = classLevel.trim();
-  const el = educationLevel.trim();
-  const elLabel =
-    EDUCATION_LEVELS.find((e) => e.value === el)?.label ?? (el || undefined);
-
-  if (cl && elLabel) return `${cl} — ${elLabel}`;
-  if (cl) return cl;
-  if (elLabel) return elLabel;
-  return 'Bez klasy';
+/** Human-readable label for an education level value. */
+function educationLevelLabel(value: string): string {
+  const v = value.trim();
+  return EDUCATION_LEVELS.find((e) => e.value === v)?.label ?? (v || 'Bez poziomu');
 }
 
 const getIconForType = (type: string) => {
@@ -136,7 +123,6 @@ export default function DashboardPage() {
       const ct = doc.content_type || '';
       if (ct) counts[ct] = (counts[ct] || 0) + 1;
     }
-    // Include known types first, then any custom/unknown types
     const known = CONTENT_TYPES.filter(t => counts[t.value]).map(t => ({ ...t, count: counts[t.value] }));
     const knownValues = new Set(CONTENT_TYPES.map(t => t.value) as readonly string[]);
     const unknown = Object.entries(counts)
@@ -145,10 +131,49 @@ export default function DashboardPage() {
     return [...known, ...unknown];
   }, [allDocs]);
 
-  // Level 2: subjects for selected content_type
-  const subjectGroups = React.useMemo(() => {
+  // Level 2: unique education levels for selected content_type
+  const educationLevelGroups = React.useMemo(() => {
     if (!drill.contentType) return [];
     const filtered = allDocs.filter(d => d.content_type === drill.contentType);
+    const counts: Record<string, number> = {};
+    for (const doc of filtered) {
+      const el = (doc.education_level ?? '').trim();
+      if (el) counts[el] = (counts[el] || 0) + 1;
+    }
+    return Object.entries(counts)
+      .map(([value, count]) => ({
+        value,
+        label: educationLevelLabel(value),
+        count,
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label, 'pl'));
+  }, [allDocs, drill.contentType]);
+
+  // Level 3: unique class levels for selected content_type + education_level
+  const classLevelGroups = React.useMemo(() => {
+    if (!drill.contentType || !drill.educationLevel) return [];
+    const filtered = allDocs.filter(
+      d => d.content_type === drill.contentType && (d.education_level ?? '').trim() === drill.educationLevel,
+    );
+    const counts: Record<string, number> = {};
+    for (const doc of filtered) {
+      const cl = (doc.class_level ?? '').trim() || 'Brak';
+      counts[cl] = (counts[cl] || 0) + 1;
+    }
+    return Object.entries(counts)
+      .map(([value, count]) => ({ value, label: value, count }))
+      .sort((a, b) => a.label.localeCompare(b.label, 'pl', { numeric: true }));
+  }, [allDocs, drill.contentType, drill.educationLevel]);
+
+  // Level 4: unique subjects for selected content_type + education_level + class_level
+  const subjectGroups = React.useMemo(() => {
+    if (!drill.contentType || !drill.educationLevel || !drill.classLevel) return [];
+    const filtered = allDocs.filter(
+      d =>
+        d.content_type === drill.contentType &&
+        (d.education_level ?? '').trim() === drill.educationLevel &&
+        ((d.class_level ?? '').trim() || 'Brak') === drill.classLevel,
+    );
     const map: Record<string, { name: string; count: number }> = {};
     for (const doc of filtered) {
       const sid = doc.subject_id;
@@ -158,63 +183,39 @@ export default function DashboardPage() {
       map[sid].count++;
     }
     return Object.entries(map).map(([id, { name, count }]) => ({ id, name, count }));
-  }, [allDocs, drill.contentType]);
+  }, [allDocs, drill.contentType, drill.educationLevel, drill.classLevel]);
 
-  // Level 3: combined class + education groups for selected content_type + subject
-  const classGroups = React.useMemo(() => {
-    if (!drill.contentType || !drill.subjectId) return [];
-    const filtered = allDocs.filter(
-      d => d.content_type === drill.contentType && d.subject_id === drill.subjectId,
-    );
-    const counts: Record<string, { classLevel: string; educationLevel: string; count: number }> = {};
-    for (const doc of filtered) {
-      const key = classGroupKeyOf(doc);
-      if (!counts[key]) {
-        counts[key] = {
-          classLevel: (doc.class_level ?? '').trim(),
-          educationLevel: (doc.education_level ?? '').trim(),
-          count: 0,
-        };
-      }
-      counts[key].count++;
-    }
-    return Object.entries(counts)
-      .map(([key, { classLevel, educationLevel, count }]) => ({
-        key,
-        classLevel,
-        educationLevel,
-        label: classGroupLabelOf(classLevel, educationLevel),
-        count,
-      }))
-      .sort((a, b) => a.label.localeCompare(b.label, 'pl', { numeric: true }));
-  }, [allDocs, drill.contentType, drill.subjectId]);
-
-  // Level 4: actual documents for selected content_type + subject + classGroup
+  // Level 5: actual documents for selected content_type + education_level + class_level + subject
   const visibleDocs = React.useMemo(() => {
-    if (drill.level !== 'documents' || !drill.classGroupKey) return [];
+    if (drill.level !== 'documents' || !drill.subjectId) return [];
     return allDocs.filter(
       d =>
         d.content_type === drill.contentType &&
-        d.subject_id === drill.subjectId &&
-        classGroupKeyOf(d) === drill.classGroupKey,
+        (d.education_level ?? '').trim() === drill.educationLevel &&
+        ((d.class_level ?? '').trim() || 'Brak') === drill.classLevel &&
+        d.subject_id === drill.subjectId,
     );
   }, [allDocs, drill]);
 
   // --- Navigation helpers ---
 
-  const goToSubjects = (contentType: string) =>
-    setDrill({ level: 'subject', contentType });
+  const goToEducationLevels = (contentType: string) =>
+    setDrill({ level: 'educationLevel', contentType });
 
-  const goToClassGroups = (subjectId: string, subjectName: string) =>
-    setDrill({ level: 'classGroup', contentType: drill.contentType, subjectId, subjectName });
+  const goToClassLevels = (educationLevel: string, educationLevelLbl: string) =>
+    setDrill({ level: 'classLevel', contentType: drill.contentType, educationLevel, educationLevelLabel: educationLevelLbl });
 
-  const goToDocuments = (classGroupKey: string, classGroupLabel: string) =>
-    setDrill({ ...drill, level: 'documents', classGroupKey, classGroupLabel });
+  const goToSubjects = (classLevel: string) =>
+    setDrill({ ...drill, level: 'subject', classLevel });
+
+  const goToDocuments = (subjectId: string, subjectName: string) =>
+    setDrill({ ...drill, level: 'documents', subjectId, subjectName });
 
   const goTo = (level: DrillLevel) => {
     if (level === 'type') setDrill({ level: 'type' });
-    else if (level === 'subject') setDrill({ level: 'subject', contentType: drill.contentType });
-    else if (level === 'classGroup') setDrill({ level: 'classGroup', contentType: drill.contentType, subjectId: drill.subjectId, subjectName: drill.subjectName });
+    else if (level === 'educationLevel') setDrill({ level: 'educationLevel', contentType: drill.contentType });
+    else if (level === 'classLevel') setDrill({ level: 'classLevel', contentType: drill.contentType, educationLevel: drill.educationLevel, educationLevelLabel: drill.educationLevelLabel });
+    else if (level === 'subject') setDrill({ level: 'subject', contentType: drill.contentType, educationLevel: drill.educationLevel, educationLevelLabel: drill.educationLevelLabel, classLevel: drill.classLevel });
   };
 
   const currentTypeLabel = CONTENT_TYPES.find(t => t.value === drill.contentType)?.label ?? drill.contentType;
@@ -249,24 +250,37 @@ export default function DashboardPage() {
           <Link underline="hover" sx={{ cursor: 'pointer' }} onClick={() => goTo('type')}>
             Typy treści
           </Link>
-          {drill.level === 'subject' ? (
+
+          {drill.level === 'educationLevel' ? (
             <Typography color="text.primary">{currentTypeLabel}</Typography>
           ) : (
-            <Link underline="hover" sx={{ cursor: 'pointer' }} onClick={() => goTo('subject')}>
+            <Link underline="hover" sx={{ cursor: 'pointer' }} onClick={() => goTo('educationLevel')}>
               {currentTypeLabel}
             </Link>
           )}
-          {drill.level !== 'subject' && (
-            drill.level === 'classGroup' ? (
-              <Typography color="text.primary">{drill.subjectName}</Typography>
+
+          {drill.level !== 'educationLevel' && (
+            drill.level === 'classLevel' ? (
+              <Typography color="text.primary">{drill.educationLevelLabel}</Typography>
             ) : (
-              <Link underline="hover" sx={{ cursor: 'pointer' }} onClick={() => goTo('classGroup')}>
-                {drill.subjectName}
+              <Link underline="hover" sx={{ cursor: 'pointer' }} onClick={() => goTo('classLevel')}>
+                {drill.educationLevelLabel}
               </Link>
             )
           )}
+
+          {drill.level !== 'educationLevel' && drill.level !== 'classLevel' && (
+            drill.level === 'subject' ? (
+              <Typography color="text.primary">{drill.classLevel}</Typography>
+            ) : (
+              <Link underline="hover" sx={{ cursor: 'pointer' }} onClick={() => goTo('subject')}>
+                {drill.classLevel}
+              </Link>
+            )
+          )}
+
           {drill.level === 'documents' && (
-            <Typography color="text.primary">{drill.classGroupLabel}</Typography>
+            <Typography color="text.primary">{drill.subjectName}</Typography>
           )}
         </Breadcrumbs>
       )}
@@ -287,7 +301,7 @@ export default function DashboardPage() {
               {contentTypeGroups.map((ct) => (
                 <Grid item xs={12} sm={6} md={4} key={ct.value}>
                   <Card variant="outlined" sx={{ transition: 'all 0.2s', '&:hover': { borderColor: 'primary.main', boxShadow: 2 } }}>
-                    <CardActionArea onClick={() => goToSubjects(ct.value)} sx={{ p: 3 }}>
+                    <CardActionArea onClick={() => goToEducationLevels(ct.value)} sx={{ p: 3 }}>
                       <CardContent sx={{ textAlign: 'center' }}>
                         <Box sx={{ color: 'primary.main', mb: 2 }}>{getIconForType(ct.value)}</Box>
                         <Typography variant="h6" fontWeight="bold">{ct.label}</Typography>
@@ -302,15 +316,53 @@ export default function DashboardPage() {
         </>
       )}
 
-      {/* Level 2 — Subjects */}
+      {/* Level 2 — Education Levels */}
+      {drill.level === 'educationLevel' && (
+        <Grid container spacing={3}>
+          {educationLevelGroups.map((el) => (
+            <Grid item xs={12} sm={6} md={4} key={el.value}>
+              <Card variant="outlined" sx={{ transition: 'all 0.2s', '&:hover': { borderColor: 'secondary.main', boxShadow: 2 } }}>
+                <CardActionArea onClick={() => goToClassLevels(el.value, el.label)} sx={{ p: 3 }}>
+                  <CardContent sx={{ textAlign: 'center' }}>
+                    <Box sx={{ color: 'secondary.main', mb: 2 }}><SchoolIcon fontSize="large" /></Box>
+                    <Typography variant="h6" fontWeight="bold">{el.label}</Typography>
+                    <Chip label={`${el.count} materiałów`} size="small" sx={{ mt: 1 }} />
+                  </CardContent>
+                </CardActionArea>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      )}
+
+      {/* Level 3 — Class Levels */}
+      {drill.level === 'classLevel' && (
+        <Grid container spacing={3}>
+          {classLevelGroups.map((cl) => (
+            <Grid item xs={6} sm={4} md={3} key={cl.value}>
+              <Card variant="outlined" sx={{ transition: 'all 0.2s', '&:hover': { borderColor: 'success.main', boxShadow: 2 } }}>
+                <CardActionArea onClick={() => goToSubjects(cl.value)} sx={{ p: 3 }}>
+                  <CardContent sx={{ textAlign: 'center' }}>
+                    <Box sx={{ color: 'success.main', mb: 2 }}><ClassIcon fontSize="large" /></Box>
+                    <Typography variant="h6" fontWeight="bold">{cl.label}</Typography>
+                    <Chip label={`${cl.count} materiałów`} size="small" sx={{ mt: 1 }} />
+                  </CardContent>
+                </CardActionArea>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      )}
+
+      {/* Level 4 — Subjects */}
       {drill.level === 'subject' && (
         <Grid container spacing={3}>
           {subjectGroups.map((s) => (
             <Grid item xs={12} sm={6} md={4} key={s.id}>
-              <Card variant="outlined" sx={{ transition: 'all 0.2s', '&:hover': { borderColor: 'secondary.main', boxShadow: 2 }, display: 'flex', flexDirection: 'column' }}>
-                <CardActionArea onClick={() => goToClassGroups(s.id, s.name)} sx={{ p: 3, flexGrow: 1 }}>
+              <Card variant="outlined" sx={{ transition: 'all 0.2s', '&:hover': { borderColor: 'info.main', boxShadow: 2 }, display: 'flex', flexDirection: 'column' }}>
+                <CardActionArea onClick={() => goToDocuments(s.id, s.name)} sx={{ p: 3, flexGrow: 1 }}>
                   <CardContent sx={{ textAlign: 'center' }}>
-                    <Box sx={{ color: 'secondary.main', mb: 2 }}><SchoolIcon fontSize="large" /></Box>
+                    <Box sx={{ color: 'info.main', mb: 2 }}><MenuBookIcon fontSize="large" /></Box>
                     <Typography variant="h6" fontWeight="bold">{s.name}</Typography>
                     <Chip label={`${s.count} materiałów`} size="small" sx={{ mt: 1 }} />
                   </CardContent>
@@ -336,31 +388,7 @@ export default function DashboardPage() {
         </Grid>
       )}
 
-      {/* Level 3 — Class + Education level (combined) */}
-      {drill.level === 'classGroup' && (
-        <Grid container spacing={3}>
-          {classGroups.map((cg) => (
-            <Grid item xs={6} sm={4} md={3} key={cg.key}>
-              <Card variant="outlined" sx={{ transition: 'all 0.2s', '&:hover': { borderColor: 'success.main', boxShadow: 2 } }}>
-                <CardActionArea onClick={() => goToDocuments(cg.key, cg.label)} sx={{ p: 3 }}>
-                  <CardContent sx={{ textAlign: 'center' }}>
-                    <Box sx={{ color: 'success.main', mb: 2 }}><ClassIcon fontSize="large" /></Box>
-                    <Typography variant="h6" fontWeight="bold">{cg.classLevel || 'Brak'}</Typography>
-                    {cg.educationLevel && (
-                      <Typography variant="body2" color="text.secondary">
-                        {EDUCATION_LEVELS.find(e => e.value === cg.educationLevel)?.label ?? cg.educationLevel}
-                      </Typography>
-                    )}
-                    <Chip label={`${cg.count} materiałów`} size="small" sx={{ mt: 1 }} />
-                  </CardContent>
-                </CardActionArea>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
-      )}
-
-      {/* Level 4 — Documents */}
+      {/* Level 5 — Documents */}
       {drill.level === 'documents' && (
         <>
           {visibleDocs.length === 0 ? (
