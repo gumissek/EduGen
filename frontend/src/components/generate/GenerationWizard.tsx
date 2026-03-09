@@ -140,18 +140,33 @@ export default function GenerationWizard() {
       <Alert
         severity="warning"
         icon={<FolderOpenIcon />}
-        action={
-          <Button component={NextLink} href="/subjects" color="inherit" size="small" variant="outlined">
+        sx={{
+          justifyContent: "center",
+          textAlign: "center",
+          "& .MuiAlert-message": {
+            width: "100%"
+          }
+        }}
+      >
+        <AlertTitle sx={{ textAlign: "center" }}>
+          Brak przedmiotów
+        </AlertTitle>
+
+        <Box>
+          Aby wygenerować materiał, musisz najpierw dodać co najmniej jeden przedmiot.
+        </Box> 
+
+        <Box sx={{ mt: 1 }}>
+          <Button
+            component={NextLink}
+            href="/subjects"
+            color="inherit"
+            size="small"
+            variant="outlined"
+          >
             Przejdź do Przedmiotów
           </Button>
-        }
-      >
-        <AlertTitle>Brak przedmiotów</AlertTitle>
-        Aby wygenerować materiał, musisz najpierw dodać co najmniej jeden przedmiot i wgrać pliki
-        źródłowe.{' '}
-        <NextLink href="/subjects" style={{ color: 'inherit', fontWeight: 700 }}>
-          Kliknij tutaj, aby przejść do sekcji Przedmioty →
-        </NextLink>
+        </Box>
       </Alert>
     );
   }

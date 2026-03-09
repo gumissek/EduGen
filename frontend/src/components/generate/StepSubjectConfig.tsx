@@ -91,12 +91,12 @@ export default function StepSubjectConfig() {
           name="education_level"
           control={control}
           render={({ field }) => {
-            const currentOption: EduLevelOption | null =
+            const currentOption: EduLevelOption | undefined =
               EDUCATION_LEVEL_OPTIONS.find(o => o.value === field.value) ??
-              (field.value ? { value: field.value, label: field.value } : null);
+              (field.value ? { value: field.value, label: field.value } : undefined);
 
             return (
-              <Autocomplete<EduLevelOption, false, false, true>
+              <Autocomplete<EduLevelOption, false, true, true>
                 freeSolo
                 value={currentOption}
                 options={EDUCATION_LEVEL_OPTIONS}
@@ -110,11 +110,14 @@ export default function StepSubjectConfig() {
                   }
                   return filtered;
                 }}
+                disableClearable
                 onChange={(_e, newValue) => {
-                  if (newValue === null) {
-                    field.onChange('');
+                  if (newValue === null || newValue === '') {
+                    // disableClearable prevents this, but guard just in case
+                    return;
                   } else if (typeof newValue === 'string') {
-                    field.onChange(newValue);
+                    if (newValue.trim() === '') return;
+                    field.onChange(newValue.trim());
                     setValue('class_level', 1);
                   } else {
                     field.onChange(newValue.inputValue ?? newValue.value);
@@ -143,12 +146,12 @@ export default function StepSubjectConfig() {
           control={control}
           render={({ field }) => {
             const numVal = Number(field.value);
-            const currentOption: ClassOption | null =
+            const currentOption: ClassOption | undefined =
               classOptions.find(o => o.value === numVal) ??
-              (field.value != null ? { value: numVal, label: `Klasa ${field.value}` } : null);
+              (field.value != null ? { value: numVal, label: `Klasa | Semestr ${field.value}` } : undefined);
 
             return (
-              <Autocomplete<ClassOption, false, false, true>
+              <Autocomplete<ClassOption, false, true, true>
                 freeSolo
                 value={currentOption}
                 options={classOptions}
@@ -165,14 +168,17 @@ export default function StepSubjectConfig() {
                   }
                   return filtered;
                 }}
+                disableClearable
                 onChange={(_e, newValue) => {
                   if (newValue === null) {
-                    field.onChange(1);
+                    // disableClearable prevents this
+                    return;
                   } else if (typeof newValue === 'string') {
                     const n = parseInt(newValue, 10);
-                    field.onChange(isNaN(n) ? 1 : n);
+                    if (!isNaN(n) && n > 0) field.onChange(n);
                   } else {
-                    field.onChange(Number(newValue.value) || 1);
+                    const n = Number(newValue.value);
+                    if (n > 0) field.onChange(n);
                   }
                 }}
                 renderInput={(params) => (

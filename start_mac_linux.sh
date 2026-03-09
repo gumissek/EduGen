@@ -93,7 +93,21 @@ echo ""
 echo "  Frontend (interfejs):  http://localhost:3000"
 echo "  Backend  (API):        http://localhost:8000"
 echo ""
-echo "Nacisnij CTRL + C aby zatrzymac aplikacje."
+
+# Red stop instructions
+RED='\033[0;31m'
+CYAN='\033[0;36m'
+NC='\033[0m'
+printf "${RED}============================================${NC}\n"
+printf "${RED}  JAK WYLACZYC APLIKACJE:${NC}\n"
+printf "${RED}  Nacisnij CTRL + C w tym terminalu.${NC}\n"
+printf "${RED}  Kontenery zostana zatrzymane automatycznie.${NC}\n"
+printf "${RED}============================================${NC}\n"
+echo ""
+printf "${CYAN}  Jezeli przeglądarka nie otworzyla sie automatycznie,${NC}\n"
+printf "${CYAN}  odwiedz recznie ponizsze adresy:${NC}\n"
+printf "${CYAN}  http://localhost:3000  (interfejs aplikacji)${NC}\n"
+printf "${CYAN}  http://localhost:8000  (API backendu)${NC}\n"
 echo ""
 
 # Uruchamianie w trybie interaktywnym (CTRL+C zatrzyma kontenery)

@@ -51,7 +51,7 @@ echo (Pierwsze uruchomienie moze trwac kilka minut - trwa pobieranie obrazow)
 echo.
 
 :: Otwarcie przegladarki w tle po 15 sekundach
-echo Przeglądarka zostanie otwarta automatycznie za ~15 sekund...
+echo Przegladarka zostanie otwarta automatycznie za ~15 sekund...
 start /b cmd /c "timeout /t 15 /nobreak >nul && start http://localhost:3000"
 echo.
 echo ============================================
@@ -61,8 +61,13 @@ echo.
 echo   Frontend (interfejs):  http://localhost:3000
 echo   Backend  (API):        http://localhost:8000
 echo.
-echo Nacisnij CTRL + C aby zatrzymac aplikacje.
+powershell -Command "Write-Host '============================================' -ForegroundColor Red ; Write-Host '  JAK WYLACZYC APLIKACJE:' -ForegroundColor Red ; Write-Host '  Nacisnij CTRL + C w tym oknie,' -ForegroundColor Red ; Write-Host '  a nastepnie wpisz T i zatwierdz Enterem.' -ForegroundColor Red ; Write-Host '============================================' -ForegroundColor Red"
+powershell -Command "Write-Host '' ; Write-Host '  Jezeli przegladarka nie otworzyla sie automatycznie,' -ForegroundColor Cyan ; Write-Host '  odwiedz recznie ponizsze adresy:' -ForegroundColor Cyan ; Write-Host '  http://localhost:3000  (interfejs aplikacji)' -ForegroundColor Cyan ; Write-Host '  http://localhost:8000  (API backendu)' -ForegroundColor Cyan ; Write-Host ''"
+echo.
+echo Czekanie na logi kontenerow...
 echo.
 
 :: Uruchamianie kontenerow w trybie interaktywnym (CTRL+C zatrzyma kontenery)
 docker compose up --build
+
+powershell -Command "Write-Host '' ; Write-Host '============================================' -ForegroundColor Yellow ; Write-Host '  Aplikacja zostala zatrzymana.' -ForegroundColor Yellow ; Write-Host '============================================' -ForegroundColor Yellow"
