@@ -45,7 +45,7 @@ export default function FileUploader({ subjectId, onUpload }: FileUploaderProps)
     setProgress(0);
     try {
       await onUpload(formData, setProgress);
-    } catch (err) {
+    } catch {
       // Error handled by mutation
     } finally {
       setProgress(null);
@@ -77,18 +77,18 @@ export default function FileUploader({ subjectId, onUpload }: FileUploaderProps)
       onClick={() => fileInputRef.current?.click()}
       sx={{
         border: '2px dashed',
-        borderColor: isDragging ? 'primary.main' : 'divider',
-        borderRadius: 2,
-        p: 4,
+        borderColor: isDragging ? 'primary.main' : 'rgba(1, 72, 131, 0.15)',
+        borderRadius: '24px',
+        p: 6,
         textAlign: 'center',
         cursor: 'pointer',
-        bgcolor: isDragging ? 'action.hover' : 'background.paper',
-        transition: 'all 0.2s ease',
+        bgcolor: isDragging ? 'rgba(1, 72, 131, 0.04)' : 'background.paper',
+        transition: 'all 0.3s ease',
         position: 'relative',
         overflow: 'hidden',
         '&:hover': {
           borderColor: 'primary.main',
-          bgcolor: 'action.hover',
+          bgcolor: 'rgba(1, 72, 131, 0.02)',
         },
       }}
     >

@@ -39,12 +39,27 @@ This application emphasizes privacy and data control by using local SQLite stora
 EduGen is designed for hybrid or fully containerized local execution.
 
 **Option 1: Automated Startup (Recommended for Full Stack)**
-The application provides automated scripts that start the database, backend, and frontend containers automatically:
-- **Windows**: Run `start_windows.bat`
-- **macOS / Linux**: Run `bash start_mac_linux.sh`
-- **macOS (Finder)**: You can also double click on `Uruchom_Mac.command` to run the project via UI.
+
+The startup scripts handle Docker checks, automatic `.env` creation from `.config_backend`, update checks via `check_update.bat` / `check_update.sh`, and automatic browser launch (~15 s after start):
+
+| Platform | Script | How to run |
+|---|---|---|
+| **Windows** | `start_windows.bat` | Double-click the file |
+| **macOS** | `Uruchom_Mac.command` | Double-click (Finder) — calls `start_mac_linux.sh` internally |
+| **macOS / Linux** | `start_mac_linux.sh` | `bash start_mac_linux.sh` in Terminal |
+
+> **macOS / Linux permissions:** Before first run, grant execute rights to the scripts:
+> ```bash
+> chmod +x start_mac_linux.sh Uruchom_Mac.command
+> ```
+
+> If `backend/.env` is missing, the startup scripts automatically copy the bundled `.config_backend` template to `backend/.env`. Remember to add your own `OPENAI_API_KEY` in the Settings panel before generating materials.
 
 > App runs at `http://localhost:3000` (Frontend) and `http://localhost:8000` (Backend).
+
+**Stopping the application:**
+- **Windows:** Press `CTRL + C` in the console window, then confirm with `T` or `Y` + `Enter`.
+- **macOS / Linux:** Press `CTRL + C` in the Terminal — the `trap` handler automatically calls `docker compose down`.
 
 **Option 2: Local Development (Manual)**
 

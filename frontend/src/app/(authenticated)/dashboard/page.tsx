@@ -94,7 +94,7 @@ export default function DashboardPage() {
       return res.data.documents;
     },
   });
-  const allDocs: Document[] = docsData ?? [];
+  const allDocs: Document[] = React.useMemo(() => docsData ?? [], [docsData]);
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -299,13 +299,15 @@ export default function DashboardPage() {
           ) : (
             <Grid container spacing={3}>
               {contentTypeGroups.map((ct) => (
-                <Grid item xs={12} sm={6} md={4} key={ct.value}>
-                  <Card variant="outlined" sx={{ transition: 'all 0.2s', '&:hover': { borderColor: 'primary.main', boxShadow: 2 } }}>
-                    <CardActionArea onClick={() => goToEducationLevels(ct.value)} sx={{ p: 3 }}>
-                      <CardContent sx={{ textAlign: 'center' }}>
-                        <Box sx={{ color: 'primary.main', mb: 2 }}>{getIconForType(ct.value)}</Box>
-                        <Typography variant="h6" fontWeight="bold">{ct.label}</Typography>
-                        <Chip label={`${ct.count} materiałów`} size="small" sx={{ mt: 1 }} />
+                <Grid item xs={12} sm={6} md={4} lg={3} key={ct.value}>
+                  <Card variant="outlined" sx={{ height: '100%', borderColor: 'divider', borderWidth: '2px', transition: 'all 0.2s', '&:hover': { borderColor: 'primary.main', bgcolor: 'rgba(1, 72, 131, 0.02)' } }}>
+                    <CardActionArea onClick={() => goToEducationLevels(ct.value)} sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start' }}>
+                      <CardContent sx={{ textAlign: 'left', p: 0, width: '100%' }}>
+                        <Box sx={{ color: 'primary.main', mb: 2, bgcolor: 'rgba(1, 72, 131, 0.08)', width: 56, height: 56, borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          {getIconForType(ct.value)}
+                        </Box>
+                        <Typography variant="h6" fontWeight="bold" sx={{ mb: 1 }}>{ct.label}</Typography>
+                        <Chip label={`${ct.count} materiałów`} size="small" variant="outlined" color="primary" />
                       </CardContent>
                     </CardActionArea>
                   </Card>
@@ -320,13 +322,15 @@ export default function DashboardPage() {
       {drill.level === 'educationLevel' && (
         <Grid container spacing={3}>
           {educationLevelGroups.map((el) => (
-            <Grid item xs={12} sm={6} md={4} key={el.value}>
-              <Card variant="outlined" sx={{ transition: 'all 0.2s', '&:hover': { borderColor: 'secondary.main', boxShadow: 2 } }}>
-                <CardActionArea onClick={() => goToClassLevels(el.value, el.label)} sx={{ p: 3 }}>
-                  <CardContent sx={{ textAlign: 'center' }}>
-                    <Box sx={{ color: 'secondary.main', mb: 2 }}><SchoolIcon fontSize="large" /></Box>
-                    <Typography variant="h6" fontWeight="bold">{el.label}</Typography>
-                    <Chip label={`${el.count} materiałów`} size="small" sx={{ mt: 1 }} />
+            <Grid item xs={12} sm={6} md={4} lg={3} key={el.value}>
+              <Card variant="outlined" sx={{ height: '100%', borderColor: 'divider', borderWidth: '2px', transition: 'all 0.2s', '&:hover': { borderColor: 'secondary.main', bgcolor: 'rgba(33, 174, 76, 0.02)' } }}>
+                <CardActionArea onClick={() => goToClassLevels(el.value, el.label)} sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start' }}>
+                  <CardContent sx={{ textAlign: 'left', p: 0, width: '100%' }}>
+                    <Box sx={{ color: 'secondary.main', mb: 2, bgcolor: 'rgba(33, 174, 76, 0.08)', width: 56, height: 56, borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <SchoolIcon fontSize="medium" />
+                    </Box>
+                    <Typography variant="h6" fontWeight="bold" sx={{ mb: 1 }}>{el.label}</Typography>
+                    <Chip label={`${el.count} materiałów`} size="small" variant="outlined" color="secondary" />
                   </CardContent>
                 </CardActionArea>
               </Card>
@@ -339,13 +343,15 @@ export default function DashboardPage() {
       {drill.level === 'classLevel' && (
         <Grid container spacing={3}>
           {classLevelGroups.map((cl) => (
-            <Grid item xs={6} sm={4} md={3} key={cl.value}>
-              <Card variant="outlined" sx={{ transition: 'all 0.2s', '&:hover': { borderColor: 'success.main', boxShadow: 2 } }}>
-                <CardActionArea onClick={() => goToSubjects(cl.value)} sx={{ p: 3 }}>
-                  <CardContent sx={{ textAlign: 'center' }}>
-                    <Box sx={{ color: 'success.main', mb: 2 }}><ClassIcon fontSize="large" /></Box>
-                    <Typography variant="h6" fontWeight="bold">{cl.label}</Typography>
-                    <Chip label={`${cl.count} materiałów`} size="small" sx={{ mt: 1 }} />
+            <Grid item xs={12} sm={6} md={4} lg={3} key={cl.value}>
+              <Card variant="outlined" sx={{ height: '100%', borderColor: 'divider', borderWidth: '2px', transition: 'all 0.2s', '&:hover': { borderColor: 'success.main', bgcolor: 'rgba(33, 174, 76, 0.02)' } }}>
+                <CardActionArea onClick={() => goToSubjects(cl.value)} sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start' }}>
+                  <CardContent sx={{ textAlign: 'left', p: 0, width: '100%' }}>
+                    <Box sx={{ color: 'success.main', mb: 2, bgcolor: 'rgba(33, 174, 76, 0.08)', width: 56, height: 56, borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <ClassIcon fontSize="medium" />
+                    </Box>
+                    <Typography variant="h6" fontWeight="bold" sx={{ mb: 1 }}>{cl.label}</Typography>
+                    <Chip label={`${cl.count} materiałów`} size="small" variant="outlined" color="success" />
                   </CardContent>
                 </CardActionArea>
               </Card>
@@ -358,29 +364,32 @@ export default function DashboardPage() {
       {drill.level === 'subject' && (
         <Grid container spacing={3}>
           {subjectGroups.map((s) => (
-            <Grid item xs={12} sm={6} md={4} key={s.id}>
-              <Card variant="outlined" sx={{ transition: 'all 0.2s', '&:hover': { borderColor: 'info.main', boxShadow: 2 }, display: 'flex', flexDirection: 'column' }}>
-                <CardActionArea onClick={() => goToDocuments(s.id, s.name)} sx={{ p: 3, flexGrow: 1 }}>
-                  <CardContent sx={{ textAlign: 'center' }}>
-                    <Box sx={{ color: 'info.main', mb: 2 }}><MenuBookIcon fontSize="large" /></Box>
-                    <Typography variant="h6" fontWeight="bold">{s.name}</Typography>
-                    <Chip label={`${s.count} materiałów`} size="small" sx={{ mt: 1 }} />
+            <Grid item xs={12} sm={6} md={4} lg={3} key={s.id}>
+              <Card variant="outlined" sx={{ height: '100%', borderColor: 'divider', borderWidth: '2px', transition: 'all 0.2s', '&:hover': { borderColor: 'info.main', bgcolor: 'rgba(2, 136, 209, 0.02)' }, display: 'flex', flexDirection: 'column' }}>
+                <CardActionArea onClick={() => goToDocuments(s.id, s.name)} sx={{ p: 3, flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start' }}>
+                  <CardContent sx={{ textAlign: 'left', p: 0, width: '100%' }}>
+                    <Box sx={{ color: 'info.main', mb: 2, bgcolor: 'rgba(2, 136, 209, 0.08)', width: 56, height: 56, borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <MenuBookIcon fontSize="medium" />
+                    </Box>
+                    <Typography variant="h6" fontWeight="bold" sx={{ mb: 1, wordBreak: 'break-word' }}>{s.name}</Typography>
+                    <Chip label={`${s.count} materiałów`} size="small" variant="outlined" color="info" />
                   </CardContent>
                 </CardActionArea>
                 <Divider />
-                <CardActions sx={{ justifyContent: 'flex-end', px: 2, py: 0.5 }}>
+                <CardActions sx={{ justifyContent: 'space-between', px: 2, py: 1, bgcolor: 'background.paper' }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+                    Baza wiedzy
+                  </Typography>
                   <Tooltip title="Zarządzaj plikami źródłowymi">
                     <IconButton
                       size="small"
-                      color="primary"
+                      color="info"
                       onClick={() => router.push(`/subjects?subjectId=${s.id}`)}
+                      sx={{ bgcolor: 'rgba(2, 136, 209, 0.08)', '&:hover': { bgcolor: 'rgba(2, 136, 209, 0.16)' } }}
                     >
                       <FolderOpenIcon fontSize="small" />
                     </IconButton>
                   </Tooltip>
-                  <Typography variant="caption" color="text.secondary">
-                    Pliki źródłowe
-                  </Typography>
                 </CardActions>
               </Card>
             </Grid>

@@ -17,12 +17,12 @@ export default function BackupPanel() {
       <Button 
         variant="outlined" 
         startIcon={<SaveIcon />}
-        sx={{ mt: 1, mb: 3 }}
+        sx={{ mt: 1, mb: 3, height: 48, px: 3, fontWeight: 600 }}
       >
         Utwórz kopię zapasową
       </Button>
 
-      <Paper variant="outlined" sx={{ p: 2, textAlign: 'center', bgcolor: 'background.default' }}>
+      <Paper variant="outlined" sx={{ p: 4, textAlign: 'center', bgcolor: 'rgba(0,0,0,0.01)', borderRadius: 3, borderStyle: 'dashed' }}>
         <Typography variant="body2" color="text.secondary">
           Brak ręcznych kopii zapasowych
         </Typography>

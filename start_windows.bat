@@ -1,7 +1,16 @@
 @echo off
 setlocal EnableDelayedExpansion
 
-call check_update.bat
+if exist "check_update.bat" (
+    call check_update.bat
+    if errorlevel 1 (
+        echo [UWAGA] Wystapil problem podczas sprawdzania aktualizacji. Kontynuuje uruchamianie aplikacji.
+        echo.
+    )
+) else (
+    echo [UWAGA] Brak pliku check_update.bat - pomijam sprawdzanie aktualizacji.
+    echo.
+)
 
 echo ============================================
 echo         EduGen - Uruchamianie aplikacji
@@ -39,11 +48,19 @@ echo.
 if not exist "backend\.env" (
     echo [UWAGA] Brak pliku konfiguracyjnego backend\.env
     echo.
-    echo Skopiuj plik backend\.env.example do backend\.env i uzupelnij dane.
-    echo Jesli nie masz pliku .env.example, skontaktuj sie z administratorem.
-    echo.
-    pause
-    exit /b 1
+    if exist ".config_backend" (
+        echo Znaleziono plik .config_backend - kopiowanie do backend\.env...
+        copy ".config_backend" "backend\.env" >nul
+        echo [OK] Plik backend\.env zostal utworzony automatycznie z .config_backend.
+        echo [INFO] Uzupelnij backend\.env o wlasny klucz OPENAI_API_KEY przed generowaniem materialow.
+        echo.
+    ) else (
+        echo [BLAD] Brak pliku .config_backend w glownym katalogu projektu.
+        echo Skontaktuj sie z administratorem i umiec plik .env w folderze backend.
+        echo.
+        pause
+        exit /b 1
+    )
 )
 
 echo [OK] Plik konfiguracyjny backend\.env istnieje.
@@ -52,9 +69,9 @@ echo Budowanie i uruchamianie aplikacji...
 echo (Pierwsze uruchomienie moze trwac kilka minut - trwa pobieranie obrazow)
 echo.
 
-:: Otwarcie przegladarki w tle po 15 sekundach
-echo Przegladarka zostanie otwarta automatycznie za ~15 sekund...
-start /b cmd /c "timeout /t 15 /nobreak >nul && start http://localhost:3000"
+:: Otwarcie przegladarki po 15 sekundach
+echo Przegladarka zostanie otwarta automatycznie po 15 sekundach...
+start "EduGen-BrowserOpener" /B powershell -NoProfile -NonInteractive -WindowStyle Hidden -Command "Start-Sleep 15; Start-Process 'http://localhost:3000'"
 echo.
 echo ============================================
 echo   Aplikacja uruchamia sie - czekaj na logi

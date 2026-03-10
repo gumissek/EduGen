@@ -53,7 +53,7 @@ export function useAuth() {
         localStorage.removeItem(MUST_CHANGE_PASSWORD_KEY);
         router.push('/dashboard');
       }
-    } catch (err: any) {
+    } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
       if (err.response?.status === 401 || err.response?.status === 403) {
         setError('Nieprawidłowe hasło');
       } else {

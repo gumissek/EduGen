@@ -1,7 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-bash check_update.sh || true
+if [ -f "check_update.sh" ]; then
+    bash check_update.sh || {
+        echo "[UWAGA] Wystapil problem podczas sprawdzania aktualizacji. Kontynuuje uruchamianie aplikacji."
+        echo ""
+    }
+else
+    echo "[UWAGA] Brak pliku check_update.sh - pomijam sprawdzanie aktualizacji."
+    echo ""
+fi
 
 echo "============================================"
 echo "        EduGen - Uruchamianie aplikacji"
@@ -62,10 +70,18 @@ echo ""
 if [ ! -f "backend/.env" ]; then
     echo "[UWAGA] Brak pliku konfiguracyjnego backend/.env"
     echo ""
-    echo "Skopiuj plik backend/.env.example do backend/.env i uzupelnij dane."
-    echo "Jesli nie masz pliku .env.example, skontaktuj sie z administratorem."
-    echo ""
-    exit 1
+    if [ -f ".config_backend" ]; then
+        echo "Znaleziono plik .config_backend - kopiowanie do backend/.env..."
+        cp ".config_backend" "backend/.env"
+        echo "[OK] Plik backend/.env zostal utworzony automatycznie z .config_backend."
+        echo "[INFO] Uzupelnij backend/.env o wlasny klucz OPENAI_API_KEY przed generowaniem materialow."
+        echo ""
+    else
+        echo "[BLAD] Brak pliku .config_backend w glownym katalogu projektu."
+        echo "Skontaktuj sie z administratorem i umiec plik .env w folderze backend."
+        echo ""
+        exit 1
+    fi
 fi
 
 echo "[OK] Plik konfiguracyjny backend/.env istnieje."
@@ -77,7 +93,7 @@ echo ""
 # ── Obsluga CTRL+C: zatrzymaj kontenery przy wyjsciu ─────────────────────────
 trap 'echo ""; echo "Zatrzymywanie kontenerow..."; docker compose down; exit 0' INT TERM
 
-# ── Otworz przegladarke w tle po 15 sekundach ────────────────────────────────
+# ── Otworz przegladarke po 15 sekundach ─────────────────────────────────────
 (
   sleep 15
   if [[ "$(uname)" == "Darwin" ]]; then

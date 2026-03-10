@@ -67,30 +67,34 @@ export default function DocumentDetailsPage({ params }: { params: Promise<{ id: 
           {document.title}
         </Typography>
 
-        <Box sx={{ display: 'flex', gap: 1 }}>
+        <Box sx={{ display: 'flex', gap: 1.5 }}>
           <Button 
-            variant="outlined" 
+            variant="contained" 
+            color="primary"
             startIcon={<SaveIcon />}
             onClick={handleSave}
             disabled={!isEdited || isUpdating}
+            sx={{ borderRadius: 2, px: 3, fontWeight: 600 }}
           >
             Zapisz
           </Button>
           <Button 
-            variant="contained" 
+            variant="outlined" 
             color="secondary"
             startIcon={isExportingWord ? <CircularProgress size={20} color="inherit" /> : <DescriptionIcon />}
             onClick={() => exportWord()}
             disabled={isExportingWord}
+            sx={{ borderRadius: 2 }}
           >
             Word
           </Button>
           <Button 
-            variant="contained" 
+            variant="outlined" 
             color="error"
             startIcon={isExportingPDF ? <CircularProgress size={20} color="inherit" /> : <PictureAsPdfIcon />}
             onClick={() => exportPDF()}
             disabled={isExportingPDF}
+            sx={{ borderRadius: 2 }}
           >
             PDF
           </Button>

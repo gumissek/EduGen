@@ -32,23 +32,26 @@ export default function RepromptInput({ onSend, isLoading }: RepromptInputProps)
 
   return (
     <Paper 
-      elevation={3} 
+      elevation={0} 
       sx={{ 
         position: 'fixed', 
-        bottom: 24, 
+        bottom: 32, 
         left: '50%', 
         transform: 'translateX(-50%)', 
-        width: '100%', 
-        maxWidth: 600, 
-        borderRadius: 8,
-        p: 0.5,
+        width: 'calc(100% - 32px)', 
+        maxWidth: 680, 
+        borderRadius: '32px',
+        p: '6px 6px 6px 20px',
         display: 'flex',
         alignItems: 'center',
         bgcolor: 'background.paper',
         zIndex: 1000,
+        border: '1px solid',
+        borderColor: 'divider',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
       }}
     >
-      <Box sx={{ pl: 2, color: 'primary.main', display: 'flex', alignItems: 'center' }}>
+      <Box sx={{ color: 'primary.main', display: 'flex', alignItems: 'center' }}>
         <AutoAwesomeIcon />
       </Box>
       <TextField
@@ -59,16 +62,22 @@ export default function RepromptInput({ onSend, isLoading }: RepromptInputProps)
         onChange={(e) => setPrompt(e.target.value)}
         onKeyDown={handleKeyDown}
         disabled={isLoading}
-        sx={{ mx: 2 }}
+        sx={{ mx: 2, '& .MuiInputBase-input': { py: 1.5, fontSize: '0.95rem' } }}
         InputProps={{ disableUnderline: true }}
       />
       <IconButton 
         color="primary" 
         onClick={handleSend} 
         disabled={!prompt.trim() || isLoading}
-        sx={{ mr: 0.5 }}
+        sx={{ 
+          bgcolor: prompt.trim() ? 'primary.main' : 'rgba(0,0,0,0.04)', 
+          color: prompt.trim() ? 'primary.contrastText' : 'text.disabled',
+          '&:hover': { bgcolor: prompt.trim() ? 'primary.dark' : 'rgba(0,0,0,0.04)' },
+          transition: 'all 0.2s',
+          p: 1.5
+        }}
       >
-        {isLoading ? <CircularProgress size={24} /> : <SendIcon />}
+        {isLoading ? <CircularProgress size={24} color="inherit" /> : <SendIcon fontSize="small" />}
       </IconButton>
     </Paper>
   );

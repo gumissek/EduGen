@@ -21,15 +21,15 @@ export default function EmptyState({ icon, title, description, actionLabel, onAc
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        p: 6,
+        p: { xs: 5, sm: 8 },
         textAlign: 'center',
-        bgcolor: 'background.paper',
-        borderRadius: 2,
-        border: '1px dashed',
-        borderColor: 'divider',
+        bgcolor: 'rgba(1, 72, 131, 0.02)',
+        borderRadius: '24px',
+        border: '2px dashed',
+        borderColor: 'rgba(1, 72, 131, 0.15)',
       }}
     >
-      <Box sx={{ color: 'text.secondary', fontSize: 64, mb: 2 }}>{icon}</Box>
+      <Box sx={{ color: 'text.disabled', '& > svg': { fontSize: 64 }, mb: 2 }}>{icon}</Box>
       <Typography variant="h6" gutterBottom>
         {title}
       </Typography>

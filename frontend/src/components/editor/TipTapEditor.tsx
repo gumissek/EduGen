@@ -81,9 +81,14 @@ export default function TipTapEditor({ initialContent, onChange, readOnly = fals
   const insertTable = () => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
 
   return (
-    <Paper variant="outlined" sx={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+    <Paper variant="outlined" sx={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', borderRadius: '24px', borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', boxShadow: '0 8px 32px rgba(0,0,0,0.04)' }}>
       {!readOnly && (
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', p: 1, borderBottom: 1, borderColor: 'divider', bgcolor: 'background.default' }}>
+        <Box sx={{ 
+          display: 'flex', flexWrap: 'wrap', p: 1, 
+          borderBottom: 1, borderColor: 'divider', 
+          background: 'rgba(255, 255, 255, 0.7)', backdropFilter: 'blur(16px)',
+          position: 'sticky', top: 0, zIndex: 10
+        }}>
           <Tooltip title="Pogrubienie">
             <IconButton size="small" onClick={toggleBold} color={editor.isActive('bold') ? 'primary' : 'default'}><FormatBoldIcon /></IconButton>
           </Tooltip>

@@ -32,7 +32,7 @@ export default function ChangePasswordForm() {
     try {
       await changePassword(data.new_password);
       router.push('/dashboard');
-    } catch (err: any) {
+    } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
       if (err.response?.data?.detail) {
         setError(err.response.data.detail);
       } else {
@@ -77,7 +77,7 @@ export default function ChangePasswordForm() {
         type="submit"
         fullWidth
         variant="contained"
-        sx={{ mt: 3, mb: 2, height: 48 }}
+        sx={{ mt: 3, mb: 1, height: 52, fontSize: '1rem', fontWeight: 600 }}
         disabled={isLoading}
       >
         {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Zmień hasło'}

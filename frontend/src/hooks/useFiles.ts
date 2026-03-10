@@ -22,6 +22,7 @@ export function useFiles(subjectId?: string | null) {
     },
     enabled: !!subjectId,
     // Poll every 5s if any file is still being processed (no text and no error yet)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     refetchInterval: (queryData: any) => {
       const hasProcessingFiles = queryData.state?.data?.some(
         (f: SourceFile) => !f.has_extracted_text && !f.extraction_error,

@@ -38,11 +38,11 @@ export default function ConfirmDialog({
       <DialogContent>
         <DialogContentText>{message}</DialogContentText>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onCancel} disabled={isLoading} color="inherit">
+      <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
+        <Button onClick={onCancel} disabled={isLoading} color="inherit" sx={{ fontWeight: 600 }}>
           {cancelLabel}
         </Button>
-        <Button onClick={onConfirm} color={severity} variant="contained" disabled={isLoading} autoFocus>
+        <Button onClick={onConfirm} color={severity} variant="contained" disabled={isLoading} autoFocus sx={{ fontWeight: 600 }}>
           {isLoading ? <CircularProgress size={24} color="inherit" /> : confirmLabel}
         </Button>
       </DialogActions>

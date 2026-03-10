@@ -51,6 +51,7 @@ Główny proces biznesowy to generowanie dokumentów. Elementy go wspierające:
 
 ### `layout/`
 - Layout aplikacji (Sidebar, Header głównego ekranu).
+- **`Sidebar.tsx`** wyświetla wersję aplikacji w stopce bocznego panelu w formacie `APP_NAME_VERSION_RELEASE_DATE` (np. `EduGen_1.0.1_2025-03-10`). Wartości odczytywane są ze zmiennych środowiskowych `NEXT_PUBLIC_APP_NAME`, `NEXT_PUBLIC_APP_VERSION` i `NEXT_PUBLIC_APP_RELEASE_DATE`, które są wstrzykiwane podczas budowania przez `next.config.ts` na podstawie pliku `.version` z głównego katalogu projektu.
 
 ### Inne
 - `documents/`, `subjects/`, `settings/`, `auth/` — komponenty odpowiadające logice poszczególnych domen.
@@ -111,6 +112,7 @@ Walidacja formularzy realizowana przez **Zod** we współpracy z **React Hook Fo
 - Odpowiada za kluczowy routing wewnętrzny w trybie developerskim poprzez `rewrites()`. 
 - Proxy przekierowuje wywołania z Frontendu (`/api/*`) na docelowy Backend (`process.env.BACKEND_URL` domyślnie http://localhost:8000), zapobiegając błędom CORS.
 - Włącza `standalone` mode przydatny przy pracy w Dockerze i transpilacje pakietów MUI.
+- **Wstrzykiwanie wersji aplikacji:** Podczas budowania odczytuje plik `.version` z głównego katalogu projektu i eksponuje jego pola jako zmienne `NEXT_PUBLIC_APP_NAME`, `NEXT_PUBLIC_APP_VERSION` oraz `NEXT_PUBLIC_APP_RELEASE_DATE`. Dzięki temu komponenty klienckie (np. `Sidebar.tsx`) mają dostęp do aktualnych danych wersji bez potrzeby dodatkowych żądań sieciowych.
 
 ---
 

@@ -26,6 +26,7 @@ export function useGenerations(id?: string) {
       return res.data;
     },
     enabled: !!id,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     refetchInterval: (queryData: any) => {
       const status = queryData.state?.data?.status;
       if (status === 'processing' || status === 'draft') return GENERATION_POLL_INTERVAL_MS;

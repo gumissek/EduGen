@@ -24,7 +24,6 @@ export default function ApiKeyForm() {
   const handleMouseDownPassword = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
   };
-
   const handleSave = () => {
     if (apiKey) {
       updateSettings({ openai_api_key: apiKey });
@@ -41,13 +40,33 @@ export default function ApiKeyForm() {
   return (
     <Box sx={{ mt: 2 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
-        <Typography variant="subtitle1" fontWeight="medium">
+        <Typography variant="subtitle1" fontWeight="bold" color="text.primary">
           Status klucza API:
         </Typography>
         {hasKey ? (
-          <Chip icon={<CheckCircleIcon />} label="Skonfigurowany" color="success" size="small" />
+          <Chip
+            icon={<CheckCircleIcon />}
+            label="Skonfigurowany"
+            size="small"
+            sx={(theme) => ({
+              bgcolor: theme.palette.success.dark,
+              color: theme.palette.getContrastText(theme.palette.success.dark),
+              fontWeight: 700,
+              '& .MuiChip-icon': { color: theme.palette.getContrastText(theme.palette.success.dark) },
+            })}
+          />
         ) : (
-          <Chip icon={<ErrorIcon />} label="Brak klucza" color="error" size="small" />
+          <Chip
+            icon={<ErrorIcon />}
+            label="Brak klucza"
+            size="small"
+            sx={(theme) => ({
+              bgcolor: theme.palette.error.dark,
+              color: theme.palette.getContrastText(theme.palette.error.dark),
+              fontWeight: 700,
+              '& .MuiChip-icon': { color: theme.palette.getContrastText(theme.palette.error.dark) },
+            })}
+          />
         )}
       </Box>
 
@@ -80,6 +99,7 @@ export default function ApiKeyForm() {
           onClick={handleSave}
           disabled={!apiKey || isUpdating}
           startIcon={isUpdating && <CircularProgress size={20} />}
+          sx={{ height: 48, px: 4, fontWeight: 600 }}
         >
           Zapisz klucz
         </Button>
@@ -88,6 +108,7 @@ export default function ApiKeyForm() {
           onClick={handleValidate}
           disabled={!hasKey || isValidating}
           startIcon={isValidating && <CircularProgress size={20} />}
+          sx={{ height: 48, px: 4, fontWeight: 600 }}
         >
           Waliduj klucz
         </Button>

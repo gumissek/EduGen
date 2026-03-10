@@ -21,4 +21,4 @@ class Subject(Base):
 
     # Relationships
     source_files = relationship("SourceFile", back_populates="subject", cascade="all, delete-orphan")
-    generations = relationship("Generation", back_populates="subject")
+    generations = relationship("Generation", back_populates="subject", cascade="all, delete-orphan")

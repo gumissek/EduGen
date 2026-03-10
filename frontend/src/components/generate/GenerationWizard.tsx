@@ -15,12 +15,12 @@ import DialogContentText from '@mui/material/DialogContentText';
 import DialogActions from '@mui/material/DialogActions';
 import Alert from '@mui/material/Alert';
 import AlertTitle from '@mui/material/AlertTitle';
-import Chip from '@mui/material/Chip';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import SchoolIcon from '@mui/icons-material/School';
 import NextLink from 'next/link';
-import { useForm, FormProvider } from 'react-hook-form';
+import Typography from '@mui/material/Typography';
+import { useForm, FormProvider, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { GenerationParamsSchema, GenerationParamsForm, TYPES_WITHOUT_QUESTIONS } from '@/schemas/generation';
 import { GenerationParams } from '@/types';
@@ -65,12 +65,14 @@ export default function GenerationWizard() {
     mode: 'onTouched',
   });
 
-  const { handleSubmit, trigger, watch, setValue } = methods;
+  const { handleSubmit, trigger, setValue } = methods;
   const { createGeneration, isCreating } = useGenerations();
 
-  const contentType = watch('content_type');
-  const educationLevel = watch('education_level');
-  const classLevel = watch('class_level');
+  // useWatch is compatible with React Compiler (unlike watch() from useForm)
+  const formValues = useWatch({ control: methods.control }) as Partial<GenerationParamsForm>;
+  const contentType = formValues.content_type ?? 'worksheet';
+  const educationLevel = formValues.education_level ?? '';
+  const classLevel = formValues.class_level ?? '';
   const isFreeForm = (TYPES_WITHOUT_QUESTIONS as readonly string[]).includes(contentType);
   const contentTypeLabel = CONTENT_TYPES.find(t => t.value === contentType)?.label;
 
@@ -81,13 +83,10 @@ export default function GenerationWizard() {
   const lastStep = ALL_STEPS.length - 1;
   const isLastStep = activeStep === lastStep;
 
-  // Save draft on change
+  // Save draft on change using useWatch (compatible with React Compiler)
   React.useEffect(() => {
-    const subscription = watch((value) => {
-      setDraft(value as Partial<GenerationParamsForm>);
-    });
-    return () => subscription.unsubscribe();
-  }, [watch, setDraft]);
+    setDraft(formValues);
+  }, [formValues, setDraft]);
 
   // When switching to a free-form type, zero out question fields
   React.useEffect(() => {
@@ -184,47 +183,69 @@ export default function GenerationWizard() {
   }
 
   return (
-    <Paper sx={{ p: 4 }}>
+    <Paper sx={{ p: { xs: 3, md: 5 }, borderRadius: '24px', border: '1px solid', borderColor: 'divider', boxShadow: '0 4px 24px rgba(0,0,0,0.02)' }}>
       {/* Selected content type badge – visible after step 0 */}
       {activeStep > 0 && contentTypeLabel && (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3, p: 1.5, borderRadius: 2, bgcolor: 'background.paper', border: 1, borderColor: 'divider', flexWrap: 'wrap' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <AutoAwesomeIcon color="primary" fontSize="small" />
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4, p: 2, borderRadius: 3, bgcolor: 'background.default', border: 1, borderColor: 'divider', flexWrap: 'wrap' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Box sx={{ p: 1, borderRadius: 2, bgcolor: 'primary.main', color: 'primary.contrastText', display: 'flex' }}>
+               <AutoAwesomeIcon fontSize="small" />
+            </Box>
             <Box>
-              <Box component="span" sx={{ fontSize: 11, color: 'text.secondary', display: 'block', lineHeight: 1 }}>Typ treści</Box>
-              <Chip label={contentTypeLabel} color="primary" size="small" sx={{ mt: 0.5 }} />
+              <Box component="span" sx={{ fontSize: 11, fontWeight: 600, color: 'text.secondary', display: 'block', lineHeight: 1, mb: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Typ treści</Box>
+              <Typography variant="body2" fontWeight="bold">{contentTypeLabel}</Typography>
             </Box>
           </Box>
 
           {activeStep > 1 && educationLevelLabel && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <SchoolIcon color="secondary" fontSize="small" />
-              <Box>
-                <Box component="span" sx={{ fontSize: 11, color: 'text.secondary', display: 'block', lineHeight: 1 }}>Poziom edukacji</Box>
-                <Chip label={educationLevelLabel} color="secondary" size="small" sx={{ mt: 0.5 }} />
+            <>
+              <Box sx={{ width: '1px', height: 32, bgcolor: 'divider', display: { xs: 'none', sm: 'block' } }} />
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Box sx={{ p: 1, borderRadius: 2, bgcolor: 'secondary.main', color: 'secondary.contrastText', display: 'flex' }}>
+                   <SchoolIcon fontSize="small" />
+                </Box>
+                <Box>
+                  <Box component="span" sx={{ fontSize: 11, fontWeight: 600, color: 'text.secondary', display: 'block', lineHeight: 1, mb: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Poziom edukacji</Box>
+                  <Typography variant="body2" fontWeight="bold">{educationLevelLabel}</Typography>
+                </Box>
               </Box>
-            </Box>
+            </>
           )}
 
           {activeStep > 1 && classLevel && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <SchoolIcon color="info" fontSize="small" />
-              <Box>
-                <Box component="span" sx={{ fontSize: 11, color: 'text.secondary', display: 'block', lineHeight: 1 }}>Klasa / Semestr</Box>
-                <Chip label={classLevel} color="info" size="small" sx={{ mt: 0.5 }} />
+            <>
+              <Box sx={{ width: '1px', height: 32, bgcolor: 'divider', display: { xs: 'none', sm: 'block' } }} />
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Box sx={{ p: 1, borderRadius: 2, bgcolor: 'info.main', color: 'info.contrastText', display: 'flex' }}>
+                   <SchoolIcon fontSize="small" />
+                </Box>
+                <Box>
+                  <Box component="span" sx={{ fontSize: 11, fontWeight: 600, color: 'text.secondary', display: 'block', lineHeight: 1, mb: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Klasa / Semestr</Box>
+                  <Typography variant="body2" fontWeight="bold">{classLevel}</Typography>
+                </Box>
               </Box>
-            </Box>
+            </>
           )}
         </Box>
       )}
 
-      <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 4 }}>
+      <Stepper 
+        activeStep={activeStep} 
+        alternativeLabel 
+        sx={{ 
+          mb: 5,
+          '& .MuiStepLabel-label': { fontWeight: 500, mt: 1 },
+          '& .MuiStepLabel-label.Mui-active': { color: 'primary.main', fontWeight: 700 },
+          '& .MuiStepLabel-label.Mui-completed': { color: 'text.primary', fontWeight: 600 },
+          '& .MuiStepConnector-line': { borderColor: 'divider', borderWidth: 2, borderRadius: 1 },
+        }}
+      >
         {ALL_STEPS.map((label, index) => {
           const isSkipped = index === QUESTIONS_STEP && isFreeForm;
           return (
             <Step key={label} completed={activeStep > index && !isSkipped}>
               <StepLabel
-                optional={isSkipped ? <span style={{ fontSize: 11, color: 'var(--mui-palette-text-secondary)' }}>Nie dotyczy</span> : undefined}
+                optional={isSkipped ? <span className="step-not-applicable">Nie dotyczy</span> : undefined}
                 StepIconProps={isSkipped ? { style: { color: 'var(--mui-palette-divider)' } } : undefined}
               >
                 {label}

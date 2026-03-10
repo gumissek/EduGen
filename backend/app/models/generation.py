@@ -15,7 +15,7 @@ class Generation(Base):
     __tablename__ = "generations"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
-    subject_id: Mapped[str] = mapped_column(String(36), ForeignKey("subjects.id"), nullable=False, index=True)
+    subject_id: Mapped[str] = mapped_column(String(36), ForeignKey("subjects.id", ondelete="CASCADE"), nullable=False, index=True)
     content_type: Mapped[str] = mapped_column(String(50), nullable=False)
     education_level: Mapped[str] = mapped_column(String(255), nullable=False)
     class_level: Mapped[str] = mapped_column(String(100), nullable=False)

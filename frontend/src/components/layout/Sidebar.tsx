@@ -42,34 +42,64 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
   };
 
   const drawerContent = (
-    <div>
-      <Toolbar />
-      <Box sx={{ overflow: 'auto' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <Toolbar sx={{ minHeight: { xs: 64, sm: 70 } }} />
+      <Box sx={{ overflow: 'auto', flexGrow: 1, pt: 2, px: 2 }}>
         <List>
-          {menuItems.map((item) => (
-            <ListItem key={item.text} disablePadding>
-              <ListItemButton
-                selected={pathname.startsWith(item.path)}
-                onClick={() => handleNavigation(item.path)}
-              >
-                <ListItemIcon sx={{ color: pathname.startsWith(item.path) ? 'primary.main' : 'inherit' }}>
-                  {item.icon}
-                </ListItemIcon>
-                <ListItemText
-                  primary={item.text}
-                  sx={{ color: pathname.startsWith(item.path) ? 'primary.main' : 'inherit' }}
-                />
-              </ListItemButton>
-            </ListItem>
-          ))}
+          {menuItems.map((item) => {
+            const isSelected = pathname.startsWith(item.path);
+            return (
+              <ListItem key={item.text} disablePadding>
+                <ListItemButton
+                  selected={isSelected}
+                  onClick={() => handleNavigation(item.path)}
+                  sx={{
+                    borderRadius: '12px',
+                    mb: 1,
+                    py: 1.25,
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    '&.Mui-selected': {
+                      bgcolor: 'rgba(1, 72, 131, 0.12)',
+                      color: 'primary.main',
+                      boxShadow: '0 2px 8px rgba(1, 72, 131, 0.08)',
+                      transform: 'translateX(4px)',
+                      '&:hover': {
+                        bgcolor: 'rgba(1, 72, 131, 0.16)',
+                      }
+                    },
+                    '&:hover': {
+                      bgcolor: 'action.hover',
+                      transform: 'translateX(4px)',
+                    }
+                  }}
+                >
+                  <ListItemIcon sx={{ 
+                    color: isSelected ? 'primary.main' : 'text.secondary',
+                    minWidth: 40,
+                    transition: 'color 0.2s',
+                  }}>
+                    {item.icon}
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={item.text}
+                    primaryTypographyProps={{ 
+                      fontWeight: isSelected ? 600 : 500,
+                      color: isSelected ? 'primary.main' : 'text.primary',
+                    }}
+                    sx={{ transition: 'color 0.2s' }}
+                  />
+                </ListItemButton>
+              </ListItem>
+            );
+          })}
         </List>
       </Box>
-      <Box sx={{ position: 'absolute', bottom: 16, width: '100%', textAlign: 'center' }}>
-        <Typography variant="caption" color="text.secondary">
-          EduGen Local v1.0.0
+      <Box sx={{ p: 3, textAlign: 'center' }}>
+        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+          {`${process.env.NEXT_PUBLIC_APP_NAME ?? 'EduGen'}_${process.env.NEXT_PUBLIC_APP_VERSION ?? '1.0.0'}_${process.env.NEXT_PUBLIC_APP_RELEASE_DATE ?? ''}`}
         </Typography>
       </Box>
-    </div>
+    </Box>
   );
 
   return (
@@ -92,7 +122,14 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
         variant="permanent"
         sx={{
           display: { xs: 'none', md: 'block' },
-          '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
+          '& .MuiDrawer-paper': { 
+            boxSizing: 'border-box', 
+            width: drawerWidth,
+            borderRight: '1px solid',
+            borderColor: 'rgba(0,0,0,0.05)',
+            bgcolor: 'background.paper',
+            boxShadow: '2px 0 16px rgba(0,0,0,0.02)',
+          },
         }}
         open
       >

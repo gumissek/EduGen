@@ -33,6 +33,7 @@ export default function ModelSelector() {
           label="Model AI"
           onChange={handleChange}
           disabled={isUpdating}
+          sx={{ borderRadius: '12px' }}
         >
           {/* Typically we might get these from /validate-key, but standard options for MVP */}
           <MenuItem value="gpt-5-mini">gpt-5-mini (Zalecany do tekstu)</MenuItem>

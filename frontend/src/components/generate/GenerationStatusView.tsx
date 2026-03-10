@@ -50,43 +50,63 @@ export default function GenerationStatusView({ id }: { id: string }) {
   const { status, error_message } = generationStatus;
 
   return (
-    <Paper sx={{ p: 6, textAlign: 'center', maxWidth: 600, mx: 'auto', mt: 4 }}>
+    <Paper variant="outlined" sx={{ p: { xs: 4, sm: 8 }, textAlign: 'center', maxWidth: 600, mx: 'auto', mt: { xs: 4, md: 8 }, borderRadius: '24px', borderColor: 'divider', boxShadow: '0 12px 48px rgba(0,0,0,0.05)' }}>
       {status === 'processing' || status === 'draft' || status === 'pending' ? (
-        <>
-          <CircularProgress size={64} sx={{ mb: 4 }} />
-          <Typography variant="h5" gutterBottom>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <Box sx={{ 
+            position: 'relative', display: 'inline-flex', mb: 5,
+            '&::before': {
+              content: '""', position: 'absolute', top: -8, left: -8, right: -8, bottom: -8,
+              borderRadius: '50%', bgcolor: 'primary.main', opacity: 0.1, zIndex: 0,
+              animation: 'pulseRing 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+            },
+            '@keyframes pulseRing': {
+              '0%': { transform: 'scale(0.8)', opacity: 0.5 },
+              '100%': { transform: 'scale(1.5)', opacity: 0 }
+            }
+          }}>
+            <CircularProgress size={80} thickness={4} sx={{ position: 'relative', zIndex: 1 }} />
+            <Box sx={{ top: 0, left: 0, bottom: 0, right: 0, position: 'absolute', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Typography variant="caption" component="div" color="text.secondary" fontWeight="bold">AI</Typography>
+            </Box>
+          </Box>
+          <Typography variant="h5" fontWeight="800" gutterBottom>
             Trwa generowanie materiałów...
           </Typography>
-          <Typography variant="body1" color="text.secondary">
-            Ten proces może potrwać do 60 sekund. Nie odświeżaj strony.
+          <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 400, mx: 'auto' }}>
+            Ten proces może potrwać do 60 sekund. Model AI aktualnie opracowuje treść na podstawie Twoich wytycznych.
           </Typography>
-        </>
+        </Box>
       ) : status === 'ready' ? (
-        <>
-          <CheckCircleOutlineIcon color="success" sx={{ fontSize: 64, mb: 4 }} />
-          <Typography variant="h5" gutterBottom>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <Box sx={{ width: 80, height: 80, borderRadius: '50%', bgcolor: 'success.main', color: 'success.contrastText', display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 4, boxShadow: '0 8px 16px rgba(46, 125, 50, 0.2)' }}>
+            <CheckCircleOutlineIcon sx={{ fontSize: 40 }} />
+          </Box>
+          <Typography variant="h4" fontWeight="800" gutterBottom>
             Materiał jest gotowy!
           </Typography>
-          <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-            Przekierowywanie do edytora...
+          <Typography variant="body1" color="text.secondary" sx={{ mb: 5 }}>
+            Przekierowywanie do edytora w przeciągu kilku sekund...
           </Typography>
-          <Button variant="contained" onClick={() => router.push(`/generate/${id}/editor`)}>
+          <Button variant="contained" color="primary" onClick={() => router.push(`/generate/${id}/editor`)} sx={{ px: 4, height: 48, borderRadius: 2, fontWeight: 600 }}>
             Otwórz edytor teraz
           </Button>
-        </>
+        </Box>
       ) : ( // error
-        <>
-          <ErrorOutlineIcon color="error" sx={{ fontSize: 64, mb: 4 }} />
-          <Typography variant="h5" color="error" gutterBottom>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <Box sx={{ width: 80, height: 80, borderRadius: '50%', bgcolor: 'error.main', color: 'error.contrastText', display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 4, boxShadow: '0 8px 16px rgba(211, 47, 47, 0.2)' }}>
+            <ErrorOutlineIcon sx={{ fontSize: 40 }} />
+          </Box>
+          <Typography variant="h4" fontWeight="800" color="error" gutterBottom>
             Wystąpił błąd
           </Typography>
-          <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-            {error_message || 'Błąd generowania AI. Spróbuj ponownie lub zmień parametry.'}
+          <Typography variant="body1" color="text.secondary" sx={{ mb: 5, maxWidth: 400, mx: 'auto' }}>
+            {error_message || 'Błąd komunikacji z modelem AI. Prosimy o zmianę parametrów i próbę ponownego generowania.'}
           </Typography>
-          <Button variant="outlined" onClick={() => router.push('/generate')}>
+          <Button variant="outlined" color="error" onClick={() => router.push('/generate')} sx={{ px: 4, height: 48, borderRadius: 2, fontWeight: 600 }}>
             Wróć do konfiguracji
           </Button>
-        </>
+        </Box>
       )}
     </Paper>
   );

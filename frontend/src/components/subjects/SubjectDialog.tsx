@@ -41,9 +41,21 @@ export default function SubjectDialog({ open, onClose, onSubmit, isLoading }: Su
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog 
+      open={open} 
+      onClose={onClose} 
+      maxWidth="sm" 
+      fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: '24px',
+          p: 2,
+          boxShadow: '0 24px 64px rgba(0,0,0,0.2)',
+        }
+      }}
+    >
       <form onSubmit={handleSubmit(onFormSubmit)}>
-        <DialogTitle>Dodaj nowy przedmiot</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 800 }}>Dodaj nowy przedmiot</DialogTitle>
         <DialogContent>
           <TextField
             autoFocus
@@ -54,13 +66,14 @@ export default function SubjectDialog({ open, onClose, onSubmit, isLoading }: Su
             helperText={errors.name?.message}
             {...register('name')}
             disabled={isLoading}
+            sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
           />
         </DialogContent>
-        <DialogActions>
-          <Button onClick={onClose} disabled={isLoading} color="inherit">
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={onClose} disabled={isLoading} color="inherit" sx={{ fontWeight: 600 }}>
             Anuluj
           </Button>
-          <Button type="submit" variant="contained" disabled={isLoading}>
+          <Button type="submit" variant="contained" disabled={isLoading} sx={{ borderRadius: 2, fontWeight: 600, px: 3 }}>
             {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Dodaj'}
           </Button>
         </DialogActions>

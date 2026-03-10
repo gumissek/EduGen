@@ -4,7 +4,6 @@ import * as React from 'react';
 import Box from '@mui/material/Box';
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
-import Typography from '@mui/material/Typography';
 import CircularProgress from '@mui/material/CircularProgress';
 import Alert from '@mui/material/Alert';
 import { useForm as useRHForm } from 'react-hook-form';
@@ -52,7 +51,7 @@ export default function LoginForm() {
         type="submit"
         fullWidth
         variant="contained"
-        sx={{ mt: 3, mb: 2, height: 48 }}
+        sx={{ mt: 3, mb: 1, height: 52, fontSize: '1rem', fontWeight: 600 }}
         disabled={isLoading}
       >
         {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Zaloguj się'}

@@ -114,7 +114,20 @@ function FileStatusSection({ file }: { file: SourceFile }) {
 
 export default function FileCard({ file, onDelete }: FileCardProps) {
   return (
-    <Card variant="outlined" sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <Card variant="outlined" sx={{ 
+      display: 'flex', 
+      flexDirection: 'column', 
+      height: '100%',
+      borderWidth: '1px',
+      borderColor: 'divider',
+      boxShadow: '0 4px 16px rgba(0,0,0,0.04)',
+      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', 
+      '&:hover': { 
+        borderColor: 'primary.main', 
+        transform: 'translateY(-4px)',
+        boxShadow: '0 12px 32px rgba(0,0,0,0.08)' 
+      } 
+    }}>
       <CardContent sx={{ flexGrow: 1 }}>
         <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 1 }}>
           <Box sx={{ mr: 1.5, mt: 0.5 }}>{getFileIcon(file.file_type)}</Box>

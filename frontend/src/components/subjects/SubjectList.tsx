@@ -10,6 +10,7 @@ import IconButton from '@mui/material/IconButton';
 import DeleteIcon from '@mui/icons-material/Delete';
 import FolderIcon from '@mui/icons-material/Folder';
 import Typography from '@mui/material/Typography';
+import Box from '@mui/material/Box'
 import { Subject } from '@/types';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 
@@ -36,36 +37,57 @@ export default function SubjectList({ subjects, selectedSubjectId, onSelect, onD
 
   return (
     <>
-      <List sx={{ width: '100%', bgcolor: 'background.paper' }}>
-        {subjects.map((subject) => (
+      <List sx={{ width: '100%', bgcolor: 'transparent', display: 'flex', flexDirection: 'column', gap: 1.5, p: 0 }}>
+        {subjects.map((subject) => {
+          const isSelected = selectedSubjectId === subject.id;
+          return (
           <ListItem
             key={subject.id}
             disablePadding
             secondaryAction={
               subject.is_custom ? (
-                <IconButton edge="end" aria-label="delete" onClick={() => setDeleteId(subject.id)}>
+                <IconButton edge="end" aria-label="delete" onClick={() => setDeleteId(subject.id)} sx={{ mr: 1, color: 'error.main' }}>
                   <DeleteIcon />
                 </IconButton>
               ) : null
             }
+            sx={{
+              border: '1px solid',
+              borderColor: isSelected ? 'primary.main' : 'divider',
+              borderRadius: '16px',
+              bgcolor: 'background.paper',
+              backgroundImage: isSelected ? 'linear-gradient(to right, rgba(1, 72, 131, 0.03), transparent)' : 'none',
+              boxShadow: isSelected ? '0 4px 12px rgba(1, 72, 131, 0.08)' : '0 2px 8px rgba(0,0,0,0.02)',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              overflow: 'hidden',
+              '&:hover': {
+                borderColor: 'primary.main',
+                backgroundImage: 'linear-gradient(to right, rgba(1, 72, 131, 0.04), transparent)',
+                transform: 'translateY(-2px)',
+                boxShadow: '0 6px 16px rgba(1, 72, 131, 0.1)'
+              }
+            }}
           >
             <ListItemButton
-              selected={selectedSubjectId === subject.id}
+              selected={isSelected}
               onClick={() => onSelect(subject.id)}
+              sx={{ p: 2 }}
             >
-              <ListItemIcon>
-                <FolderIcon color={selectedSubjectId === subject.id ? 'primary' : 'inherit'} />
+              <ListItemIcon sx={{ minWidth: 48, color: isSelected ? 'primary.main' : 'text.secondary' }}>
+                <Box sx={{ p: 1, bgcolor: isSelected ? 'rgba(1, 72, 131, 0.1)' : 'rgba(0, 0, 0, 0.04)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <FolderIcon color="inherit" />
+                </Box>
               </ListItemIcon>
               <ListItemText 
                 primary={subject.name} 
                 primaryTypographyProps={{ 
-                  fontWeight: selectedSubjectId === subject.id ? 'bold' : 'normal',
-                  color: selectedSubjectId === subject.id ? 'primary.main' : 'text.primary',
+                  fontWeight: isSelected ? 700 : 500,
+                  color: isSelected ? 'primary.main' : 'text.primary',
                 }} 
               />
             </ListItemButton>
           </ListItem>
-        ))}
+        )})}
       </List>
 
       <ConfirmDialog

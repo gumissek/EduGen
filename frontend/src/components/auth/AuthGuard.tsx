@@ -15,7 +15,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Only check auth state if we're not on the login page
     if (pathname === '/login') {
-      setIsChecking(false);
+      setTimeout(() => setIsChecking(false), 0);
       return;
     }
 

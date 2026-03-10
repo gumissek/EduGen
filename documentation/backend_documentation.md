@@ -43,6 +43,8 @@ Moduł zarządzania zmiennymi środowiskowymi przez `pydantic-settings`:
 - `DATABASE_URL` (domyślnie `sqlite:///./data/edugen.db`)
 - `DATA_DIR`, `SESSION_TIMEOUT_MINUTES`, `MAX_FILE_SIZE_MB`, `CORS_ORIGINS`.
 
+> **Szablon konfiguracji:** Główny katalog projektu zawiera plik **`.config_backend`**, który jest domyślnym szablonem konfiguracyjnym. Skrypty startowe (`start_windows.bat` / `start_mac_linux.sh`) automatycznie kopiują go do `backend/.env`, jeśli plik nie istnieje. Plik `.config_backend` zawiera wszystkie wymagane zmienne z bezpiecznymi wartościami domyślnymi — wyjątkiem jest `OPENAI_API_KEY`, który użytkownik musi uzupełnić samodzielnie przez panel Ustawień aplikacji.
+
 ### `backend/app/database.py`
 Konfiguracja silnika SQLAlchemy (SQLite):
 - Włączone mechanizmy PRAGMA specyficzne dla optymalizacji relacyjnych w SQLite: `foreign_keys=ON`, `journal_mode=WAL`, `synchronous=NORMAL`.

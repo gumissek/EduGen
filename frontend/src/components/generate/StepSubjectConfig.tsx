@@ -13,7 +13,7 @@ import Typography from '@mui/material/Typography';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { GenerationParamsForm } from '@/schemas/generation';
 import { useSubjects } from '@/hooks/useSubjects';
-import { useLevels, EducationLevelItem, ClassLevelItem } from '@/hooks/useLevels';
+import { useLevels } from '@/hooks/useLevels';
 import { LANGUAGE_LEVELS } from '@/lib/constants';
 import CircularProgress from '@mui/material/CircularProgress';
 import { Subject } from '@/types';
@@ -61,8 +61,6 @@ export default function StepSubjectConfig() {
     [educationLevels],
   );
 
-  const knownLevel = eduOptions.find(l => l.value === selectedEducationLevel);
-
   // Build class options from CSV data filtered by selected education level
   const classOptions: ClassOption[] = React.useMemo(() => {
     const filtered = classLevels.filter(c => c.education_level === selectedEducationLevel);
@@ -82,265 +80,268 @@ export default function StepSubjectConfig() {
   if (isLoading || isLoadingEdu || isLoadingClass) return <CircularProgress />;
 
   return (
-    <Grid container spacing={3}>
+    <Box>
+      <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>Podstawowe parametry</Typography>
+      <Grid container spacing={4}>
 
-      {/* Subject */}
-      <Grid item xs={12} md={6}>
-        <TextField
-          select
-          fullWidth
-          label="Przedmiot"
-          error={!!errors.subject_id}
-          helperText={errors.subject_id?.message}
-          {...register('subject_id')}
-          value={selectedSubjectId || ''}
-        >
-          {subjects.map((subject: Subject) => (
-            <MenuItem key={subject.id} value={subject.id}>
-              {subject.name}
-            </MenuItem>
-          ))}
-        </TextField>
-      </Grid>
-
-      {/* Education level (enum + custom) */}
-      <Grid item xs={12} md={6}>
-        <Controller
-          name="education_level"
-          control={control}
-          render={({ field }) => {
-            const currentOption: EduLevelOption | undefined =
-              eduOptions.find(o => o.value === field.value) ??
-              (field.value ? { value: field.value, label: field.value } : undefined);
-
-            return (
-              <Autocomplete<EduLevelOption, false, true, true>
-                freeSolo
-                value={currentOption}
-                options={eduOptions}
-                getOptionLabel={(opt) => (typeof opt === 'string' ? opt : opt.label)}
-                filterOptions={(options, params) => {
-                  const filtered = filterEduOptions(options, params);
-                  const { inputValue } = params;
-                  const exists = options.some(o => o.label === inputValue || o.value === inputValue);
-                  if (inputValue !== '' && !exists) {
-                    filtered.push({ value: inputValue, label: `Dodaj: "${inputValue}"`, inputValue });
-                  }
-                  return filtered;
-                }}
-                disableClearable
-                onChange={async (_e, newValue) => {
-                  if (newValue === null || newValue === '') return;
-
-                  let selectedValue: string;
-                  if (typeof newValue === 'string') {
-                    if (newValue.trim() === '') return;
-                    selectedValue = newValue.trim();
-                  } else {
-                    selectedValue = newValue.inputValue ?? newValue.value;
-                  }
-
-                  // If this is a new custom level, persist it to CSV
-                  const isNew = !eduOptions.some(o => o.value === selectedValue);
-                  if (isNew && selectedValue) {
-                    try {
-                      await createEducationLevel({
-                        value: selectedValue,
-                        label: selectedValue,
-                        class_range_start: 1,
-                        class_range_end: 8,
-                      });
-                    } catch {
-                      // already exists or error — proceed anyway
-                    }
-                  }
-
-                  field.onChange(selectedValue);
-                  setValue('class_level', 'Klasa 1');
-                }}
-                renderOption={(props, option) => (
-                  <Box component="li" {...props} key={option.value} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                    <Typography sx={{ flex: 1 }}>{option.label}</Typography>
-                    {!option.inputValue && (
-                      <Tooltip title="Usuń poziom edukacji">
-                        <IconButton
-                          size="small"
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            await deleteEducationLevel(option.value);
-                            if (field.value === option.value) {
-                              const remaining = eduOptions.filter(o => o.value !== option.value);
-                              if (remaining.length > 0) {
-                                field.onChange(remaining[0].value);
-                                setValue('class_level', 'Klasa 1');
-                              }
-                            }
-                          }}
-                          sx={{ ml: 1, color: 'error.main' }}
-                        >
-                          <DeleteOutlineIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    )}
-                  </Box>
-                )}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="Poziom edukacji"
-                    required
-                    error={!!errors.education_level}
-                    helperText={errors.education_level?.message ?? 'Wybierz z listy lub wpisz własny poziom'}
-                  />
-                )}
-              />
-            );
-          }}
-        />
-      </Grid>
-
-      {/* Class level (enum + custom) */}
-      <Grid item xs={12} md={6}>
-        <Controller
-          name="class_level"
-          control={control}
-          render={({ field }) => {
-            const strVal = String(field.value ?? '');
-            const currentOption: ClassOption | undefined =
-              classOptions.find(o => o.value === strVal) ??
-              (strVal ? { value: strVal, label: strVal } : undefined);
-
-            return (
-              <Autocomplete<ClassOption, false, true, true>
-                freeSolo
-                value={currentOption}
-                options={classOptions}
-                getOptionLabel={(opt) => (typeof opt === 'string' ? opt : opt.label)}
-                filterOptions={(options, params) => {
-                  const filtered = filterClassOptions(options, params);
-                  const { inputValue } = params;
-                  const trimmed = inputValue.trim();
-                  const exists = options.some(o => o.value === trimmed || o.label === trimmed);
-                  if (trimmed !== '' && !exists) {
-                    filtered.push({ value: trimmed, label: `Dodaj: "${trimmed}"`, inputValue: trimmed });
-                  }
-                  return filtered;
-                }}
-                disableClearable
-                onChange={async (_e, newValue) => {
-                  if (newValue === null) return;
-
-                  let selectedValue: string;
-                  if (typeof newValue === 'string') {
-                    if (!newValue.trim()) return;
-                    selectedValue = newValue.trim();
-                  } else {
-                    selectedValue = newValue.inputValue ?? newValue.value;
-                  }
-
-                  // Persist new custom class level to CSV
-                  const isNew = !classOptions.some(o => o.value === selectedValue);
-                  if (isNew && selectedValue && selectedEducationLevel) {
-                    try {
-                      await createClassLevel({
-                        value: selectedValue,
-                        label: selectedValue,
-                        education_level: selectedEducationLevel,
-                      });
-                    } catch {
-                      // already exists or error — proceed anyway
-                    }
-                  }
-
-                  field.onChange(selectedValue);
-                }}
-                renderOption={(props, option) => (
-                  <Box component="li" {...props} key={option.value} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                    <Typography sx={{ flex: 1 }}>{option.label}</Typography>
-                    {!option.inputValue && (
-                      <Tooltip title="Usuń klasę / semestr">
-                        <IconButton
-                          size="small"
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            await deleteClassLevel({
-                              educationLevel: selectedEducationLevel,
-                              value: option.value,
-                            });
-                            if (field.value === option.value) {
-                              const remaining = classOptions.filter(o => o.value !== option.value);
-                              if (remaining.length > 0) {
-                                field.onChange(remaining[0].value);
-                              }
-                            }
-                          }}
-                          sx={{ ml: 1, color: 'error.main' }}
-                        >
-                          <DeleteOutlineIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    )}
-                  </Box>
-                )}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="Klasa / Semestr"
-                    required
-                    error={!!errors.class_level}
-                    helperText={errors.class_level?.message ?? 'Wybierz z listy lub wpisz dowolną wartość (np. Semestr 2)'}
-                  />
-                )}
-              />
-            );
-          }}
-        />
-      </Grid>
-
-      {/* Language level (conditional) */}
-      {isLanguageSubject && (
+        {/* Subject */}
         <Grid item xs={12} md={6}>
           <TextField
             select
             fullWidth
-            label="Poziom językowy"
-            error={!!errors.language_level}
-            helperText={errors.language_level?.message}
-            {...register('language_level')}
-            value={watch('language_level') || ''}
+            label="Przedmiot"
+            error={!!errors.subject_id}
+            helperText={errors.subject_id?.message}
+            {...register('subject_id')}
+            value={selectedSubjectId || ''}
           >
-            <MenuItem value="">Brak skali</MenuItem>
-            {LANGUAGE_LEVELS.map((lvl) => (
-              <MenuItem key={lvl} value={lvl}>{lvl}</MenuItem>
+            {subjects.map((subject: Subject) => (
+              <MenuItem key={subject.id} value={subject.id}>
+                {subject.name}
+              </MenuItem>
             ))}
           </TextField>
         </Grid>
-      )}
 
-      {/* Topic */}
-      <Grid item xs={12}>
-        <TextField
-          fullWidth
-          label="Temat przewodni"
-          error={!!errors.topic}
-          helperText={errors.topic?.message}
-          {...register('topic')}
-          required
-        />
-      </Grid>
+        {/* Education level (enum + custom) */}
+        <Grid item xs={12} md={6}>
+          <Controller
+            name="education_level"
+            control={control}
+            render={({ field }) => {
+              const currentOption: EduLevelOption | undefined =
+                eduOptions.find(o => o.value === field.value) ??
+                (field.value ? { value: field.value, label: field.value } : undefined);
 
-      {/* Optional instructions */}
-      <Grid item xs={12}>
-        <TextField
-          fullWidth
-          multiline
-          minRows={2}
-          label="Dodatkowe wskazówki (opcjonalne)"
-          error={!!errors.instructions}
-          helperText={errors.instructions?.message}
-          {...register('instructions')}
-        />
+              return (
+                <Autocomplete<EduLevelOption, false, true, true>
+                  freeSolo
+                  value={currentOption}
+                  options={eduOptions}
+                  getOptionLabel={(opt) => (typeof opt === 'string' ? opt : opt.label)}
+                  filterOptions={(options, params) => {
+                    const filtered = filterEduOptions(options, params);
+                    const { inputValue } = params;
+                    const exists = options.some(o => o.label === inputValue || o.value === inputValue);
+                    if (inputValue !== '' && !exists) {
+                      filtered.push({ value: inputValue, label: `Dodaj: "${inputValue}"`, inputValue });
+                    }
+                    return filtered;
+                  }}
+                  disableClearable
+                  onChange={async (_e, newValue) => {
+                    if (newValue === null || newValue === '') return;
+
+                    let selectedValue: string;
+                    if (typeof newValue === 'string') {
+                      if (newValue.trim() === '') return;
+                      selectedValue = newValue.trim();
+                    } else {
+                      selectedValue = newValue.inputValue ?? newValue.value;
+                    }
+
+                    // If this is a new custom level, persist it to CSV
+                    const isNew = !eduOptions.some(o => o.value === selectedValue);
+                    if (isNew && selectedValue) {
+                      try {
+                        await createEducationLevel({
+                          value: selectedValue,
+                          label: selectedValue,
+                          class_range_start: 1,
+                          class_range_end: 8,
+                        });
+                      } catch {
+                        // already exists or error — proceed anyway
+                      }
+                    }
+
+                    field.onChange(selectedValue);
+                    setValue('class_level', 'Klasa 1');
+                  }}
+                  renderOption={(props, option) => (
+                    <Box component="li" {...props} key={option.value} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                      <Typography sx={{ flex: 1 }}>{option.label}</Typography>
+                      {!option.inputValue && (
+                        <Tooltip title="Usuń poziom edukacji">
+                          <IconButton
+                            size="small"
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              await deleteEducationLevel(option.value);
+                              if (field.value === option.value) {
+                                const remaining = eduOptions.filter(o => o.value !== option.value);
+                                if (remaining.length > 0) {
+                                  field.onChange(remaining[0].value);
+                                  setValue('class_level', 'Klasa 1');
+                                }
+                              }
+                            }}
+                            sx={{ ml: 1, color: 'error.main', transition: 'all 0.2s', '&:hover': { bgcolor: 'rgba(229, 57, 53, 0.08)' } }}
+                          >
+                            <DeleteOutlineIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                    </Box>
+                  )}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Poziom edukacji"
+                      required
+                      error={!!errors.education_level}
+                      helperText={errors.education_level?.message ?? 'Wybierz z listy lub wpisz własny poziom'}
+                    />
+                  )}
+                />
+              );
+            }}
+          />
+        </Grid>
+
+        {/* Class level (enum + custom) */}
+        <Grid item xs={12} md={6}>
+          <Controller
+            name="class_level"
+            control={control}
+            render={({ field }) => {
+              const strVal = String(field.value ?? '');
+              const currentOption: ClassOption | undefined =
+                classOptions.find(o => o.value === strVal) ??
+                (strVal ? { value: strVal, label: strVal } : undefined);
+
+              return (
+                <Autocomplete<ClassOption, false, true, true>
+                  freeSolo
+                  value={currentOption}
+                  options={classOptions}
+                  getOptionLabel={(opt) => (typeof opt === 'string' ? opt : opt.label)}
+                  filterOptions={(options, params) => {
+                    const filtered = filterClassOptions(options, params);
+                    const { inputValue } = params;
+                    const trimmed = inputValue.trim();
+                    const exists = options.some(o => o.value === trimmed || o.label === trimmed);
+                    if (trimmed !== '' && !exists) {
+                      filtered.push({ value: trimmed, label: `Dodaj: "${trimmed}"`, inputValue: trimmed });
+                    }
+                    return filtered;
+                  }}
+                  disableClearable
+                  onChange={async (_e, newValue) => {
+                    if (newValue === null) return;
+
+                    let selectedValue: string;
+                    if (typeof newValue === 'string') {
+                      if (!newValue.trim()) return;
+                      selectedValue = newValue.trim();
+                    } else {
+                      selectedValue = newValue.inputValue ?? newValue.value;
+                    }
+
+                    // Persist new custom class level to CSV
+                    const isNew = !classOptions.some(o => o.value === selectedValue);
+                    if (isNew && selectedValue && selectedEducationLevel) {
+                      try {
+                        await createClassLevel({
+                          value: selectedValue,
+                          label: selectedValue,
+                          education_level: selectedEducationLevel,
+                        });
+                      } catch {
+                        // already exists or error — proceed anyway
+                      }
+                    }
+
+                    field.onChange(selectedValue);
+                  }}
+                  renderOption={(props, option) => (
+                    <Box component="li" {...props} key={option.value} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                      <Typography sx={{ flex: 1 }}>{option.label}</Typography>
+                      {!option.inputValue && (
+                        <Tooltip title="Usuń klasę / semestr">
+                          <IconButton
+                            size="small"
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              await deleteClassLevel({
+                                educationLevel: selectedEducationLevel,
+                                value: option.value,
+                              });
+                              if (field.value === option.value) {
+                                const remaining = classOptions.filter(o => o.value !== option.value);
+                                if (remaining.length > 0) {
+                                  field.onChange(remaining[0].value);
+                                }
+                              }
+                            }}
+                            sx={{ ml: 1, color: 'error.main', transition: 'all 0.2s', '&:hover': { bgcolor: 'rgba(229, 57, 53, 0.08)' } }}
+                          >
+                            <DeleteOutlineIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                    </Box>
+                  )}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Klasa / Semestr"
+                      required
+                      error={!!errors.class_level}
+                      helperText={errors.class_level?.message ?? 'Wybierz z listy lub wpisz dowolną wartość (np. Semestr 2)'}
+                    />
+                  )}
+                />
+              );
+            }}
+          />
+        </Grid>
+
+        {/* Language level (conditional) */}
+        {isLanguageSubject && (
+          <Grid item xs={12} md={6}>
+            <TextField
+              select
+              fullWidth
+              label="Poziom językowy"
+              error={!!errors.language_level}
+              helperText={errors.language_level?.message}
+              {...register('language_level')}
+              value={watch('language_level') || ''}
+            >
+              <MenuItem value="">Brak skali</MenuItem>
+              {LANGUAGE_LEVELS.map((lvl) => (
+                <MenuItem key={lvl} value={lvl}>{lvl}</MenuItem>
+              ))}
+            </TextField>
+          </Grid>
+        )}
+
+        {/* Topic */}
+        <Grid item xs={12}>
+          <TextField
+            fullWidth
+            label="Temat przewodni"
+            error={!!errors.topic}
+            helperText={errors.topic?.message}
+            {...register('topic')}
+            required
+          />
+        </Grid>
+
+        {/* Optional instructions */}
+        <Grid item xs={12}>
+          <TextField
+            fullWidth
+            multiline
+            minRows={2}
+            label="Dodatkowe wskazówki (opcjonalne)"
+            error={!!errors.instructions}
+            helperText={errors.instructions?.message}
+            {...register('instructions')}
+          />
+        </Grid>
       </Grid>
-    </Grid>
+    </Box>
   );
 }

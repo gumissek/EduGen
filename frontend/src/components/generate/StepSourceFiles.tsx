@@ -61,21 +61,20 @@ export default function StepSourceFiles() {
 
   return (
     <Box>
-      <Typography variant="h6" gutterBottom>
-        Wybierz pliki źródłowe (opcjonalne)
-      </Typography>
-      <Typography variant="body2" color="text.secondary" gutterBottom>
-        Zaznacz pliki, na podstawie których AI powinno wygenerować pytania.
+      <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>Pliki źródłowe (opcjonalne)</Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+        Zaznacz własne materiały (Zeskanowane notatki, opracowania, PDF), z których AI ma skorzystać przy generowaniu pytań i zadań.
       </Typography>
 
-      <List sx={{ width: '100%', bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', borderRadius: 1, mt: 2 }}>
+      <List sx={{ width: '100%', bgcolor: 'transparent', display: 'flex', flexDirection: 'column', gap: 1.5, p: 0 }}>
         {files.map((file: SourceFile) => {
           const isProcessing = !file.has_extracted_text && !file.extraction_error;
           const hasError = !!file.extraction_error;
           const isDisabled = isProcessing || hasError;
+          const isSelected = selectedFiles.indexOf(file.id) !== -1;
 
           const secondaryText = isProcessing
-            ? 'Plik w trakcie wczytywania przez AI...'
+            ? 'Plik w trakcie przetwarzania przez AI...'
             : file.extraction_error === 'NO_API_KEY'
               ? '⚠ Brak klucza API OpenAI – skonfiguruj go w Ustawieniach'
               : file.extraction_error === 'RATE_LIMIT'
@@ -86,29 +85,48 @@ export default function StepSourceFiles() {
             <ListItem
               key={file.id}
               disablePadding
+              sx={{
+                border: '2px solid',
+                borderColor: isSelected ? 'primary.main' : 'divider',
+                borderRadius: '16px',
+                bgcolor: isSelected ? 'rgba(1, 72, 131, 0.04)' : 'background.paper',
+                transition: 'all 0.2s ease-in-out',
+                overflow: 'hidden',
+                '&:hover': {
+                  borderColor: isDisabled ? 'divider' : 'primary.main',
+                  bgcolor: isDisabled ? 'background.paper' : isSelected ? 'rgba(1, 72, 131, 0.06)' : 'rgba(1, 72, 131, 0.02)',
+                  transform: isDisabled ? 'none' : 'translateY(-2px)'
+                }
+              }}
             >
               <ListItemButton
                 role={undefined}
                 onClick={handleToggle(file.id)}
-                dense
                 disabled={isDisabled}
+                sx={{ p: 2, alignItems: 'center' }}
               >
-                <ListItemIcon>
+                <ListItemIcon sx={{ minWidth: 48, ml: -1 }}>
                   <Checkbox
                     edge="start"
-                    checked={selectedFiles.indexOf(file.id) !== -1}
+                    checked={isSelected}
                     tabIndex={-1}
                     disableRipple
+                    sx={{ '&.Mui-checked': { color: 'primary.main' } }}
                   />
                 </ListItemIcon>
-                <ListItemIcon sx={{ minWidth: 40 }}>
-                  {getFileIcon(file.file_type)}
+                <ListItemIcon sx={{ minWidth: 56, color: 'primary.main' }}>
+                  <Box sx={{ p: 1, bgcolor: 'rgba(0, 0, 0, 0.04)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {getFileIcon(file.file_type)}
+                  </Box>
                 </ListItemIcon>
                 <ListItemText
                   primary={file.filename}
                   secondary={secondaryText}
-                  primaryTypographyProps={{ fontWeight: 'medium' }}
-                  secondaryTypographyProps={{ color: hasError ? 'warning.main' : undefined }}
+                  primaryTypographyProps={{ fontWeight: 600, color: isSelected ? 'primary.main' : 'text.primary', mb: 0.5 }}
+                  secondaryTypographyProps={{ 
+                    color: hasError ? 'error.main' : 'text.secondary', 
+                    sx: { display: '-webkit-box', WebkitLineClamp: isSelected ? 3 : 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }
+                  }}
                 />
               </ListItemButton>
             </ListItem>

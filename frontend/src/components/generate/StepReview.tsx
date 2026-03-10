@@ -37,11 +37,8 @@ export default function StepReview() {
 
   return (
     <Box>
-      <Typography variant="h6" gutterBottom>
-        Podsumowanie konfiguracji
-      </Typography>
-      
-      <Paper variant="outlined" sx={{ p: 3, mb: 3, bgcolor: 'background.default' }}>
+      <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>Podsumowanie konfiguracji</Typography>
+      <Paper variant="outlined" sx={{ p: { xs: 3, md: 4 }, mb: 3, borderRadius: '24px', borderWidth: 1, borderColor: 'divider', bgcolor: 'rgba(1, 72, 131, 0.01)', boxShadow: '0 8px 32px rgba(0,0,0,0.04)' }}>
         <Grid container spacing={2}>
           <Grid item xs={6} sm={4}>
             <Typography variant="caption" color="text.secondary">Typ materiału</Typography>
@@ -151,7 +148,7 @@ export default function StepReview() {
       </Paper>
       
       <Typography variant="body2" color="text.secondary">
-        Sprawdź powyższe dane. Jeśli wszystko się zgadza, kliknij "Generuj materiał", aby przeznaczyć zasoby OpenAI na wygenerowanie prototypu.
+        Sprawdź powyższe dane. Jeśli wszystko się zgadza, kliknij &quot;Generuj materiał&quot;, aby przeznaczyć zasoby OpenAI na wygenerowanie prototypu.
       </Typography>
     </Box>
   );
