@@ -187,7 +187,7 @@ export default function GenerationWizard() {
     <Paper sx={{ p: 4 }}>
       {/* Selected content type badge – visible after step 0 */}
       {activeStep > 0 && contentTypeLabel && (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3, p: 1.5, borderRadius: 1, bgcolor: 'primary.50', border: 1, borderColor: 'primary.200', flexWrap: 'wrap' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3, p: 1.5, borderRadius: 2, bgcolor: 'background.paper', border: 1, borderColor: 'divider', flexWrap: 'wrap' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <AutoAwesomeIcon color="primary" fontSize="small" />
             <Box>
@@ -224,8 +224,8 @@ export default function GenerationWizard() {
           return (
             <Step key={label} completed={activeStep > index && !isSkipped}>
               <StepLabel
-                optional={isSkipped ? <span style={{ fontSize: 11, color: '#aaa' }}>Nie dotyczy</span> : undefined}
-                StepIconProps={isSkipped ? { style: { color: '#ccc' } } : undefined}
+                optional={isSkipped ? <span style={{ fontSize: 11, color: 'var(--mui-palette-text-secondary)' }}>Nie dotyczy</span> : undefined}
+                StepIconProps={isSkipped ? { style: { color: 'var(--mui-palette-divider)' } } : undefined}
               >
                 {label}
               </StepLabel>

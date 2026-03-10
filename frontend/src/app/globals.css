@@ -1,9 +1,28 @@
 body {
   margin: 0;
   padding: 0;
-  font-family: 'Roboto', 'Helvetica', 'Arial', sans-serif;
+  font-family: 'Inter', 'Roboto', 'Helvetica', 'Arial', sans-serif;
   background-color: var(--mui-palette-background-default);
   color: var(--mui-palette-text-primary);
+}
+
+/* Modern Scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--mui-palette-divider);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--mui-palette-text-secondary);
 }
 
 /* ProseMirror / TipTap editor styles */
@@ -18,6 +37,7 @@ body {
   font-size: 1.75rem;
   font-weight: 700;
   margin: 0.75em 0 0.5em;
+  color: var(--mui-palette-primary-main);
 }
 
 .ProseMirror h2 {
@@ -47,10 +67,13 @@ body {
 }
 
 .ProseMirror blockquote {
-  border-left: 3px solid #ccc;
+  border-left: 4px solid var(--mui-palette-primary-light);
   margin: 0.5em 0;
   padding-left: 1em;
-  color: #666;
+  color: var(--mui-palette-text-secondary);
+  background: color-mix(in srgb, var(--mui-palette-primary-light) 5%, transparent);
+  padding: 0.5em 1em;
+  border-radius: 0 8px 8px 0;
 }
 
 .ProseMirror strong {
@@ -67,13 +90,16 @@ body {
   width: 100%;
   margin: 0.5em 0;
   overflow: hidden;
+  border-radius: 8px;
+  border-style: hidden;
+  box-shadow: 0 0 0 1px var(--mui-palette-divider);
 }
 
 .ProseMirror table td,
 .ProseMirror table th {
   min-width: 1em;
-  border: 1px solid #ddd;
-  padding: 6px 8px;
+  border: 1px solid var(--mui-palette-divider);
+  padding: 8px 12px;
   vertical-align: top;
   box-sizing: border-box;
   position: relative;
@@ -82,11 +108,12 @@ body {
 .ProseMirror table th {
   font-weight: bold;
   text-align: left;
-  background-color: #f1f3f5;
+  background-color: var(--mui-palette-background-default);
+  color: var(--mui-palette-text-primary);
 }
 
 .ProseMirror p.is-editor-empty:first-child::before {
-  color: #adb5bd;
+  color: var(--mui-palette-text-secondary);
   content: attr(data-placeholder);
   float: left;
   height: 0;
