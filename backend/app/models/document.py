@@ -15,6 +15,7 @@ class Document(Base):
     __tablename__ = "documents"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     generation_id: Mapped[str] = mapped_column(String(36), ForeignKey("generations.id", ondelete="CASCADE"), nullable=False, index=True)
     filename: Mapped[str] = mapped_column(Text, nullable=False)
     file_path: Mapped[str] = mapped_column(Text, nullable=False)
@@ -23,4 +24,5 @@ class Document(Base):
     deleted_at: Mapped[str | None] = mapped_column(String, nullable=True)
 
     # Relationships
+    user = relationship("User", back_populates="documents")
     generation = relationship("Generation", back_populates="documents")

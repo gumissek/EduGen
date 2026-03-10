@@ -1,16 +1,16 @@
-"""Authentication service."""
+"""Authentication service — JWT creation/verification, user registration & login."""
 
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
-from uuid import uuid4
 
 import bcrypt
+import jwt
 from sqlalchemy.orm import Session as DBSession
 
 from app.config import settings
 from app.models.user import User
-from app.models.session import Session
+from app.models.settings import UserSettings
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -23,41 +23,77 @@ def hash_password(plain_password: str) -> str:
     return bcrypt.hashpw(plain_password.encode(), bcrypt.gensalt()).decode()
 
 
-def authenticate_user(db: DBSession, password: str) -> User | None:
-    """Authenticate user by password. Returns the user or None."""
-    user = db.query(User).first()
+def create_access_token(user_id: str, email: str) -> str:
+    """Create a short-lived JWT access token."""
+    now = datetime.now(timezone.utc)
+    payload = {
+        "sub": user_id,
+        "email": email,
+        "iat": now,
+        "exp": now + timedelta(minutes=settings.JWT_EXPIRATION_MINUTES),
+    }
+    return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+
+
+def verify_access_token(token: str) -> dict | None:
+    """Decode and validate a JWT access token.
+
+    Returns the decoded payload dict or None if invalid/expired.
+    """
+    try:
+        payload = jwt.decode(
+            token,
+            settings.JWT_SECRET_KEY,
+            algorithms=[settings.JWT_ALGORITHM],
+        )
+        return payload
+    except jwt.ExpiredSignatureError:
+        return None
+    except jwt.InvalidTokenError:
+        return None
+
+
+def authenticate_user(db: DBSession, email: str, password: str) -> User | None:
+    """Authenticate user by email and password. Returns the user or None."""
+    user = db.query(User).filter(User.email == email).first()
     if not user:
         return None
-    if not verify_password(password, user.password_hash):
+    if not user.is_active:
         return None
+    if not verify_password(password, user.password_hash):
+        # Track failed login attempts
+        user.failed_login_attempts += 1
+        db.commit()
+        return None
+
+    # Reset failed attempts on success
+    user.failed_login_attempts = 0
+    user.last_login_at = datetime.now(timezone.utc).isoformat()
+    db.commit()
     return user
 
 
-def create_session(db: DBSession, user: User) -> Session:
-    """Create a new session for the authenticated user."""
-    now = datetime.now(timezone.utc)
-    expires_at = now + timedelta(minutes=settings.SESSION_TIMEOUT_MINUTES)
-
-    session = Session(
-        user_id=user.id,
-        token=str(uuid4()),
-        expires_at=expires_at.isoformat(),
-        last_activity_at=now.isoformat(),
+def register_user(
+    db: DBSession,
+    email: str,
+    password: str,
+    first_name: str | None = None,
+    last_name: str | None = None,
+) -> User:
+    """Register a new user. Creates associated UserSettings."""
+    user = User(
+        email=email,
+        password_hash=hash_password(password),
+        first_name=first_name,
+        last_name=last_name,
     )
-    db.add(session)
+    db.add(user)
+    db.flush()
 
-    # Update last_login_at
-    user.last_login_at = now.isoformat()
+    # Create default settings for the user
+    user_settings = UserSettings(user_id=user.id)
+    db.add(user_settings)
+
     db.commit()
-    db.refresh(session)
-    return session
-
-
-def invalidate_session(db: DBSession, token: str) -> bool:
-    """Invalidate (delete) a session by token."""
-    session = db.query(Session).filter(Session.token == token).first()
-    if session:
-        db.delete(session)
-        db.commit()
-        return True
-    return False
+    db.refresh(user)
+    return user

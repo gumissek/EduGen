@@ -1,8 +1,8 @@
 """ORM models package."""
 
 from app.models.user import User
-from app.models.session import Session
 from app.models.settings import UserSettings
+from app.models.secret_key import SecretKey
 from app.models.subject import Subject
 from app.models.source_file import SourceFile
 from app.models.file_content_cache import FileContentCache
@@ -16,8 +16,8 @@ from app.models.diagnostic_log import DiagnosticLog
 
 __all__ = [
     "User",
-    "Session",
     "UserSettings",
+    "SecretKey",
     "Subject",
     "SourceFile",
     "FileContentCache",

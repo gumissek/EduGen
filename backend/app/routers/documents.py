@@ -91,7 +91,10 @@ def finalize_document(
     current_user: User = Depends(get_current_user),
 ):
     """Generate the final DOCX document with variants."""
-    generation = db.query(Generation).filter(Generation.id == generation_id).first()
+    generation = db.query(Generation).filter(
+        Generation.id == generation_id,
+        Generation.user_id == current_user.id,
+    ).first()
     if not generation:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Generation not found")
 
@@ -102,7 +105,7 @@ def finalize_document(
         )
 
     try:
-        document = generate_docx(db, generation_id)
+        document = generate_docx(db, generation_id, user_id=current_user.id)
         return DocumentResponse.model_validate(document)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -117,6 +120,7 @@ def get_document(
     """Get a single document with its content and metadata."""
     document = db.query(Document).filter(
         Document.id == document_id,
+        Document.user_id == current_user.id,
         Document.deleted_at.is_(None),
     ).first()
     if not document:
@@ -134,6 +138,7 @@ def update_document(
     """Update the edited content of a document (stored in its Prototype)."""
     document = db.query(Document).filter(
         Document.id == document_id,
+        Document.user_id == current_user.id,
         Document.deleted_at.is_(None),
     ).first()
     if not document:
@@ -157,6 +162,7 @@ def export_docx(
     """Download the DOCX file for a document."""
     document = db.query(Document).filter(
         Document.id == document_id,
+        Document.user_id == current_user.id,
         Document.deleted_at.is_(None),
     ).first()
     if not document:
@@ -182,6 +188,7 @@ def export_pdf(
     """Convert and download the document as a PDF (converted from DOCX via PyMuPDF)."""
     document = db.query(Document).filter(
         Document.id == document_id,
+        Document.user_id == current_user.id,
         Document.deleted_at.is_(None),
     ).first()
     if not document:
@@ -218,7 +225,10 @@ def list_documents(
     current_user: User = Depends(get_current_user),
 ):
     """List finalized documents with pagination."""
-    query = db.query(Document).filter(Document.deleted_at.is_(None))
+    query = db.query(Document).filter(
+        Document.user_id == current_user.id,
+        Document.deleted_at.is_(None),
+    )
 
     if subject_id or content_type or class_level is not None:
         query = query.join(Generation)
@@ -253,6 +263,7 @@ def download_document(
     """Download a single DOCX document."""
     document = db.query(Document).filter(
         Document.id == document_id,
+        Document.user_id == current_user.id,
         Document.deleted_at.is_(None),
     ).first()
     if not document:
@@ -280,6 +291,7 @@ def bulk_download(
         db.query(Document)
         .filter(
             Document.id.in_(body.document_ids),
+            Document.user_id == current_user.id,
             Document.deleted_at.is_(None),
         )
         .all()
@@ -314,7 +326,10 @@ def delete_document(
     current_user: User = Depends(get_current_user),
 ):
     """Soft-delete a document."""
-    document = db.query(Document).filter(Document.id == document_id).first()
+    document = db.query(Document).filter(
+        Document.id == document_id,
+        Document.user_id == current_user.id,
+    ).first()
     if not document:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
 

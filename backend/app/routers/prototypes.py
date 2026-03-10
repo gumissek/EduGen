@@ -26,6 +26,33 @@ from app.services.generation_service import _render_content_html, _build_answer_
 router = APIRouter(prefix="/prototypes", tags=["prototypes"])
 
 
+def _get_user_generation(db: DBSession, generation_id: str, user_id: str) -> Generation:
+    """Get a generation, verifying it belongs to the user."""
+    generation = db.query(Generation).filter(
+        Generation.id == generation_id,
+        Generation.user_id == user_id,
+    ).first()
+    if not generation:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Generation not found")
+    return generation
+
+
+def _get_user_prototype(db: DBSession, generation_id: str, user_id: str) -> Prototype:
+    """Get a prototype, verifying the parent generation belongs to the user."""
+    prototype = (
+        db.query(Prototype)
+        .join(Generation, Prototype.generation_id == Generation.id)
+        .filter(
+            Prototype.generation_id == generation_id,
+            Generation.user_id == user_id,
+        )
+        .first()
+    )
+    if not prototype:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Prototype not found")
+    return prototype
+
+
 @router.get("/{generation_id}", response_model=PrototypeResponse)
 def get_prototype(
     generation_id: str,
@@ -33,10 +60,7 @@ def get_prototype(
     current_user: User = Depends(get_current_user),
 ):
     """Get the prototype for a generation."""
-    prototype = db.query(Prototype).filter(Prototype.generation_id == generation_id).first()
-    if not prototype:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Prototype not found")
-
+    prototype = _get_user_prototype(db, generation_id, current_user.id)
     return PrototypeResponse.model_validate(prototype)
 
 
@@ -48,9 +72,7 @@ def update_prototype(
     current_user: User = Depends(get_current_user),
 ):
     """Save edited content for a prototype."""
-    prototype = db.query(Prototype).filter(Prototype.generation_id == generation_id).first()
-    if not prototype:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Prototype not found")
+    prototype = _get_user_prototype(db, generation_id, current_user.id)
 
     prototype.edited_content = body.edited_content
     prototype.updated_at = datetime.now(timezone.utc).isoformat()
@@ -67,9 +89,7 @@ def restore_original(
     current_user: User = Depends(get_current_user),
 ):
     """Restore prototype to original content (discard edits)."""
-    prototype = db.query(Prototype).filter(Prototype.generation_id == generation_id).first()
-    if not prototype:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Prototype not found")
+    prototype = _get_user_prototype(db, generation_id, current_user.id)
 
     prototype.edited_content = None
     prototype.updated_at = datetime.now(timezone.utc).isoformat()
@@ -87,13 +107,8 @@ def reprompt(
     current_user: User = Depends(get_current_user),
 ):
     """Reprompt AI to modify the prototype based on user feedback."""
-    generation = db.query(Generation).filter(Generation.id == generation_id).first()
-    if not generation:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Generation not found")
-
-    prototype = db.query(Prototype).filter(Prototype.generation_id == generation_id).first()
-    if not prototype:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Prototype not found")
+    generation = _get_user_generation(db, generation_id, current_user.id)
+    prototype = _get_user_prototype(db, generation_id, current_user.id)
 
     # Get API key
     user_settings = db.query(UserSettings).filter(UserSettings.user_id == current_user.id).first()

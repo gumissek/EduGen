@@ -1,6 +1,25 @@
-version: "3.8"
 
 services:
+  postgres:
+    image: postgres:16
+    container_name: edugen-postgres
+    restart: unless-stopped
+    env_file:
+      - .env                          # dostarcza POSTGRES_PASSWORD
+    environment:
+      POSTGRES_DB: edugen
+      POSTGRES_USER: edugen_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - edugen_postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U edugen_user -d edugen"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   backend:
     build:
       context: ./backend
@@ -12,11 +31,18 @@ services:
       - edugen_data:/app/data
       - ./common_filles:/app/common_filles
     env_file:
-      - ./backend/.env
+      - backend/.env                  # dostarcza JWT_SECRET_KEY, CORS_ORIGINS, itp.
     environment:
+      # Nadpisuje DATABASE_URL z backend/.env — używa hosta "postgres" (sieć Docker)
       - UV_PROJECT_ENVIRONMENT=/app/.venv
+      - DATABASE_URL=postgresql+psycopg://edugen_user:${POSTGRES_PASSWORD}@postgres:5432/edugen
     command: ["uv", "run", "sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2"]
+    depends_on:
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
+    networks:
+      - backend_network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
       interval: 30s
@@ -43,3 +69,9 @@ services:
 volumes:
   edugen_data:
     driver: local
+  edugen_postgres_data:
+    driver: local
+
+networks:
+  backend_network:
+    driver: bridge

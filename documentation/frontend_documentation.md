@@ -25,10 +25,10 @@ Aplikacja korzysta z Next.js App Router. Wszystkie pliki `page.tsx` w folderach 
 - `/subjects` — zarządzanie przedmiotami i plikami źródłowymi ułatwiającymi generowanie
 - `/settings` — powiązane z konfiguracją użytkownika
 - `/diagnostics` — diagnostyka działania
-- `/change-password` — wymuszenie zmiany hasła logowania
 
 ### Ścieżki publiczne (w `src/app/`)
-- `/login` — ekran logowania do systemu
+- `/login` — ekran logowania (email + hasło)
+- `/register` — ekran rejestracji nowego konta (email, imię, nazwisko, hasło, potwierdzenie hasła)
 
 ---
 
@@ -36,65 +36,74 @@ Aplikacja korzysta z Next.js App Router. Wszystkie pliki `page.tsx` w folderach 
 
 Komponenty podzielone na domeny ułatwiające ich znalezienie:
 
+### `auth/`
+- **`LoginForm.tsx`** — formularz logowania z polami email i hasło. Walidacja Zod via `react-hook-form`.
+- **`RegisterForm.tsx`** — formularz rejestracji z polami: email, imię, nazwisko, hasło, potwierdzenie hasła. Walidacja Zod.
+- **`AuthGuard.tsx`** — strażnik tras chronionych. Sprawdza `isAuthenticated()` i przekierowuje do `/login` jeśli brak tokena. Pomija sprawdzanie na stronach `/login` i `/register`.
+
 ### `generate/`
 Główny proces biznesowy to generowanie dokumentów. Elementy go wspierające:
 - `GenerationWizard.tsx` — główny komponent kreatora krok po kroku.
 - `StepContentType.tsx` — wybór typu materiału (kartkówka, sprawdzian, test, quiz, materiały lekcyjne).
-- `StepSubjectConfig.tsx` — wybór przedmiotu i konfiguracja tematu (obsługa list predefiniowanych z autouzupełnianiem).
-- `StepQuestionConfig.tsx` — definicja liczby pytań, stopnia trudności oraz wybór konkretnych typów zadań (np. Prawda/Fałsz, Esej).
+- `StepSubjectConfig.tsx` — wybór przedmiotu i konfiguracja tematu.
+- `StepQuestionConfig.tsx` — definicja liczby pytań, stopnia trudności oraz wybór typów zadań.
 - `StepSourceFiles.tsx` — wybór i dodawanie własnych plików z bazą wiedzy.
-- `StepReview.tsx` — weryfikacja danych przed uruchomieniem procesu na backendzie. Weryfikacja zezwala na elastyczne definiowanie zadań (wystarczy podać jedno z pól: liczba zadań ogólnie, liczba zadań otwartych lub wybranie z listy typów zadań).
-- `GenerationStatusView.tsx` — obsługa statusów zadania, podgląd jego trwania (reaguje na statusy `processing`, `draft` oraz początkowy `pending` od razu pokazując spinner).
+- `StepReview.tsx` — weryfikacja danych przed uruchomieniem procesu na backendzie.
+- `GenerationStatusView.tsx` — obsługa statusów zadania (reaguje na statusy `processing`, `draft`, `pending`).
 
 ### `editor/`
 - Edytor dokumentów oparty na silniku **Tiptap** dający interfejs modyfikacji wygenerowanej treści.
 
 ### `layout/`
 - Layout aplikacji (Sidebar, Header głównego ekranu).
-- **`Sidebar.tsx`** wyświetla wersję aplikacji w stopce bocznego panelu w formacie `APP_NAME_VERSION_RELEASE_DATE` (np. `EduGen_1.0.1_2025-03-10`). Wartości odczytywane są ze zmiennych środowiskowych `NEXT_PUBLIC_APP_NAME`, `NEXT_PUBLIC_APP_VERSION` i `NEXT_PUBLIC_APP_RELEASE_DATE`, które są wstrzykiwane podczas budowania przez `next.config.ts` na podstawie pliku `.version` z głównego katalogu projektu.
+- **`Sidebar.tsx`** wyświetla wersję aplikacji w stopce (odczytywana ze zmiennych środowiskowych `NEXT_PUBLIC_APP_*`).
 
 ### Inne
-- `documents/`, `subjects/`, `settings/`, `auth/` — komponenty odpowiadające logice poszczególnych domen.
+- `documents/`, `subjects/`, `settings/` — komponenty odpowiadające logice poszczególnych domen.
 - `ui/` — fundamentalne reużywalne fragmenty interfejsu (własne wrappery dla przycisków, powiadomienia Snackbar itp).
 
 ---
 
-## 4. Komunikacja Frontend ↔ Backend (`src/lib/` i `src/hooks/`)
+## 4. Uwierzytelnianie JWT (`src/hooks/useAuth.ts`)
 
-Architektura zakłada użycie biblioteki `axios` i instancji zdefiniowanej w `src/lib/api.ts`.
+Frontend korzysta z bezstanowej autoryzacji JWT:
+
+- **`login(data)`** — wysyła `{email, password}` do `POST /api/auth/login`, zapisuje `access_token` w ciasteczku `edugen-auth` (7 dni, SameSite=Lax) via `js-cookie`, przekierowuje do `/dashboard`.
+- **`register(data)`** — wysyła `{email, password, first_name, last_name}` do `POST /api/auth/register`, po sukcesie automatycznie loguje użytkownika.
+- **`logout()`** — wywołuje `POST /api/auth/logout`, usuwa ciasteczko `edugen-auth`, przekierowuje do `/login`.
+- **`isAuthenticated()`** — sprawdza istnienie ciasteczka `edugen-auth`.
 
 ### `src/lib/api.ts`
-- Baza URL oparta na zmiennej środowiskowej `NEXT_PUBLIC_API_URL` z serwera.
-- Interceptory requestów pobierają automatycznie JWT token ze specjalnego cookie (`edugen-auth`) i zasilają nagłówek `Authorization`.
-- Interceptory response wymuszają powrót do widoku logowania w przypadku błędu o kodzie `401 Unauthorized`.
+- Baza URL oparta na zmiennej środowiskowej `NEXT_PUBLIC_API_URL`.
+- Interceptory requestów pobierają automatycznie JWT token ze specjalnego cookie (`edugen-auth`) i zasilają nagłówek `Authorization: Bearer <token>`.
+- Interceptory response wymuszają powrót do widoku logowania w przypadku błędu `401 Unauthorized` (usuwając cookie i przekierowując do `/login`).
 
 Za pobieranie, cache'owanie i mutację danych odpowiedzialny jest pakiet **TanStack React Query** (konfiguracja: `src/lib/queryClient.ts`).
 
 ### Wybrane hooki (`src/hooks/`)
-| Hook | Przeznaczenie | Technologie pod spodem |
+| Hook | Przeznaczenie | Technologie |
 |---|---|---|
-| `useAuth.ts` | Endpointy `/api/auth/login`, `/logout`, modyfikacja hasła. Zarządzanie ciasteczkami sesji. | axios |
-| `useDocuments.ts` | Wyświetlanie, usuwanie, podgląd detali dla `/api/documents`. Eksporter PDF (zapis Blob jako pobranie). | React Query |
-| `useGenerations.ts` | Wysłanie uformulowanych żądań o generację materiałów oraz pobranie statusu. | React Query |
-| `useSubjects.ts`, `useLevels.ts` | Dane słownikowe (dostępne przedmioty, poziomy zaawansowania dla formularzy). | React Query |
-| `useTaskTypes.ts` | Pobieranie z backendu dostępnych typów zadań do wyboru w formularzu. | React Query |
-| `useFiles.ts` | C.R.U.D plików udostępnionych dla generatorów i dodawanych do bazy (opróżnianych na tematy). | React Query |
+| `useAuth.ts` | Rejestracja, logowanie, wylogowanie. Zarządzanie JWT via ciasteczko. | axios, js-cookie |
+| `useDocuments.ts` | Wyświetlanie, usuwanie, podgląd detali dla `/api/documents`. Eksporter PDF. | React Query |
+| `useGenerations.ts` | Wysłanie żądań o generację materiałów oraz pobranie statusu. | React Query |
+| `useSubjects.ts`, `useLevels.ts` | Dane słownikowe (przedmioty, poziomy zaawansowania). | React Query |
+| `useTaskTypes.ts` | Pobieranie z backendu dostępnych typów zadań. | React Query |
+| `useFiles.ts` | CRUD plików źródłowych dla generatorów. | React Query |
 
 ---
 
 ## 5. Dane i Typy (`src/types/` i `src/schemas/`)
 
 ### `src/types/index.ts`
-Znajdują się w nim główne interfejsy TypeScript służące zapewnieniu ochrony typów danych:
-
-- **Enumy / String Typy do Generacji:** `ContentType` (worksheet, test, quiz, exam, lesson_materials), `EducationLevel`, `LanguageLevel`
-- **Interfejsy Bazowe:** `Subject`, `SourceFile`, `GenerationParams` (uwzględniający m.in. tablicę `task_types`)
+Główne interfejsy TypeScript:
+- **Enumy / String Typy:** `ContentType` (worksheet, test, quiz, exam, lesson_materials), `EducationLevel`, `LanguageLevel`
+- **Interfejsy:** `Subject`, `SourceFile`, `GenerationParams` (z tablicą `task_types`)
 
 ### `src/schemas/`
 Walidacja formularzy realizowana przez **Zod** we współpracy z **React Hook Form**:
-- `auth.ts` — np. weryfikacja loginu o długości znaków oraz rygorystyczności hasła.
-- `generation.ts` — schematy kroków generacji minimalizujące błędy przed wysłaniem na API (Zod weryfikuje m.in. liczebność pól liczbowych, trudność itp).
-- `document.ts`, `file.ts`, `subject.ts`, `settings.ts` — schematy żądań reszty domen aplikacji.
+- `auth.ts` — `LoginRequestSchema` (email + hasło), `RegisterRequestSchema` (email, imię, nazwisko, hasło, potwierdzenie hasła z refine), `LoginResponseSchema` (access_token + token_type).
+- `generation.ts` — schematy kroków generacji.
+- `document.ts`, `file.ts`, `subject.ts`, `settings.ts` — schematy żądań reszty domen.
 
 ---
 
@@ -103,28 +112,34 @@ Walidacja formularzy realizowana przez **Zod** we współpracy z **React Hook Fo
 ### `package.json`
 | Skrypt | Komenda | Opis |
 |---|---|---|
-| `dev` | `next dev` | Tryb developerski (Hot-Reload) pożeniony z App Routerem |
-| `build` | `next build` | Budowa wersji zoptymalizowanej (produkcyjnej) |
-| `start` | `next start` | Serwowanie po zbuildowaniu z wydajną re-kompilacją na dysku |
-| `lint` | `eslint` | Weryfikacja czystości składni TypeScript/React według reguł projektowych |
+| `dev` | `next dev` | Tryb developerski (Hot-Reload) |
+| `build` | `next build` | Budowa wersji produkcyjnej |
+| `start` | `next start` | Serwowanie po zbuildowaniu |
+| `lint` | `eslint` | Weryfikacja czystości składni TypeScript/React |
+
+### Kluczowe zależności
+- `js-cookie` + `@types/js-cookie` — zarządzanie ciasteczkami JWT po stronie klienta
+- `@hookform/resolvers` + `react-hook-form` + `zod` — walidacja formularzy
+- `axios` — HTTP client
+- `@tanstack/react-query` — zarządzanie stanem serwera
+- `@mui/material` + `@emotion/*` — biblioteka komponentów UI
+- `@tiptap/*` — edytor WYSIWYG
 
 ### `next.config.ts`
-- Odpowiada za kluczowy routing wewnętrzny w trybie developerskim poprzez `rewrites()`. 
-- Proxy przekierowuje wywołania z Frontendu (`/api/*`) na docelowy Backend (`process.env.BACKEND_URL` domyślnie http://localhost:8000), zapobiegając błędom CORS.
-- Włącza `standalone` mode przydatny przy pracy w Dockerze i transpilacje pakietów MUI.
-- **Wstrzykiwanie wersji aplikacji:** Podczas budowania odczytuje plik `.version` z głównego katalogu projektu i eksponuje jego pola jako zmienne `NEXT_PUBLIC_APP_NAME`, `NEXT_PUBLIC_APP_VERSION` oraz `NEXT_PUBLIC_APP_RELEASE_DATE`. Dzięki temu komponenty klienckie (np. `Sidebar.tsx`) mają dostęp do aktualnych danych wersji bez potrzeby dodatkowych żądań sieciowych.
+- Proxy routing: przekierowuje `/api/*` na Backend (`process.env.BACKEND_URL`).
+- `standalone` mode dla Dockera, transpilacje pakietów MUI.
+- **Wstrzykiwanie wersji** ze zmiennych `NEXT_PUBLIC_APP_*` na podstawie pliku `.version`.
 
 ---
 
 ## 7. Motyw i Style (`src/theme/` i `globals.css`)
-Czysty wygląd został osiągnięty przez definicje dla biblioteki Material UI (`@mui/material`).
-- `src/theme/theme.ts` — deklaracja głównych kolorów (primary, secondary), konfiguracja cieni komponentów, kształtów (np. borderRadius) oraz typografia.
-- `src/theme/ThemeRegistry.tsx` i `ColorModeContext.tsx` — podpięcie stylów pod SSR Next.JS oraz obsługa dynamicznej ramy, co pozwala w przyszłości na sprawną implementację logiki przełącznika Dark/Light w całym drzewie bez odświeżania.
-- `src/app/globals.css` — ogólnoprojektowe klasy użytkowe. Reset domyślnych zachowań marginesów w przeglądarkach oraz ustawienie kroju używanych fontów nadrzędnych dla body. 
+- `src/theme/theme.ts` — deklaracja głównych kolorów, cieni, kształtów i typografii MUI.
+- `src/theme/ThemeRegistry.tsx` i `ColorModeContext.tsx` — integracja z SSR Next.JS.
+- `src/app/globals.css` — reset CSS i globalne style.
 
 ---
 
 ## 8. Testowanie i Jakość Kodu
-- Brak wewnątrz folderu predefiniowanych narzędzi typu Jest czy Cypress (warto uzupełnić ewentualnie bazując na API)
-- Weryfikator `ESLint` z konfiguracją Strict (`eslint.config.mjs`) połączony z poprawną statyczną analizą kodu wsparcia TypeScript.
-- Odwrócenie logiki i użycie silnego modułu `@tanstack/react-query-devtools` do podsłuchu stanu pobrań zapytań ułatwia debuggowanie w trakcie `dev`.
+- Weryfikator `ESLint` z konfiguracją Strict (`eslint.config.mjs`) połączony z TypeScript.
+- `@tanstack/react-query-devtools` do debuggowania stanu zapytań w trybie `dev`.
+- TypeScript strict mode — brak `any` w kodzie produkcyjnym.

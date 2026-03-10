@@ -83,8 +83,12 @@ def generate_prototype_task(db: DBSession, generation_id: str) -> None:
         generation.updated_at = datetime.now(timezone.utc).isoformat()
         db.commit()
 
-        # Get API key
-        user_settings = db.query(UserSettings).first()
+        # Get API key — scoped to the generation's owner
+        user_settings = (
+            db.query(UserSettings)
+            .filter(UserSettings.user_id == generation.user_id)
+            .first()
+        )
         if not user_settings or not user_settings.openai_api_key_encrypted:
             raise ValueError("OpenAI API key not configured")
 
@@ -109,6 +113,7 @@ def generate_prototype_task(db: DBSession, generation_id: str) -> None:
         raw_json = None if is_free_form else json.dumps(result, ensure_ascii=False)
 
         prototype = Prototype(
+            user_id=generation.user_id,
             generation_id=generation.id,
             original_content=original_content,
             answer_key=answer_key,

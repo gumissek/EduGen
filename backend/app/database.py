@@ -1,27 +1,17 @@
-"""SQLAlchemy engine, session factory and pragmas for SQLite."""
+"""SQLAlchemy engine and session factory for PostgreSQL."""
 
 from __future__ import annotations
 
-from sqlalchemy import event, create_engine
+from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, DeclarativeBase
 
 from app.config import settings
 
 engine = create_engine(
     settings.DATABASE_URL,
-    connect_args={"check_same_thread": False},
+    pool_pre_ping=True,
     echo=False,
 )
-
-
-@event.listens_for(engine, "connect")
-def _set_sqlite_pragmas(dbapi_connection, connection_record):
-    cursor = dbapi_connection.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.execute("PRAGMA journal_mode=WAL")
-    cursor.execute("PRAGMA synchronous=NORMAL")
-    cursor.close()
-
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

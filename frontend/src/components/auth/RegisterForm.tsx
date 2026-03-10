@@ -8,22 +8,22 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Alert from '@mui/material/Alert';
 import { useForm as useRHForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { LoginRequestSchema, LoginRequest } from '@/schemas/auth';
+import { RegisterRequestSchema, RegisterRequest } from '@/schemas/auth';
 import { useAuth } from '@/hooks/useAuth';
 
-export default function LoginForm() {
-  const { login, isLoading, error } = useAuth();
-  
+export default function RegisterForm() {
+  const { register: registerUser, isLoading, error } = useAuth();
+
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useRHForm<LoginRequest>({
-    resolver: zodResolver(LoginRequestSchema),
+  } = useRHForm<RegisterRequest>({
+    resolver: zodResolver(RegisterRequestSchema),
   });
 
-  const onSubmit = (data: LoginRequest) => {
-    login(data);
+  const onSubmit = (data: RegisterRequest) => {
+    registerUser(data);
   };
 
   return (
@@ -47,6 +47,30 @@ export default function LoginForm() {
         {...register('email')}
         disabled={isLoading}
       />
+      <Box sx={{ display: 'flex', gap: 2 }}>
+        <TextField
+          margin="normal"
+          fullWidth
+          id="first_name"
+          label="Imię"
+          autoComplete="given-name"
+          error={!!errors.first_name}
+          helperText={errors.first_name?.message}
+          {...register('first_name')}
+          disabled={isLoading}
+        />
+        <TextField
+          margin="normal"
+          fullWidth
+          id="last_name"
+          label="Nazwisko"
+          autoComplete="family-name"
+          error={!!errors.last_name}
+          helperText={errors.last_name?.message}
+          {...register('last_name')}
+          disabled={isLoading}
+        />
+      </Box>
       <TextField
         margin="normal"
         required
@@ -54,10 +78,23 @@ export default function LoginForm() {
         id="password"
         label="Hasło"
         type="password"
-        autoComplete="current-password"
+        autoComplete="new-password"
         error={!!errors.password}
         helperText={errors.password?.message}
         {...register('password')}
+        disabled={isLoading}
+      />
+      <TextField
+        margin="normal"
+        required
+        fullWidth
+        id="confirm_password"
+        label="Potwierdź hasło"
+        type="password"
+        autoComplete="new-password"
+        error={!!errors.confirm_password}
+        helperText={errors.confirm_password?.message}
+        {...register('confirm_password')}
         disabled={isLoading}
       />
       <Button
@@ -67,7 +104,7 @@ export default function LoginForm() {
         sx={{ mt: 3, mb: 1, height: 52, fontSize: '1rem', fontWeight: 600 }}
         disabled={isLoading}
       >
-        {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Zaloguj się'}
+        {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Zarejestruj się'}
       </Button>
     </Box>
   );

@@ -281,7 +281,7 @@ def _add_answer_key_to_docx(doc: DocxDocument, all_variants_answers: list[tuple[
             doc.add_paragraph(f"{num}. {answer_map[num]}")
 
 
-def generate_docx(db: DBSession, generation_id: str) -> Document:
+def generate_docx(db: DBSession, generation_id: str, user_id: str | None = None) -> Document:
     """Generate a DOCX file with variants from a prototype."""
     generation = db.query(Generation).filter(Generation.id == generation_id).first()
     if not generation:
@@ -318,6 +318,7 @@ def generate_docx(db: DBSession, generation_id: str) -> Document:
         doc.save(str(file_path))
 
         document = Document(
+            user_id=user_id or generation.user_id,
             generation_id=generation_id,
             filename=filename,
             file_path=str(file_path),
@@ -394,6 +395,7 @@ def generate_docx(db: DBSession, generation_id: str) -> Document:
 
     # Create DB record
     document = Document(
+        user_id=user_id or generation.user_id,
         generation_id=generation_id,
         filename=filename,
         file_path=str(file_path),

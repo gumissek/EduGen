@@ -6,11 +6,10 @@ import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
 import Link from '@mui/material/Link';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
-import LoginForm from '@/components/auth/LoginForm';
+import RegisterForm from '@/components/auth/RegisterForm';
 import NextLink from 'next/link';
 
-export default function LoginPage() {
-
+export default function RegisterPage() {
   return (
     <Box
       sx={{
@@ -30,7 +29,7 @@ export default function LoginPage() {
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          maxWidth: 440,
+          maxWidth: 480,
           width: '100%',
           borderRadius: '24px',
           boxShadow: '0 24px 64px rgba(0,0,0,0.3)',
@@ -51,16 +50,16 @@ export default function LoginPage() {
           <AutoAwesomeIcon fontSize="large" />
         </Box>
         <Typography component="h1" variant="h4" fontWeight="800" color="text.primary" gutterBottom>
-          EduGen
+          Utwórz konto
         </Typography>
         <Typography variant="body1" color="text.secondary" align="center" sx={{ mb: 4, lineHeight: 1.6 }}>
-          Zaloguj się, aby uzyskać dostęp do generatora materiałów edukacyjnych.
+          Zarejestruj się, aby zacząć generować materiały edukacyjne.
         </Typography>
-        <LoginForm />
+        <RegisterForm />
         <Typography variant="body2" color="text.secondary" sx={{ mt: 3 }}>
-          Nie masz konta?{' '}
-          <Link component={NextLink} href="/register" underline="hover" fontWeight={600}>
-            Zarejestruj się
+          Masz już konto?{' '}
+          <Link component={NextLink} href="/login" underline="hover" fontWeight={600}>
+            Zaloguj się
           </Link>
         </Typography>
       </Paper>

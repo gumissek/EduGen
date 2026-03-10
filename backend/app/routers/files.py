@@ -53,7 +53,7 @@ async def upload_file(
     current_user: User = Depends(get_current_user),
 ):
     """Upload a source file (PDF, DOCX, JPG, PNG)."""
-    # Validate subject exists
+    # Validate subject exists and belongs to user
     subject = db.query(Subject).filter(Subject.id == subject_id).first()
     if not subject:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subject not found")
@@ -82,6 +82,7 @@ async def upload_file(
     # Create DB record
     source_file = SourceFile(
         id=file_uuid,
+        user_id=current_user.id,
         subject_id=subject_id,
         filename=file.filename or f"{file_uuid}.{ext}",
         original_path=file_path,
@@ -106,7 +107,10 @@ def list_files(
     current_user: User = Depends(get_current_user),
 ):
     """List source files, optionally filtered by subject."""
-    query = db.query(SourceFile).filter(SourceFile.deleted_at.is_(None))
+    query = db.query(SourceFile).filter(
+        SourceFile.user_id == current_user.id,
+        SourceFile.deleted_at.is_(None),
+    )
     if subject_id:
         query = query.filter(SourceFile.subject_id == subject_id)
 
@@ -124,7 +128,10 @@ def delete_file(
     current_user: User = Depends(get_current_user),
 ):
     """Soft-delete a source file."""
-    source_file = db.query(SourceFile).filter(SourceFile.id == file_id).first()
+    source_file = db.query(SourceFile).filter(
+        SourceFile.id == file_id,
+        SourceFile.user_id == current_user.id,
+    ).first()
     if not source_file:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
 

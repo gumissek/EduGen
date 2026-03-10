@@ -4,7 +4,6 @@
 
 Poniższa instrukcja krok po kroku wyjaśnia, jak uruchomić aplikację na własnym komputerze. Nie jest wymagana wiedza programistyczna – wystarczy postępować zgodnie z poniższymi punktami.
 
--TEST-
 ---
 
 ## Spis treści
@@ -14,7 +13,7 @@ Poniższa instrukcja krok po kroku wyjaśnia, jak uruchomić aplikację na włas
 3. [Krok 2 – Instalacja Docker Desktop](#krok-2--instalacja-docker-desktop)
 4. [Krok 3 – Przygotowanie pliku konfiguracyjnego](#krok-3--przygotowanie-pliku-konfiguracyjnego)
 5. [Krok 4 – Uruchomienie aplikacji](#krok-4--uruchomienie-aplikacji)
-6. [Krok 5 – Logowanie](#krok-5--logowanie)
+6. [Krok 5 – Rejestracja i logowanie](#krok-5--rejestracja-i-logowanie)
 7. [Zatrzymywanie aplikacji](#zatrzymywanie-aplikacji)
 8. [Rozwiązywanie problemów](#rozwiązywanie-problemów)
 
@@ -155,9 +154,16 @@ bash start_mac_linux.sh
 
 ---
 
-## Krok 5 – Logowanie
+## Krok 5 – Rejestracja i logowanie
 
-Z chwilą zalogowania użytkownika na docelową platformę internetową pod wspomnianym adresem, Twoim oczom natychmiastowo zaoferuje się widok panelu autoryzacji. Pierwsze uruchomienie wymaga podania hasła startowego. Domyślne hasło to: **Start1234!**. Następnie trzeba je zmienić. 
+Po otwarciu przeglądarki pod adresem **http://localhost:3000** zostaniesz przekierowany do ekranu logowania.
+
+**Pierwsze uruchomienie — utwórz swoje konto:**
+1. Kliknij link **„Zarejestruj się"** na stronie logowania.
+2. Wypełnij formularz rejestracyjny: podaj **adres e-mail**, **imię**, **nazwisko** oraz **hasło** (potwierdzając je ponownie).
+3. Po pomyślnej rejestracji zostaniesz automatycznie zalogowany i przekierowany do panelu głównego.
+
+> Aplikacja obsługuje wielu niezależnych użytkowników. Każde konto posiada własne, odizolowane dane (przedmioty, pliki, wygenerowane materiały). Nie istnieje żadne domyślne hasło — każdy użytkownik samodzielnie tworzy swoje konto.
 
 ---
 

@@ -15,6 +15,7 @@ class SourceFile(Base):
     __tablename__ = "source_files"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     subject_id: Mapped[str] = mapped_column(String(36), ForeignKey("subjects.id", ondelete="CASCADE"), nullable=False, index=True)
     filename: Mapped[str] = mapped_column(Text, nullable=False)
     original_path: Mapped[str] = mapped_column(Text, nullable=False)
@@ -28,5 +29,6 @@ class SourceFile(Base):
     deleted_at: Mapped[str | None] = mapped_column(String, nullable=True)
 
     # Relationships
+    user = relationship("User", back_populates="source_files")
     subject = relationship("Subject", back_populates="source_files")
     generations = relationship("Generation", secondary="generation_source_files", back_populates="source_files")

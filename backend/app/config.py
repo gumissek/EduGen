@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import secrets
 from pathlib import Path
 from typing import List
 
@@ -16,12 +17,15 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    DATABASE_URL: str = "sqlite:///./data/edugen.db"
-    DEFAULT_PASSWORD_HASH: str = ""
+    DATABASE_URL: str = "postgresql+psycopg://edugen_user:edugen_pass@localhost:5432/edugen"
     DATA_DIR: str = "./data"
-    SESSION_TIMEOUT_MINUTES: int = 15
     MAX_FILE_SIZE_MB: int = 10
     CORS_ORIGINS: str = '["http://localhost:3000"]'
+
+    # JWT configuration
+    JWT_SECRET_KEY: str = secrets.token_urlsafe(64)
+    JWT_ALGORITHM: str = "HS256"
+    JWT_EXPIRATION_MINUTES: int = 30
 
     @property
     def cors_origins_list(self) -> List[str]:
