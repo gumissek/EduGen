@@ -49,7 +49,7 @@ export function useGenerations(id?: string) {
 
   const finalizeMutation = useMutation({
     mutationFn: async (generationId: string) => {
-      const res = await api.post(`/api/generations/${generationId}/finalize`);
+      const res = await api.post(`/api/documents/${generationId}/finalize`);
       return res.data;
     },
     onError: () => {

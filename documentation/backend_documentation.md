@@ -46,7 +46,7 @@ Moduł zarządzania zmiennymi środowiskowymi przez `pydantic-settings`:
 - `JWT_ALGORITHM` — algorytm podpisu (domyślnie `HS256`)
 - `JWT_EXPIRATION_MINUTES` — czas życia tokena JWT (domyślnie `30` minut)
 
-> **Szablon konfiguracji:** Główny katalog projektu zawiera plik **`.config_backend`**, który jest domyślnym szablonem konfiguracyjnym. Skrypty startowe (`start_windows.bat` / `start_mac_linux.sh`) automatycznie kopiują go do `backend/.env`, jeśli plik nie istnieje.
+> **Szablon konfiguracji:** Główny katalog projektu zawiera plik **`.env.example`**, który jest domyślnym szablonem konfiguracyjnym. Skrypty startowe (`start_windows.bat` / `start_mac_linux.sh`) automatycznie kopiują go do pliku `.env` w głównym katalogu, jeśli plik ten nie istnieje.
 
 ### `backend/app/database.py`
 Konfiguracja silnika SQLAlchemy (PostgreSQL):

@@ -44,26 +44,28 @@ if %ERRORLEVEL% NEQ 0 (
 echo [OK] Docker Desktop jest zainstalowany i uruchomiony.
 echo.
 
-:: Sprawdz czy istnieje plik .env backendu
-if not exist "backend\.env" (
-    echo [UWAGA] Brak pliku konfiguracyjnego backend\.env
+:: Sprawdz czy istnieje plik .env (root — wymagany przez Docker Compose)
+if not exist ".env" (
+    echo [UWAGA] Brak pliku konfiguracyjnego .env
     echo.
-    if exist ".config_backend" (
-        echo Znaleziono plik .config_backend - kopiowanie do backend\.env...
-        copy ".config_backend" "backend\.env" >nul
-        echo [OK] Plik backend\.env zostal utworzony automatycznie z .config_backend.
-        echo [INFO] Uzupelnij backend\.env o wlasny klucz OPENAI_API_KEY przed generowaniem materialow.
+    if exist ".env.example" (
+        echo Znaleziono plik .env.example - kopiowanie do .env...
+        copy ".env.example" ".env" >nul
+        echo [OK] Plik .env zostal utworzony automatycznie z .env.example.
+        echo [WAZNE] Przed uruchomieniem uzupelnij .env o wlasne wartosci:
+        echo         - POSTGRES_PASSWORD
+        echo         - JWT_SECRET_KEY
         echo.
     ) else (
-        echo [BLAD] Brak pliku .config_backend w glownym katalogu projektu.
-        echo Skontaktuj sie z administratorem i umiec plik .env w folderze backend.
+        echo [BLAD] Brak pliku .env.example w glownym katalogu projektu.
+        echo Pobierz ponownie projekt lub utwórz plik .env recznie na podstawie dokumentacji.
         echo.
         pause
         exit /b 1
     )
 )
 
-echo [OK] Plik konfiguracyjny backend\.env istnieje.
+echo [OK] Plik konfiguracyjny .env istnieje.
 echo.
 echo Budowanie i uruchamianie aplikacji...
 echo (Pierwsze uruchomienie moze trwac kilka minut - trwa pobieranie obrazow)

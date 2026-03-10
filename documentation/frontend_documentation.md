@@ -74,7 +74,7 @@ Frontend korzysta z bezstanowej autoryzacji JWT:
 - **`isAuthenticated()`** — sprawdza istnienie ciasteczka `edugen-auth`.
 
 ### `src/lib/api.ts`
-- Baza URL oparta na zmiennej środowiskowej `NEXT_PUBLIC_API_URL`.
+- Żądania wysyłane są na ścieżkę bazową `/api`, którą deweloperskie proxy lub Next.js rewrites w `next.config.ts` przekierowują do backendu pod adresem konfigurowanym przez zmienną `BACKEND_URL`.
 - Interceptory requestów pobierają automatycznie JWT token ze specjalnego cookie (`edugen-auth`) i zasilają nagłówek `Authorization: Bearer <token>`.
 - Interceptory response wymuszają powrót do widoku logowania w przypadku błędu `401 Unauthorized` (usuwając cookie i przekierowując do `/login`).
 
