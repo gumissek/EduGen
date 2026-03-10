@@ -2,7 +2,7 @@
 
 **EduGen** to platforma oparta na sztucznej inteligencji, pomagająca nauczycielom i edukatorom w automatycznym generowaniu materiałów dydaktycznych (m.in. testów, sprawdzianów, quizów) na bazie wgranych dokumentów.
 
-Poniższa instrukcja krok po kroku wyjaśnia, jak uruchomić aplikację na własnym komputerze. Nie jest wymagana wiedza programistyczna – wystarczy postępować zgodnie z poniższymi punktami.
+Poniższa instrukcja krok po kroku wyjaśnia, jak uruchomić aplikację na własnym komputerze. Nie jest wymagana wiedza programistyczna – wystarczy postępować zgodnie z poniższymi punkta
 
 ---
 
