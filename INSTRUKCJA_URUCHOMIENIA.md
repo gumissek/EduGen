@@ -4,7 +4,7 @@
 
 Poniższa instrukcja krok po kroku wyjaśnia, jak uruchomić aplikację na własnym komputerze. Nie jest wymagana wiedza programistyczna – wystarczy postępować zgodnie z poniższymi punktami.
 
-
+-TEST-
 ---
 
 ## Spis treści
