@@ -25,6 +25,44 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def create_database_if_not_exists() -> None:
+    """Create the database if it doesn't exist.
+    
+    Connects to the default 'postgres' database first, then creates
+    the target database if needed.
+    """
+    from sqlalchemy import create_engine, text
+
+    from app.config import settings
+
+    # Parse the database URL to get connection details
+    db_url = settings.DATABASE_URL
+    # Replace the database name with 'postgres' to connect to the default database
+    admin_url = db_url.rsplit("/", 1)[0] + "/postgres"
+
+    try:
+        # Connect to the 'postgres' database as admin
+        engine = create_engine(admin_url, isolation_level="AUTOCOMMIT")
+        with engine.connect() as conn:
+            # Extract database name from the original URL
+            db_name = db_url.split("/")[-1]
+            
+            # Check if database exists
+            result = conn.execute(
+                text("SELECT 1 FROM pg_database WHERE datname = :db_name"),
+                {"db_name": db_name},
+            )
+            if not result.scalar():
+                logger.info("[database] Creating database: %s", db_name)
+                conn.execute(text(f'CREATE DATABASE "{db_name}"'))
+                logger.info("[database] Database created successfully.")
+            else:
+                logger.info("[database] Database already exists: %s", db_name)
+    except Exception:
+        logger.exception("[database] Failed to create database — aborting.")
+        sys.exit(1)
+
+
 def run_migrations() -> None:
     """Apply pending Alembic migrations. Exits with code 1 on failure."""
     try:
@@ -77,6 +115,7 @@ def ensure_directories() -> None:
 
 def main() -> None:
     logger.info("[init] Starting EduGen initialization...")
+    create_database_if_not_exists()
     run_migrations()
     ensure_directories()
     logger.info("[init] Initialization complete.")

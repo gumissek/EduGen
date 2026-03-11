@@ -59,6 +59,25 @@ Ustawienia aplikacji per użytkownik (API key, model AI).
 | created_at | TEXT | NOT NULL DEFAULT (aktualna data ISO 8601) |
 | updated_at | TEXT | NOT NULL DEFAULT (aktualna data ISO 8601) |
 
+### user_ai_models
+
+Modele AI przypisane do użytkownika (domyślne + własne).
+
+| Kolumna | Typ | Ograniczenia |
+|---|---|---|
+| id | VARCHAR(36) | PRIMARY KEY |
+| user_id | VARCHAR(36) | NOT NULL REFERENCES users(id) ON DELETE CASCADE, INDEX |
+| provider | VARCHAR(100) | NOT NULL (lowercase) |
+| model_name | VARCHAR(255) | NOT NULL (lowercase) |
+| description | TEXT | NULL |
+| price_description | TEXT | NULL |
+| is_available | BOOLEAN | NOT NULL DEFAULT TRUE |
+| created_at | TEXT | NOT NULL |
+| changed_at | TEXT | NULL |
+| request_made | INTEGER | NOT NULL DEFAULT 0 |
+
+> UNIQUE constraint: `(user_id, provider, model_name)`. Przy rejestracji tworzone są dwa domyślne modele: `openai/gpt-5.1` i `openai/gpt-5-mini`.
+
 ### subjects
 
 Lista przedmiotów (predefiniowane + własne użytkownika).
@@ -219,6 +238,7 @@ Logi zapytań do modeli OpenAI.
 
 - users → settings
 - users → secret_keys
+- users → user_ai_models
 - users → subjects (nullable FK — predefinowane przedmioty)
 - users → source_files
 - users → generations
@@ -272,6 +292,10 @@ CREATE INDEX ix_documents_user_id ON documents(user_id);
 CREATE INDEX ix_documents_generation ON documents(generation_id);
 CREATE INDEX ix_documents_created_at ON documents(created_at);
 
+-- User AI models
+CREATE INDEX ix_user_ai_models_user_id ON user_ai_models(user_id);
+CREATE UNIQUE INDEX uq_user_ai_models_user_provider_model ON user_ai_models(user_id, provider, model_name);
+
 -- AI requests
 CREATE INDEX ix_ai_requests_user_id ON ai_requests(user_id);
 CREATE INDEX ix_ai_requests_generation ON ai_requests(generation_id);
@@ -296,5 +320,5 @@ CREATE INDEX ix_diagnostic_logs_created_at ON diagnostic_logs(created_at);
 - Soft delete dla plików (`source_files.deleted_at`) i dokumentów (`documents.deleted_at`).
 - Deduplikacja plików przez `file_content_cache` (klucz: SHA-256 hash pliku).
 - Klucz OpenAI API szyfrowany AES w polu `settings.openai_api_key_encrypted`.
-- Migracje schematu zarządzane przez **Alembic** (aktualna wersja: `007`).
+- Migracje schematu zarządzane przez **Alembic** (aktualna wersja: `002`).
 - Tabela `secret_keys` przygotowana do obsługi wielu kluczy API per użytkownik.

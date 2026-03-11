@@ -12,6 +12,7 @@ from app.encryption import decrypt_api_key
 from app.models.generation import Generation
 from app.models.prototype import Prototype
 from app.models.settings import UserSettings
+from app.models.secret_key import SecretKey
 from app.models.source_file import SourceFile
 from app.models.diagnostic_log import DiagnosticLog
 from app.services.ai_service import build_system_prompt, call_openai, TYPES_WITHOUT_QUESTIONS
@@ -83,17 +84,42 @@ def generate_prototype_task(db: DBSession, generation_id: str) -> None:
         generation.updated_at = datetime.now(timezone.utc).isoformat()
         db.commit()
 
-        # Get API key — scoped to the generation's owner
-        user_settings = (
+        # Get API key — prefer active secret_key, fall back to settings
+        api_key = None
+        model = "openai/gpt-5-mini"
+
+        # Try to get key from secret_keys table (first active key)
+        secret_key = (
+            db.query(SecretKey)
+            .filter(SecretKey.user_id == generation.user_id, SecretKey.is_active == True)
+            .first()
+        )
+        if secret_key:
+            api_key = decrypt_api_key(secret_key.secret_key_hash)
+            # Update last_used_at
+            secret_key.last_used_at = datetime.now(timezone.utc).isoformat()
+
+        # Fall back to legacy settings
+        if not api_key:
+            user_settings = (
+                db.query(UserSettings)
+                .filter(UserSettings.user_id == generation.user_id)
+                .first()
+            )
+            if user_settings and user_settings.openai_api_key_encrypted:
+                api_key = decrypt_api_key(user_settings.openai_api_key_encrypted)
+
+        if not api_key:
+            raise ValueError("API key not configured — add a key in Settings")
+
+        # Get model preference from settings
+        user_settings_for_model = (
             db.query(UserSettings)
             .filter(UserSettings.user_id == generation.user_id)
             .first()
         )
-        if not user_settings or not user_settings.openai_api_key_encrypted:
-            raise ValueError("OpenAI API key not configured")
-
-        api_key = decrypt_api_key(user_settings.openai_api_key_encrypted)
-        model = user_settings.default_model
+        if user_settings_for_model and user_settings_for_model.default_model:
+            model = user_settings_for_model.default_model
 
         # Gather source texts
         source_texts = []

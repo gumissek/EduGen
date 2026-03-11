@@ -10,7 +10,7 @@ Projekt EduGen opiera się na nowoczesnym, modularnym backendzie. Składa się o
 - **Framework REST API** — FastAPI.
 - **Baza danych** — PostgreSQL 16 z wykorzystaniem SQLAlchemy ORM oraz Alembic do zarządzania migracjami schematu.
 - **Konteneryzacja** — Docker Compose z trzema serwisami: `postgres`, `backend`, `frontend`. Backend i Postgres komunikują się przez wewnętrzną sieć `backend_network`.
-- **Integracja AI** — Komunikacja z modelami OpenAI API w celu generowania dedykowanych treści edukacyjnych.
+- **Integracja AI** — Komunikacja z modelami AI poprzez OpenRouter API (`https://openrouter.ai/api/v1/chat/completions`) w celu generowania dedykowanych treści edukacyjnych. Wykorzystywana jest biblioteka `requests` zamiast SDK OpenAI.
 - **Menedżer pakietów** — Skonfigurowany za pomocą `pyproject.toml` (wymaga Pythona >= 3.12).
 - **Zadania w tle (Background Tasks)** — `apscheduler` dla codziennych kopii zapasowych oraz tła dla asynchronicznego generowania materiałów edukacyjnych.
 
@@ -68,8 +68,8 @@ Kod dzieli się na dedykowane pliki modelowe oparte na `DeclarativeBase`. Kluczo
 - **`secret_key.py`** — Przechowywanie zewnętrznych kluczy API (platform, key_name, secret_key_hash, is_active, last_used_at). FK → `users.id`.
 - **`generation.py`** & **`prototype.py`** — Logika zadań AI: parametry generacji a zrenderowane rezultaty docelowe JSON/HTML. Pole `user_id` (FK → `users.id`, NOT NULL) zapewnia izolację danych per użytkownik.
 - **`source_file.py`** & **`document.py`** — Przetwarzanie dokumentów dostarczanych przez użytkownika. Oba zawierają `user_id` (FK → `users.id`, NOT NULL).
-- **`settings.py`** — Klucz API OpenAI zapisywany jako AES encrypted string, konfig modelów LLM. FK → `users.id`.
-- **`ai_request.py`** — Logi zapytań do modeli OpenAI. `user_id` (FK → `users.id`, nullable).
+- **`settings.py`** — Legacy klucz API zapisywany jako AES encrypted string, konfig modelów LLM. FK → `users.id`.
+- **`ai_request.py`** — Logi zapytań do modeli AI (OpenRouter). `user_id` (FK → `users.id`, nullable).
 - **`subject.py`** — Przedmioty edukacyjne. `user_id` (FK → `users.id`, nullable — predefinowane przedmioty nie mają właściciela).
 - **`diagnostic_log.py`** — Logowanie wszystkich błędów rzuconych w apce poprzez exception handler.
 
@@ -86,6 +86,10 @@ Backend wykorzystuje bezstanową autoryzację opartą na **JWT (JSON Web Tokens)
 - Dekodowanie i walidacja JWT przez `verify_access_token()` (sprawdzenie podpisu i `exp` claim).
 - Pobranie użytkownika z bazy na podstawie `sub` (user_id) z payloadu JWT.
 - Weryfikacja `is_active` — zablokowane konta otrzymują `403 Forbidden`.
+
+### `get_current_superuser()`:
+- Zależy od `get_current_user()`. Sprawdza `is_superuser` — jeśli `False`, zwraca `403 Forbidden`.
+- Służy do ochrony endpointów dostępnych wyłącznie dla administratorów (np. panel admina).
 
 ### Izolacja danych (Data Isolation):
 Każdy endpoint filtruje dane po `user_id == current_user.id`:
@@ -108,20 +112,21 @@ Obsługa uwierzytelniania JWT:
 - `register_user(db, email, password, ...)` — rejestracja nowego użytkownika z automatycznym tworzeniem `UserSettings`.
 
 ### `ai_service.py`
-Odpowiada za logikę formowania wytycznych promptów i połączenie z zasobami OpenAI:
+Odpowiada za logikę formowania wytycznych promptów i połączenie z OpenRouter API:
 - System prompts dla typów generacji: `test`, `worksheet`, `lesson_materials`, `quiz`, `exam`.
-- Formatyzacja odpowiedzi do modelu API OpenAI — tryb `{"type": "json_object"}`.
+- Wewnętrzna funkcja `_call_openrouter()` realizuje połączienie HTTP z `https://openrouter.ai/api/v1/chat/completions`.
+- Formatyzacja odpowiedzi w trybie JSON (`response_format: {"type": "json_object"}`).
 - **Logowanie** każdego z żądań/odpowiedzi w tabeli `AIRequest`.
-- Funkcje `call_openai_reprompt` oraz `call_openai_reprompt_free_form` do udoskonalania wyników AI.
+- Funkcje `call_openai_reprompt` oraz `call_openai_reprompt_free_form` do udoskonalania wyników AI (oba korzystają z OpenRouter).
 
 ### `generation_service.py`
 Orkiestracja procesu generowania materiałów:
-- Worker w tle (`generate_prototype_task`) pobierający klucz API z `UserSettings` **filtrowanych po `generation.user_id`** (izolacja danych).
+- Worker w tle (`generate_prototype_task`) pobierający klucz API priorytetowo z `SecretKey` (tabela secret_keys), następnie fallback na `UserSettings`, **filtrowanych po `generation.user_id`** (izolacja danych).
 - Mapowanie wygenerowanych JSONów do HTML (`_render_content_html`) i kluczy odpowiedzi (`_build_answer_key`).
 
 ### Inne serwisy:
 - **`docx_service.py`**: Eksport do MS Word z wariantami. Document tworzony z `user_id`.
-- **`file_service.py`**: Obsługa `pymupdf`, `python-docx` z cache'em SHA-256 (`file_content_cache`).
+- **`file_service.py`**: Obsługa `pymupdf`, `python-docx` z cache'em SHA-256 (`file_content_cache`). OCR i summary korzystają z OpenRouter REST API (requests).
 - **`backup_service.py`**: Kopie zapasowe bazy.
 
 ---
@@ -132,7 +137,8 @@ Architektura grupuje endpointy na określone sfery:
 | Router | Opis używalności API |
 |---|---|
 | `/api/auth` | JWT: rejestracja (POST `/register`), logowanie (POST `/login`), wylogowanie (POST `/logout`), profil (GET `/me`). |
-| `/api/settings` | Ustawienia użytkownika — klucze OpenAI (AES encrypted), wybór modelu AI. Filtrowane po `user_id`. |
+| `/api/settings` | Ustawienia użytkownika — legacy klucze API (AES encrypted), wybór modelu AI. Filtrowane po `user_id`. |
+| `/api/secret-keys` | CRUD kluczy API użytkownika (SecretKey). Dodawanie, usuwanie, walidacja klucza via OpenRouter API. Filtrowane po `user_id`. |
 | `/api/subjects` | Przedmioty edukacyjne (predefinowane + własne użytkownika). Filtrowane po `user_id`. |
 | `/api/task-types` | Pobieranie i dodawanie własnych typów zadań. |
 | `/api/files` | Wrzucanie i cache'owanie plików pomocniczych. Filtrowane po `user_id`. |

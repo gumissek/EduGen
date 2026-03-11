@@ -37,6 +37,9 @@ class UserResponse(BaseModel):
     is_active: bool = True
     is_superuser: bool = False
     created_at: str
+    api_quota: int = 1000
+    api_quota_reset: str | None = None
+    has_secret_keys: bool = False
 
 
 class LogoutResponse(BaseModel):

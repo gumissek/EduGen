@@ -80,7 +80,11 @@ def register_user(
     first_name: str | None = None,
     last_name: str | None = None,
 ) -> User:
-    """Register a new user. Creates associated UserSettings."""
+    """Register a new user. Creates associated UserSettings and default AI models."""
+    from app.models.user_ai_model import UserAIModel
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+
     user = User(
         email=email,
         password_hash=hash_password(password),
@@ -94,6 +98,34 @@ def register_user(
     user_settings = UserSettings(user_id=user.id)
     db.add(user_settings)
 
+    # Seed default AI models
+    default_models = [
+        UserAIModel(
+            user_id=user.id,
+            provider="openai",
+            model_name="gpt-5.1",
+            description="Dobry uniwersalny model",
+            price_description="Umiarkowana cena",
+            is_available=True,
+            created_at=now_iso,
+            changed_at=None,
+            request_made=0,
+        ),
+        UserAIModel(
+            user_id=user.id,
+            provider="openai",
+            model_name="gpt-5-mini",
+            description="Dobry do tekstu",
+            price_description="Tani",
+            is_available=True,
+            created_at=now_iso,
+            changed_at=None,
+            request_made=0,
+        ),
+    ]
+    db.add_all(default_models)
+
     db.commit()
     db.refresh(user)
     return user
+

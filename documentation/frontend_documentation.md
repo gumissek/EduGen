@@ -23,8 +23,9 @@ Aplikacja korzysta z Next.js App Router. Wszystkie pliki `page.tsx` w folderach 
 - `/documents` — widok zapisanych dokumentów
 - `/generate` — ścieżki kreatora generowania dokumentów i materiałów
 - `/subjects` — zarządzanie przedmiotami i plikami źródłowymi ułatwiającymi generowanie
-- `/settings` — powiązane z konfiguracją użytkownika
-- `/diagnostics` — diagnostyka działania
+- `/settings` — powiązane z konfiguracją użytkownika (klucze API OpenRouter, wybór modelu)
+- `/diagnostics` — diagnostyka działania (dostępna z panelu admina)
+- `/admin-panel` — panel administracyjny (wyłącznie dla superuserów) z kafelkami do sekcji zarządzania
 
 ### Ścieżki publiczne (w `src/app/`)
 - `/login` — ekran logowania (email + hasło)
@@ -55,11 +56,14 @@ Główny proces biznesowy to generowanie dokumentów. Elementy go wspierające:
 - Edytor dokumentów oparty na silniku **Tiptap** dający interfejs modyfikacji wygenerowanej treści.
 
 ### `layout/`
-- Layout aplikacji (Sidebar, Header głównego ekranu).
-- **`Sidebar.tsx`** wyświetla wersję aplikacji w stopce (odczytywana ze zmiennych środowiskowych `NEXT_PUBLIC_APP_*`).
+- Layout aplikacji (Sidebar, TopBar).
+- **`Sidebar.tsx`** wyświetla wersję aplikacji w stopce (odczytywana ze zmiennych środowiskowych `NEXT_PUBLIC_APP_*`). Zawiera linki: Generuj, Materiały, Przedmioty i Pliki, Ustawienia. Diagnostyka przeniesiona do panelu admina.
+- **`TopBar.tsx`** wyświetla: tytuł strony, imię/nazwisko i email zalogowanego użytkownika, chip z api_quota (jeśli brak secret_keys), przycisk panelu admina (dla superuserów), przełącznik motywu i przycisk wylogowania.
 
 ### Inne
 - `documents/`, `subjects/`, `settings/` — komponenty odpowiadające logice poszczególnych domen.
+  - **`settings/ApiKeyForm.tsx`** — CRUD kluczy API (tabela secret_keys). Dodawanie, usuwanie, walidacja klucza via OpenRouter.
+  - **`settings/ModelSelector.tsx`** — wybór modelu AI z listy wbudowanych (ai_models.csv) i custom modeli (localStorage). Dialog dodawania z linkiem do openrouter.ai/models.
 - `ui/` — fundamentalne reużywalne fragmenty interfejsu (własne wrappery dla przycisków, powiadomienia Snackbar itp).
 
 ---
@@ -89,6 +93,8 @@ Za pobieranie, cache'owanie i mutację danych odpowiedzialny jest pakiet **TanSt
 | `useSubjects.ts`, `useLevels.ts` | Dane słownikowe (przedmioty, poziomy zaawansowania). | React Query |
 | `useTaskTypes.ts` | Pobieranie z backendu dostępnych typów zadań. | React Query |
 | `useFiles.ts` | CRUD plików źródłowych dla generatorów. | React Query |
+| `useSecretKeys.ts` | CRUD kluczy API użytkownika (tabela secret_keys). List, create, delete, validate. | React Query |
+| `useCurrentUser.ts` | Pobieranie profilu zalogowanego użytkownika (`/api/auth/me`) z polami: email, imię, nazwisko, is_superuser, api_quota, has_secret_keys. | React Query |
 
 ---
 
@@ -104,6 +110,7 @@ Walidacja formularzy realizowana przez **Zod** we współpracy z **React Hook Fo
 - `auth.ts` — `LoginRequestSchema` (email + hasło), `RegisterRequestSchema` (email, imię, nazwisko, hasło, potwierdzenie hasła z refine), `LoginResponseSchema` (access_token + token_type).
 - `generation.ts` — schematy kroków generacji.
 - `document.ts`, `file.ts`, `subject.ts`, `settings.ts` — schematy żądań reszty domen.
+- `settings.ts` — dodatkowo: interfejsy `SecretKey`, `SecretKeyCreate`, `SecretKeyValidateResponse` dla CRUD kluczy API.
 
 ---
 

@@ -51,3 +51,4 @@ class User(Base):
     source_files = relationship("SourceFile", back_populates="user")
     documents = relationship("Document", back_populates="user")
     prototypes = relationship("Prototype", back_populates="user")
+    ai_models = relationship("UserAIModel", back_populates="user", cascade="all, delete-orphan")

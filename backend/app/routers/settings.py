@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+import requests as http_requests
 from fastapi import APIRouter, Depends, HTTPException
-from openai import OpenAI
 from sqlalchemy.orm import Session as DBSession
 
 from app.database import get_db
@@ -91,9 +91,15 @@ def validate_key(
 
     try:
         api_key = decrypt_api_key(user_settings.openai_api_key_encrypted)
-        client = OpenAI(api_key=api_key)
-        models_response = client.models.list()
-        model_ids = sorted([m.id for m in models_response.data if "gpt" in m.id.lower()])
-        return ValidateKeyResponse(valid=True, models=model_ids)
+        resp = http_requests.get(
+            "https://openrouter.ai/api/v1/models",
+            headers={"Authorization": f"Bearer {api_key}"},
+            timeout=15,
+        )
+        if resp.status_code == 200:
+            return ValidateKeyResponse(valid=True, models=[])
+        else:
+            error_detail = resp.json().get("error", {}).get("message", resp.text[:200])
+            return ValidateKeyResponse(valid=False, error=error_detail)
     except Exception as e:
         return ValidateKeyResponse(valid=False, error=str(e))

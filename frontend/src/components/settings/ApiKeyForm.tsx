@@ -9,110 +9,230 @@ import InputAdornment from '@mui/material/InputAdornment';
 import IconButton from '@mui/material/IconButton';
 import CircularProgress from '@mui/material/CircularProgress';
 import Chip from '@mui/material/Chip';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableContainer from '@mui/material/TableContainer';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
+import Paper from '@mui/material/Paper';
+import Tooltip from '@mui/material/Tooltip';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
+import DeleteIcon from '@mui/icons-material/Delete';
+import VerifiedIcon from '@mui/icons-material/Verified';
+import AddIcon from '@mui/icons-material/Add';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import ErrorIcon from '@mui/icons-material/Error';
-import { useSettings } from '@/hooks/useSettings';
+import { format } from 'date-fns';
+import { useSecretKeys } from '@/hooks/useSecretKeys';
 
 export default function ApiKeyForm() {
-  const { settings, updateSettings, isUpdating, validateKey, isValidating } = useSettings();
-  const [apiKey, setApiKey] = React.useState('');
+  const { secretKeys, isLoading, createKey, isCreating, deleteKey, isDeleting, validateKey, isValidating } = useSecretKeys();
+
+  const [dialogOpen, setDialogOpen] = React.useState(false);
+  const [keyName, setKeyName] = React.useState('');
+  const [secretKeyValue, setSecretKeyValue] = React.useState('');
   const [showPassword, setShowPassword] = React.useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = React.useState<string | null>(null);
 
-  const handleClickShowPassword = () => setShowPassword((show) => !show);
-  const handleMouseDownPassword = (event: React.MouseEvent<HTMLButtonElement>) => {
-    event.preventDefault();
-  };
-  const handleSave = () => {
-    if (apiKey) {
-      updateSettings({ openai_api_key: apiKey });
-      setApiKey(''); // Clear field after saving for safety
-    }
-  };
-
-  const handleValidate = () => {
-    validateKey();
+  const handleAdd = async () => {
+    if (!keyName.trim() || !secretKeyValue.trim()) return;
+    await createKey({
+      platform: 'openrouter',
+      key_name: keyName.trim(),
+      secret_key: secretKeyValue.trim(),
+    });
+    setKeyName('');
+    setSecretKeyValue('');
+    setShowPassword(false);
+    setDialogOpen(false);
   };
 
-  const hasKey = settings?.has_api_key;
+  const handleDelete = (id: string) => {
+    deleteKey(id);
+    setDeleteConfirmId(null);
+  };
+
+  const handleValidate = (id: string) => {
+    validateKey(id);
+  };
+
+  if (isLoading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
-    <Box sx={{ mt: 2 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
-        <Typography variant="subtitle1" fontWeight="bold" color="text.primary">
-          Status klucza API:
-        </Typography>
-        {hasKey ? (
+    <Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography variant="subtitle1" fontWeight="bold">
+            Twoje klucze API
+          </Typography>
           <Chip
-            icon={<CheckCircleIcon />}
-            label="Skonfigurowany"
+            label={secretKeys.length > 0 ? `${secretKeys.length} kluczy` : 'Brak kluczy'}
             size="small"
-            sx={(theme) => ({
-              bgcolor: theme.palette.success.dark,
-              color: theme.palette.getContrastText(theme.palette.success.dark),
-              fontWeight: 700,
-              '& .MuiChip-icon': { color: theme.palette.getContrastText(theme.palette.success.dark) },
-            })}
+            color={secretKeys.length > 0 ? 'success' : 'error'}
+            variant="outlined"
           />
-        ) : (
-          <Chip
-            icon={<ErrorIcon />}
-            label="Brak klucza"
-            size="small"
-            sx={(theme) => ({
-              bgcolor: theme.palette.error.dark,
-              color: theme.palette.getContrastText(theme.palette.error.dark),
-              fontWeight: 700,
-              '& .MuiChip-icon': { color: theme.palette.getContrastText(theme.palette.error.dark) },
-            })}
-          />
-        )}
-      </Box>
-
-      <TextField
-        fullWidth
-        label="Nowy klucz OpenAI API"
-        type={showPassword ? 'text' : 'password'}
-        value={apiKey}
-        onChange={(e) => setApiKey(e.target.value)}
-        margin="normal"
-        InputProps={{
-          endAdornment: (
-            <InputAdornment position="end">
-              <IconButton
-                aria-label="toggle password visibility"
-                onClick={handleClickShowPassword}
-                onMouseDown={handleMouseDownPassword}
-                edge="end"
-              >
-                {showPassword ? <VisibilityOff /> : <Visibility />}
-              </IconButton>
-            </InputAdornment>
-          ),
-        }}
-      />
-      
-      <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+        </Box>
         <Button
           variant="contained"
-          onClick={handleSave}
-          disabled={!apiKey || isUpdating}
-          startIcon={isUpdating && <CircularProgress size={20} />}
-          sx={{ height: 48, px: 4, fontWeight: 600 }}
+          startIcon={<AddIcon />}
+          size="small"
+          onClick={() => setDialogOpen(true)}
+          sx={{ fontWeight: 600 }}
         >
-          Zapisz klucz
-        </Button>
-        <Button
-          variant="outlined"
-          onClick={handleValidate}
-          disabled={!hasKey || isValidating}
-          startIcon={isValidating && <CircularProgress size={20} />}
-          sx={{ height: 48, px: 4, fontWeight: 600 }}
-        >
-          Waliduj klucz
+          Dodaj klucz
         </Button>
       </Box>
+
+      {secretKeys.length === 0 ? (
+        <Paper variant="outlined" sx={{ p: 4, textAlign: 'center', bgcolor: 'rgba(0,0,0,0.01)', borderRadius: 3, borderStyle: 'dashed' }}>
+          <Typography variant="body2" color="text.secondary">
+            Nie masz jeszcze żadnych kluczy API. Dodaj klucz OpenRouter, aby rozpocząć generowanie.
+          </Typography>
+        </Paper>
+      ) : (
+        <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 3 }}>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>Nazwa</TableCell>
+                <TableCell>Platforma</TableCell>
+                <TableCell>Data dodania</TableCell>
+                <TableCell>Ostatnie użycie</TableCell>
+                <TableCell align="right">Akcje</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {secretKeys.map((key) => (
+                <TableRow key={key.id} hover>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      {key.is_active && <CheckCircleIcon fontSize="small" color="success" />}
+                      <Typography variant="body2" fontWeight={600}>{key.key_name}</Typography>
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Chip label={key.platform} size="small" variant="outlined" />
+                  </TableCell>
+                  <TableCell sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
+                    {format(new Date(key.created_at), 'dd.MM.yyyy HH:mm')}
+                  </TableCell>
+                  <TableCell sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
+                    {key.last_used_at ? format(new Date(key.last_used_at), 'dd.MM.yyyy HH:mm') : '—'}
+                  </TableCell>
+                  <TableCell align="right">
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
+                      <Tooltip title="Waliduj klucz">
+                        <IconButton
+                          size="small"
+                          color="primary"
+                          onClick={() => handleValidate(key.id)}
+                          disabled={isValidating}
+                        >
+                          <VerifiedIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Usuń klucz">
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() => setDeleteConfirmId(key.id)}
+                          disabled={isDeleting}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
+
+      {/* Add Key Dialog */}
+      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Dodaj nowy klucz API</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Klucz zostanie zaszyfrowany i bezpiecznie przechowany. Możesz uzyskać klucz na{' '}
+            <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700 }}>
+              openrouter.ai/keys
+            </a>
+          </Typography>
+          <TextField
+            fullWidth
+            label="Nazwa klucza (etykieta)"
+            value={keyName}
+            onChange={(e) => setKeyName(e.target.value)}
+            placeholder="np. Mój klucz OpenRouter"
+            margin="normal"
+          />
+          <TextField
+            fullWidth
+            label="Klucz API"
+            type={showPassword ? 'text' : 'password'}
+            value={secretKeyValue}
+            onChange={(e) => setSecretKeyValue(e.target.value)}
+            placeholder="sk-or-..."
+            margin="normal"
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    onClick={() => setShowPassword((s) => !s)}
+                    edge="end"
+                  >
+                    {showPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setDialogOpen(false)}>Anuluj</Button>
+          <Button
+            variant="contained"
+            onClick={handleAdd}
+            disabled={!keyName.trim() || !secretKeyValue.trim() || isCreating}
+            startIcon={isCreating ? <CircularProgress size={18} /> : undefined}
+          >
+            Dodaj klucz
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirm Dialog */}
+      <Dialog open={!!deleteConfirmId} onClose={() => setDeleteConfirmId(null)} maxWidth="xs">
+        <DialogTitle>Potwierdź usunięcie</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2">
+            Czy na pewno chcesz usunąć ten klucz API? Tej operacji nie można cofnąć.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteConfirmId(null)}>Anuluj</Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={() => deleteConfirmId && handleDelete(deleteConfirmId)}
+          >
+            Usuń
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

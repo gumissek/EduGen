@@ -19,6 +19,7 @@ from app.models.user import User
 from app.models.generation import Generation
 from app.models.prototype import Prototype
 from app.models.settings import UserSettings
+from app.models.secret_key import SecretKey
 from app.schemas.prototype import PrototypeResponse, PrototypeUpdate, RepromptRequest
 from app.services.ai_service import call_openai_reprompt, call_openai_reprompt_free_form, TYPES_WITHOUT_QUESTIONS
 from app.services.generation_service import _render_content_html, _build_answer_key
@@ -110,16 +111,31 @@ def reprompt(
     generation = _get_user_generation(db, generation_id, current_user.id)
     prototype = _get_user_prototype(db, generation_id, current_user.id)
 
-    # Get API key
-    user_settings = db.query(UserSettings).filter(UserSettings.user_id == current_user.id).first()
-    if not user_settings or not user_settings.openai_api_key_encrypted:
+    # Get API key — prefer secret_keys, fall back to legacy settings
+    api_key = None
+    secret_key = (
+        db.query(SecretKey)
+        .filter(SecretKey.user_id == current_user.id, SecretKey.is_active == True)
+        .first()
+    )
+    if secret_key:
+        api_key = decrypt_api_key(secret_key.secret_key_hash)
+        from datetime import datetime, timezone
+        secret_key.last_used_at = datetime.now(timezone.utc).isoformat()
+
+    if not api_key:
+        user_settings = db.query(UserSettings).filter(UserSettings.user_id == current_user.id).first()
+        if user_settings and user_settings.openai_api_key_encrypted:
+            api_key = decrypt_api_key(user_settings.openai_api_key_encrypted)
+
+    if not api_key:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="OpenAI API key not configured",
+            detail="API key not configured — add a key in Settings",
         )
 
-    api_key = decrypt_api_key(user_settings.openai_api_key_encrypted)
-    model = user_settings.default_model or "gpt-5-mini"
+    user_settings = db.query(UserSettings).filter(UserSettings.user_id == current_user.id).first()
+    model = (user_settings.default_model if user_settings else None) or "openai/gpt-5-mini"
 
     # Use edited content if available, otherwise original
     current_content = prototype.edited_content or prototype.original_content

@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   postgres:
     image: postgres:16
@@ -8,18 +6,20 @@ services:
     env_file:
       - .env                          # dostarcza POSTGRES_PASSWORD
     environment:
-      POSTGRES_DB: edugen
-      POSTGRES_USER: edugen_user
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - edugen_postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
     networks:
       - backend_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U edugen_user -d edugen"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
-      timeout: 5s
-      retries: 5
+      timeout: 3s
+      retries: 3
 
   backend:
     build:
@@ -31,12 +31,15 @@ services:
     volumes:
       - edugen_data:/app/data
       - ./common_filles:/app/common_filles:ro
-    env_file:
-      - .env
     environment:
-      # Nadpisuje DATABASE_URL z .env — używa hosta "postgres" (sieć Docker)
       - UV_PROJECT_ENVIRONMENT=/app/.venv
-      - DATABASE_URL=postgresql+psycopg://edugen_user:${POSTGRES_PASSWORD}@postgres:5432/edugen
+      - DATABASE_URL=postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:${POSTGRES_PORT}/${POSTGRES_DB}
+      - DATA_DIR=${DATA_DIR}
+      - MAX_FILE_SIZE_MB=${MAX_FILE_SIZE_MB}
+      - CORS_ORIGINS=${CORS_ORIGINS}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - JWT_ALGORITHM=${JWT_ALGORITHM}
+      - JWT_EXPIRATION_MINUTES=${JWT_EXPIRATION_MINUTES}
     command: ["uv", "run", "sh", "-c", "python app/init_app.py && uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2"]
     depends_on:
       postgres:
@@ -64,6 +67,10 @@ services:
       - ./common_filles:/app/common_filles:ro
     environment:
       - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+      - NEXT_PUBLIC_APP_NAME=${APP_NAME}
+      - NEXT_PUBLIC_APP_VERSION=${APP_VERSION}
+      - NEXT_PUBLIC_APP_RELEASE_DATE=${APP_RELEASE_DATE}
     depends_on:
       backend:
         condition: service_healthy

@@ -1,4 +1,4 @@
-// ... (TopBar logic, will be implemented with MUI AppBar)
+// TopBar — with user info, quota display, admin button
 'use client';
 
 import * as React from 'react';
@@ -11,11 +11,14 @@ import MenuIcon from '@mui/icons-material/Menu';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 import LogoutIcon from '@mui/icons-material/Logout';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
 import Tooltip from '@mui/material/Tooltip';
 import { useColorMode } from '@/theme/ColorModeContext';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 
 interface TopBarProps {
   onMenuClick: () => void;
@@ -24,7 +27,9 @@ interface TopBarProps {
 export default function TopBar({ onMenuClick }: TopBarProps) {
   const { mode, toggleColorMode } = useColorMode();
   const pathname = usePathname();
+  const router = useRouter();
   const { logout } = useAuth();
+  const { user } = useCurrentUser();
 
   // Simple title mapping
   let title = 'EduGen Local';
@@ -33,10 +38,17 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
   if (pathname.includes('/subjects')) title = 'Przedmioty i pliki';
   if (pathname.includes('/settings')) title = 'Ustawienia';
   if (pathname.includes('/diagnostics')) title = 'Diagnostyka';
+  if (pathname.includes('/admin-panel')) title = 'Panel administracyjny';
 
   const handleLogout = () => {
     logout();
   };
+
+  // Build user display name
+  const displayParts: string[] = [];
+  if (user?.first_name) displayParts.push(user.first_name);
+  if (user?.last_name) displayParts.push(user.last_name);
+  const displayName = displayParts.length > 0 ? displayParts.join(' ') : null;
 
   return (
     <AppBar 
@@ -63,11 +75,60 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
         >
           <MenuIcon />
         </IconButton>
-        <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, fontWeight: 700, letterSpacing: '-0.01em' }}>
+        <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 700, letterSpacing: '-0.01em', mr: 2 }}>
           {title}
         </Typography>
+
+        {/* Spacer */}
+        <Box sx={{ flexGrow: 1 }} />
         
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        {/* User display */}
+          {user && (
+            <Box sx={{ display: { xs: 'none', sm: 'flex' }, alignItems: 'center' , justifyContent : 'center', gap: 0.5 }}>
+              {displayName && (
+                <Typography variant="body2" fontWeight={600} noWrap sx={{ maxWidth: 150 , }}>
+                  {displayName}
+                </Typography>
+              )}
+              <Typography variant="caption" color="text.secondary" noWrap sx={{ maxWidth: 180 }}>
+                {user.email}
+              </Typography>
+            </Box>
+          )}
+
+        {/* User info section */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          {/* Quota info — show only if user has no secret keys */}
+          {user && !user.has_secret_keys && (
+            <Tooltip title={user.api_quota_reset ? `Reset: ${user.api_quota_reset}` : 'Limit zapytań API'}>
+              <Chip
+                label={`Quota: ${user.api_quota}`}
+                size="small"
+                variant="outlined"
+                color="warning"
+                sx={{ fontWeight: 600, fontSize: '0.75rem' }}
+              />
+            </Tooltip>
+          )}
+
+          {/* Admin panel button — superuser only */}
+          {user?.is_superuser && (
+            <Tooltip title="Panel administracyjny">
+              <IconButton
+                color="primary"
+                onClick={() => router.push('/admin-panel')}
+                sx={{
+                  bgcolor: 'primary.light',
+                  color: 'primary.contrastText',
+                  '&:hover': { bgcolor: 'primary.main', transform: 'scale(1.05)' },
+                  transition: 'all 0.2s',
+                }}
+              >
+                <AdminPanelSettingsIcon />
+              </IconButton>
+            </Tooltip>
+          )}
+
           <Tooltip title={mode === 'dark' ? 'Tryb jasny' : 'Tryb ciemny'}>
             <IconButton 
               color="inherit" 

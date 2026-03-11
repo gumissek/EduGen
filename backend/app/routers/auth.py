@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session as DBSession
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models.user import User
+from app.models.secret_key import SecretKey
 from app.schemas.auth import (
     RegisterRequest,
     LoginRequest,
@@ -88,9 +89,11 @@ def login(
 
 @router.get("/me", response_model=UserResponse)
 def get_me(
+    db: DBSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """Get the currently authenticated user's profile."""
+    has_keys = db.query(SecretKey).filter(SecretKey.user_id == current_user.id).count() > 0
     return UserResponse(
         id=current_user.id,
         email=current_user.email,
@@ -99,6 +102,9 @@ def get_me(
         is_active=current_user.is_active,
         is_superuser=current_user.is_superuser,
         created_at=current_user.created_at,
+        api_quota=current_user.api_quota,
+        api_quota_reset=current_user.api_quota_reset,
+        has_secret_keys=has_keys,
     )
 
 

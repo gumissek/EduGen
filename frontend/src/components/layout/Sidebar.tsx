@@ -14,7 +14,6 @@ import AddCircleIcon from '@mui/icons-material/AddCircle';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import SettingsIcon from '@mui/icons-material/Settings';
-import BugReportIcon from '@mui/icons-material/BugReport';
 import { usePathname, useRouter } from 'next/navigation';
 
 const drawerWidth = 260;
@@ -24,7 +23,6 @@ const menuItems = [
   { text: 'Materiały', icon: <DashboardIcon />, path: '/dashboard' },
   { text: 'Przedmioty i Pliki', icon: <FolderOpenIcon />, path: '/subjects' },
   { text: 'Ustawienia', icon: <SettingsIcon />, path: '/settings' },
-  { text: 'Diagnostyka', icon: <BugReportIcon />, path: '/diagnostics' },
 ];
 
 interface SidebarProps {

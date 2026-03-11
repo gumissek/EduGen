@@ -12,13 +12,13 @@ import StorageIcon from '@mui/icons-material/Storage';
 
 export default function SettingsPage() {
   return (
-    <Box sx={{ maxWidth: 800, mx: 'auto', p: { xs: 0, sm: 2 } }}>
+    <Box sx={{ maxWidth: 900, mx: 'auto', p: { xs: 0, sm: 2 } }}>
       <Box sx={{ mb: 4 }}>
         <Typography variant="h4" fontWeight="800" gutterBottom>
           Ustawienia aplikacji
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          Zarządzaj modelem sztucznej inteligencji, kopiami zapasowymi i parametrami działania.
+          Zarządzaj kluczami API, modelem sztucznej inteligencji i kopiami zapasowymi.
         </Typography>
       </Box>
       
@@ -28,11 +28,11 @@ export default function SettingsPage() {
             <VpnKeyIcon fontSize="small" />
           </Box>
           <Typography variant="h6" fontWeight="bold">
-            Klucz API OpenAI
+            Klucze API (OpenRouter)
           </Typography>
         </Box>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          Twój klucz, używany do komunikacji z modelami generatywnymi.
+          Zarządzaj swoimi kluczami API do OpenRouter. Klucze są szyfrowane i bezpiecznie przechowywane.
         </Typography>
         <Divider sx={{ mb: 3 }} />
         <ApiKeyForm />
@@ -48,7 +48,7 @@ export default function SettingsPage() {
           </Typography>
         </Box>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          Wybierz domyślny model językowy, który osiąga najlepsze rezultaty zadaniowe.
+          Wybierz domyślny model językowy. Modele dostępne przez OpenRouter.
         </Typography>
         <Divider sx={{ mb: 3 }} />
         <ModelSelector />

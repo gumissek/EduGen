@@ -20,3 +20,25 @@ export const ValidateKeyResponseSchema = z.object({
 });
 
 export type ValidateKeyResponse = z.infer<typeof ValidateKeyResponseSchema>;
+
+// --- Secret Keys ---
+
+export interface SecretKey {
+  id: string;
+  platform: string;
+  key_name: string;
+  is_active: boolean;
+  last_used_at: string | null;
+  created_at: string;
+}
+
+export interface SecretKeyCreate {
+  platform: string;
+  key_name: string;
+  secret_key: string;
+}
+
+export interface SecretKeyValidateResponse {
+  valid: boolean;
+  error?: string | null;
+}
