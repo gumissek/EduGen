@@ -6,6 +6,7 @@ EduGen is a web application that supports educators with AI to create and edit d
 
 Frontend documentation: `documentation\frontend_documentation.md`
 Backend documentation: `documentation\backend_documentation.md`
+Database documentation: `documentation\database_documentation.md`
 Tech Stack: `documentation\tech_stack.md`
 Modules documentation: `documentation\modules\<module_name>_module_documentation.md`
 
