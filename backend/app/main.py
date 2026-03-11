@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import json
+import logging
 import traceback
 from contextlib import asynccontextmanager
-from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,17 +15,7 @@ from app.config import settings
 from app.database import SessionLocal
 from app.models import *  # noqa: F401, F403 — register all models
 
-
-def _ensure_directories():
-    """Create required data directories."""
-    dirs = [
-        Path(settings.DATA_DIR),
-        Path(settings.DATA_DIR) / "subjects",
-        Path(settings.DATA_DIR) / "documents",
-        Path(settings.DATA_DIR) / "backups",
-    ]
-    for d in dirs:
-        d.mkdir(parents=True, exist_ok=True)
+logger = logging.getLogger(__name__)
 
 
 def _start_backup_scheduler():
@@ -55,10 +45,8 @@ def _start_backup_scheduler():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan: startup and shutdown."""
-    # Startup
-    _ensure_directories()
-
-    # Start backup scheduler
+    # Startup — migrations and directories are handled by app/init_app.py
+    # which runs as a separate process before uvicorn is started.
     scheduler = _start_backup_scheduler()
 
     yield

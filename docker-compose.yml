@@ -37,7 +37,7 @@ services:
       # Nadpisuje DATABASE_URL z .env — używa hosta "postgres" (sieć Docker)
       - UV_PROJECT_ENVIRONMENT=/app/.venv
       - DATABASE_URL=postgresql+psycopg://edugen_user:${POSTGRES_PASSWORD}@postgres:5432/edugen
-    command: ["uv", "run", "sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2"]
+    command: ["uv", "run", "sh", "-c", "python app/init_app.py && uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2"]
     depends_on:
       postgres:
         condition: service_healthy

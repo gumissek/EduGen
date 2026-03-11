@@ -28,5 +28,5 @@ COPY alembic ./alembic
 # create mount point for shared common files
 RUN mkdir -p /app/common_filles
 
-# start server
-CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# start server (init_app.py runs migrations & creates dirs before uvicorn starts)
+CMD ["uv", "run", "sh", "-c", "python app/init_app.py && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
