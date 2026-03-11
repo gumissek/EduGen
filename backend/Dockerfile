@@ -1,43 +1,32 @@
-FROM python:3.12-slim AS base
-
-# System dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libmagic1 \
-    poppler-utils \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install uv
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
-
-# Set uv environment variables
-ENV UV_COMPILE_BYTECODE=1
-ENV UV_LINK_MODE=copy
-ENV UV_PYTHON_DOWNLOADS=never
-ENV UV_PROJECT_ENVIRONMENT=/app/.venv
+FROM python:3.12-slim
 
 WORKDIR /app
 
-# Copy dependency files first for better Docker layer caching
-COPY pyproject.toml uv.lock* ./
+# system deps
+RUN apt-get update && apt-get install -y \
+    curl \
+    build-essential \
+    libmagic1 \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install dependencies via uv
-# If uv.lock exists use --frozen, otherwise generate it
-RUN if [ -f uv.lock ]; then \
-      uv sync --frozen --no-dev --no-install-project; \
-    else \
-      uv sync --no-dev --no-install-project; \
-    fi
+# install uv
+RUN pip install uv
 
-# Copy application code
-COPY . .
+# copy dependency files first (cache layer)
+COPY pyproject.toml uv.lock ./
 
-# Create data directories
-RUN mkdir -p data/subjects data/documents data/backups
+# install dependencies
+RUN uv sync --frozen
 
-# Add .venv/bin to PATH so uvicorn is directly accessible
-ENV PATH="/app/.venv/bin:$PATH"
+# copy source
+COPY app ./app
 
-EXPOSE 8000
+# copy alembic migrations
+COPY alembic.ini ./
+COPY alembic ./alembic
 
-CMD ["uv", "run", "sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2"]
+# create mount point for shared common files
+RUN mkdir -p /app/common_filles
+
+# start server
+CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

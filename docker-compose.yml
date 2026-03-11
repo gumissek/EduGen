@@ -1,3 +1,4 @@
+version: "3.8"
 
 services:
   postgres:
@@ -29,9 +30,9 @@ services:
       - "127.0.0.1:8000:8000"
     volumes:
       - edugen_data:/app/data
-      - ./common_filles:/app/common_filles
+      - ./common_filles:/app/common_filles:ro
     env_file:
-      - .env                          # wszystkie zmienne z jednego pliku root
+      - .env
     environment:
       # Nadpisuje DATABASE_URL z .env — używa hosta "postgres" (sieć Docker)
       - UV_PROJECT_ENVIRONMENT=/app/.venv
@@ -55,14 +56,18 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        - BACKEND_URL=http://backend:8000
+        BACKEND_URL: http://backend:8000
     container_name: edugen-frontend
     ports:
       - "127.0.0.1:3000:3000"
+    volumes:
+      - ./common_filles:/app/common_filles:ro
     environment:
       - NODE_ENV=production
     depends_on:
       backend:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
     restart: unless-stopped
     networks:
@@ -70,9 +75,7 @@ services:
 
 volumes:
   edugen_data:
-    driver: local
   edugen_postgres_data:
-    driver: local
 
 networks:
   backend_network:
