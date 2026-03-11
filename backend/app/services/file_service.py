@@ -20,7 +20,7 @@ from app.config import settings
 from app.encryption import decrypt_api_key
 from app.models.source_file import SourceFile
 from app.models.file_content_cache import FileContentCache
-from app.models.settings import UserSettings
+from app.models.user import User
 from app.models.secret_key import SecretKey
 from app.models.ai_request import AIRequest
 
@@ -205,10 +205,10 @@ def generate_summary(text: str, api_key: str, model: str = "openai/gpt-5-mini") 
 
 
 def get_api_key_and_model(db: DBSession, user_id: str | None = None) -> tuple[str, str]:
-    """Retrieve and decrypt the API key and default model.
+    """Retrieve and decrypt the API key and the user's preferred model.
 
-    Checks secret_keys first (for the given user), then falls back to
-    legacy settings table.
+    Looks up the first active key from the secret_keys table.
+    The model preference is read from the users.default_model column.
     """
     api_key = None
     model = "openai/gpt-5-mini"
@@ -222,14 +222,10 @@ def get_api_key_and_model(db: DBSession, user_id: str | None = None) -> tuple[st
         if secret_key:
             api_key = decrypt_api_key(secret_key.secret_key_hash)
 
-    if not api_key:
-        if user_id:
-            user_settings = db.query(UserSettings).filter(UserSettings.user_id == user_id).first()
-        else:
-            user_settings = db.query(UserSettings).first()
-        if user_settings and user_settings.openai_api_key_encrypted:
-            api_key = decrypt_api_key(user_settings.openai_api_key_encrypted)
-            model = user_settings.default_model or model
+        # Get model preference from the user record
+        user = db.query(User).filter(User.id == user_id).first()
+        if user and user.default_model:
+            model = user.default_model
 
     if not api_key:
         raise ValueError("API key not configured")

@@ -9,7 +9,6 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session as DBSession
 
 from app.encryption import decrypt_api_key
-from app.models.settings import UserSettings
 from app.models.ai_request import AIRequest
 from app.models.generation import Generation
 from app.models.source_file import SourceFile
@@ -254,7 +253,7 @@ def _call_openrouter(api_key: str, model: str, messages: list[dict], json_mode: 
     return resp.json()
 
 
-def call_openai(
+def call_openrouter(
     db: DBSession,
     generation: Generation,
     system_prompt: str,
@@ -332,7 +331,7 @@ def _normalize_reprompt_response(data: dict) -> dict:
     return data
 
 
-def call_openai_reprompt_free_form(
+def call_openrouter_reprompt_free_form(
     db: DBSession,
     generation: Generation,
     current_content: str,
@@ -403,7 +402,7 @@ def call_openai_reprompt_free_form(
         raise
 
 
-def call_openai_reprompt(
+def call_openrouter_reprompt(
     db: DBSession,
     generation: Generation,
     current_content: str,

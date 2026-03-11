@@ -1,7 +1,6 @@
 """ORM models package."""
 
 from app.models.user import User
-from app.models.settings import UserSettings
 from app.models.secret_key import SecretKey
 from app.models.subject import Subject
 from app.models.source_file import SourceFile
@@ -17,7 +16,6 @@ from app.models.user_ai_model import UserAIModel
 
 __all__ = [
     "User",
-    "UserSettings",
     "SecretKey",
     "Subject",
     "SourceFile",

@@ -148,7 +148,7 @@ export default function StepReview() {
       </Paper>
       
       <Typography variant="body2" color="text.secondary">
-        Sprawdź powyższe dane. Jeśli wszystko się zgadza, kliknij &quot;Generuj materiał&quot;, aby przeznaczyć zasoby OpenAI na wygenerowanie prototypu.
+        Sprawdź powyższe dane. Jeśli wszystko się zgadza, kliknij &quot;Generuj materiał&quot;, aby rozpocząć generowanie prototypu przez AI (OpenRouter).
       </Typography>
     </Box>
   );

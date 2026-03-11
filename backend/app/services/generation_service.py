@@ -11,11 +11,11 @@ from sqlalchemy.orm import Session as DBSession
 from app.encryption import decrypt_api_key
 from app.models.generation import Generation
 from app.models.prototype import Prototype
-from app.models.settings import UserSettings
+from app.models.user import User
 from app.models.secret_key import SecretKey
 from app.models.source_file import SourceFile
 from app.models.diagnostic_log import DiagnosticLog
-from app.services.ai_service import build_system_prompt, call_openai, TYPES_WITHOUT_QUESTIONS
+from app.services.ai_service import build_system_prompt, call_openrouter, TYPES_WITHOUT_QUESTIONS
 
 
 def _render_content_html(data: dict, content_type: str = "") -> str:
@@ -84,11 +84,10 @@ def generate_prototype_task(db: DBSession, generation_id: str) -> None:
         generation.updated_at = datetime.now(timezone.utc).isoformat()
         db.commit()
 
-        # Get API key — prefer active secret_key, fall back to settings
+        # Get API key from secret_keys table
         api_key = None
         model = "openai/gpt-5-mini"
 
-        # Try to get key from secret_keys table (first active key)
         secret_key = (
             db.query(SecretKey)
             .filter(SecretKey.user_id == generation.user_id, SecretKey.is_active == True)
@@ -99,27 +98,13 @@ def generate_prototype_task(db: DBSession, generation_id: str) -> None:
             # Update last_used_at
             secret_key.last_used_at = datetime.now(timezone.utc).isoformat()
 
-        # Fall back to legacy settings
-        if not api_key:
-            user_settings = (
-                db.query(UserSettings)
-                .filter(UserSettings.user_id == generation.user_id)
-                .first()
-            )
-            if user_settings and user_settings.openai_api_key_encrypted:
-                api_key = decrypt_api_key(user_settings.openai_api_key_encrypted)
-
         if not api_key:
             raise ValueError("API key not configured — add a key in Settings")
 
-        # Get model preference from settings
-        user_settings_for_model = (
-            db.query(UserSettings)
-            .filter(UserSettings.user_id == generation.user_id)
-            .first()
-        )
-        if user_settings_for_model and user_settings_for_model.default_model:
-            model = user_settings_for_model.default_model
+        # Get user's preferred model
+        user = db.query(User).filter(User.id == generation.user_id).first()
+        if user and user.default_model:
+            model = user.default_model
 
         # Gather source texts
         source_texts = []
@@ -127,9 +112,9 @@ def generate_prototype_task(db: DBSession, generation_id: str) -> None:
             if sf.extracted_text and sf.deleted_at is None:
                 source_texts.append(sf.extracted_text)
 
-        # Build prompt and call OpenAI
+        # Build prompt and call OpenRouter
         system_prompt = build_system_prompt(generation, source_texts)
-        result = call_openai(db, generation, system_prompt, api_key, model)
+        result = call_openrouter(db, generation, system_prompt, api_key, model)
 
         # Create prototype
         is_free_form = generation.content_type in TYPES_WITHOUT_QUESTIONS

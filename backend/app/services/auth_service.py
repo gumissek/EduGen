@@ -10,7 +10,6 @@ from sqlalchemy.orm import Session as DBSession
 
 from app.config import settings
 from app.models.user import User
-from app.models.settings import UserSettings
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -80,7 +79,7 @@ def register_user(
     first_name: str | None = None,
     last_name: str | None = None,
 ) -> User:
-    """Register a new user. Creates associated UserSettings and default AI models."""
+    """Register a new user and seed default AI models."""
     from app.models.user_ai_model import UserAIModel
 
     now_iso = datetime.now(timezone.utc).isoformat()
@@ -93,10 +92,6 @@ def register_user(
     )
     db.add(user)
     db.flush()
-
-    # Create default settings for the user
-    user_settings = UserSettings(user_id=user.id)
-    db.add(user_settings)
 
     # Seed default AI models
     default_models = [

@@ -10,7 +10,7 @@
 * Document Processing: PyMuPDF (fitz) and python-docx for handling PDF and DOCX files.
 * Security:
     - Password Hashing: Bcrypt with failed login attempt tracking.
-    - Key Encryption: AES encryption for external OpenAI API keys.
+    - Key Encryption: AES encryption for external API keys (OpenRouter).
     - Authentication: Stateless JWT (JSON Web Tokens) with HS256 algorithm.
 
 ## FRONTEND ARCHITECTURE (TypeScript)

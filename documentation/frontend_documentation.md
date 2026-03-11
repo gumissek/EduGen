@@ -54,16 +54,17 @@ Główny proces biznesowy to generowanie dokumentów. Elementy go wspierające:
 
 ### `editor/`
 - Edytor dokumentów oparty na silniku **Tiptap** dający interfejs modyfikacji wygenerowanej treści.
+- **`RepromptInput.tsx`** — pasek prompt przyklejony na stałe do dołu ekranu (`position: fixed`). Na desktopie uwzględnia szerokość Sidebara (260 px) poprzez `left: calc(50% + 130px)` i `width: calc(100% - 292px)`, dzięki czemu jest wyśrodkowany w obszarze treści, a nie w całym viewporcie.
 
 ### `layout/`
 - Layout aplikacji (Sidebar, TopBar).
-- **`Sidebar.tsx`** wyświetla wersję aplikacji w stopce (odczytywana ze zmiennych środowiskowych `NEXT_PUBLIC_APP_*`). Zawiera linki: Generuj, Materiały, Przedmioty i Pliki, Ustawienia. Diagnostyka przeniesiona do panelu admina.
+- **`Sidebar.tsx`** wyświetla wersję aplikacji w stopce (`NEXT_PUBLIC_APP_NAME`, `NEXT_PUBLIC_APP_VERSION`, `NEXT_PUBLIC_APP_RELEASE_DATE`). Zmienne są wstrzykiwane **w czasie budowania** (build-time). W trybie lokalnym (`npm run dev`) Next.js odczytuje je z `frontend/.env.local`. W Dockerze są przekazywane jako build args w `docker-compose.yml` → `Dockerfile` (`ARG`/`ENV`). Zawiera linki: Generuj, Materiały, Przedmioty i Pliki, Ustawienia.
 - **`TopBar.tsx`** wyświetla: tytuł strony, imię/nazwisko i email zalogowanego użytkownika, chip z api_quota (jeśli brak secret_keys), przycisk panelu admina (dla superuserów), przełącznik motywu i przycisk wylogowania.
 
 ### Inne
 - `documents/`, `subjects/`, `settings/` — komponenty odpowiadające logice poszczególnych domen.
   - **`settings/ApiKeyForm.tsx`** — CRUD kluczy API (tabela secret_keys). Dodawanie, usuwanie, walidacja klucza via OpenRouter.
-  - **`settings/ModelSelector.tsx`** — wybór modelu AI z listy wbudowanych (ai_models.csv) i custom modeli (localStorage). Dialog dodawania z linkiem do openrouter.ai/models.
+  - **`settings/ModelSelector.tsx`** — wybór domyślnego modelu AI (tabela `user_ai_models`). Wyświetla alertem ostrzeżenie jeśli żaden model nie jest wybrany. Po usunięciu aktualnie wybranego modelu automatycznie przełącza na pierwszy z pozostałych (lub czyści wybór jeśli lista jest pusta). Dialog dodawania z linkiem do openrouter.ai/models.
 - `ui/` — fundamentalne reużywalne fragmenty interfejsu (własne wrappery dla przycisków, powiadomienia Snackbar itp).
 
 ---
@@ -135,7 +136,10 @@ Walidacja formularzy realizowana przez **Zod** we współpracy z **React Hook Fo
 ### `next.config.ts`
 - Proxy routing: przekierowuje `/api/*` na Backend (`process.env.BACKEND_URL`).
 - `standalone` mode dla Dockera, transpilacje pakietów MUI.
-- **Wstrzykiwanie wersji** ze zmiennych `NEXT_PUBLIC_APP_*` na podstawie pliku `.version`.
+
+### `frontend/.env.local`
+- Plik dla trybu lokalnego (dev/build). Zawiera `NEXT_PUBLIC_APP_NAME`, `NEXT_PUBLIC_APP_VERSION`, `NEXT_PUBLIC_APP_RELEASE_DATE`.
+- W Dockerze odpowiedniki są przekazywane jako build args (`NEXT_PUBLIC_APP_*`) z `docker-compose.yml` do `Dockerfile` i inlinowane przez Next.js podczas `npm run build`.
 
 ---
 

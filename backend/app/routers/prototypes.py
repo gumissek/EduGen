@@ -18,10 +18,9 @@ from app.encryption import decrypt_api_key
 from app.models.user import User
 from app.models.generation import Generation
 from app.models.prototype import Prototype
-from app.models.settings import UserSettings
 from app.models.secret_key import SecretKey
 from app.schemas.prototype import PrototypeResponse, PrototypeUpdate, RepromptRequest
-from app.services.ai_service import call_openai_reprompt, call_openai_reprompt_free_form, TYPES_WITHOUT_QUESTIONS
+from app.services.ai_service import call_openrouter_reprompt, call_openrouter_reprompt_free_form, TYPES_WITHOUT_QUESTIONS
 from app.services.generation_service import _render_content_html, _build_answer_key
 
 router = APIRouter(prefix="/prototypes", tags=["prototypes"])
@@ -111,7 +110,7 @@ def reprompt(
     generation = _get_user_generation(db, generation_id, current_user.id)
     prototype = _get_user_prototype(db, generation_id, current_user.id)
 
-    # Get API key — prefer secret_keys, fall back to legacy settings
+    # Get API key from secret_keys
     api_key = None
     secret_key = (
         db.query(SecretKey)
@@ -124,18 +123,12 @@ def reprompt(
         secret_key.last_used_at = datetime.now(timezone.utc).isoformat()
 
     if not api_key:
-        user_settings = db.query(UserSettings).filter(UserSettings.user_id == current_user.id).first()
-        if user_settings and user_settings.openai_api_key_encrypted:
-            api_key = decrypt_api_key(user_settings.openai_api_key_encrypted)
-
-    if not api_key:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="API key not configured — add a key in Settings",
         )
 
-    user_settings = db.query(UserSettings).filter(UserSettings.user_id == current_user.id).first()
-    model = (user_settings.default_model if user_settings else None) or "openai/gpt-5-mini"
+    model = current_user.default_model or "openai/gpt-5-mini"
 
     # Use edited content if available, otherwise original
     current_content = prototype.edited_content or prototype.original_content
@@ -143,7 +136,7 @@ def reprompt(
     try:
         if generation.content_type in TYPES_WITHOUT_QUESTIONS:
             # Free-form types (worksheet / lesson_materials) — update HTML directly
-            new_html = call_openai_reprompt_free_form(
+            new_html = call_openrouter_reprompt_free_form(
                 db, generation, current_content, body.prompt, api_key, model
             )
             prototype.edited_content = new_html
@@ -152,7 +145,7 @@ def reprompt(
             db.refresh(prototype)
             return PrototypeResponse.model_validate(prototype)
 
-        result = call_openai_reprompt(
+        result = call_openrouter_reprompt(
             db, generation, current_content, body.prompt, api_key, model,
             raw_questions_json=prototype.raw_questions_json,
         )

@@ -43,8 +43,10 @@ class User(Base):
     # Security
     failed_login_attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
+    # AI model preference
+    default_model: Mapped[str] = mapped_column(String(100), nullable=False, default="openai/gpt-5-mini")
+
     # Relationships
-    settings = relationship("UserSettings", back_populates="user", cascade="all, delete-orphan")
     secret_keys = relationship("SecretKey", back_populates="user", cascade="all, delete-orphan")
     subjects = relationship("Subject", back_populates="user")
     generations = relationship("Generation", back_populates="user")

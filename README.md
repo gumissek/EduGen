@@ -1,6 +1,6 @@
 # EduGen - Developer Documentation
 
-**EduGen Local** is an advanced desktop application designed to run locally, assisting teachers in generating educational materials such as worksheets, quizzes, and tests. It leverages OpenAI models (GPT-5 Vision, GPT-5-mini) to create personalized content based on user guidelines and extracted source materials.
+**EduGen Local** is an advanced desktop application designed to run locally, assisting teachers in generating educational materials such as worksheets, quizzes, and tests. It leverages AI models via **OpenRouter** to create personalized content based on user guidelines and extracted source materials.
 
 This application emphasizes privacy and data control by running entirely on `localhost` via a Docker Compose deployment model. It supports multiple user accounts with JWT-based authentication. Development is focused on a two-step creation process: an interactive editor prototype, followed by a final DOCX export with varied groups (A/B) and answer keys.
 
@@ -9,10 +9,10 @@ This application emphasizes privacy and data control by running entirely on `loc
 ## 🚀 Key Features
 
 - **Multi-user Support**: JWT-based authentication system with individual accounts — each user's data is fully isolated.
-- **AI Orchestration**: Integration with OpenAI SDK (GPT-5 for Vision OCR, GPT-5-mini for text) for generating content.
+- **AI Orchestration**: Integration with **OpenRouter** (`https://openrouter.ai`) for flexible model selection across providers. Users manage their own model list (`user_ai_models`) and select their preferred model in the Settings panel. API keys are stored encrypted in the `secret_keys` table.
 - **Source File Processing**: OCR capabilities for images/scans using Vision, text extraction from PDF (via PyMuPDF) and DOCX (via python-docx).
 - **Drafting & Finalization**: WYSIWYG Editor (TipTap) to review/edit AI prototypes, followed by DOCX generation with shuffled questions for multiple test variants.
-- **Privacy & Security**: Entirely local environment (`localhost` only, no LAN access), AES-encrypted API keys, bcrypt-hashed passwords, and automatic daily database backups.
+- **Privacy & Security**: Entirely local environment (`localhost` only, no LAN access), AES-encrypted API keys stored in `secret_keys` table, bcrypt-hashed passwords, and automatic daily database backups.
 - **Background Processing**: FastAPI BackgroundTasks for async AI generation and document processing.
 
 ---
@@ -32,6 +32,7 @@ This application emphasizes privacy and data control by running entirely on `loc
 - **Package Manager**: `uv` (fast package manager replacing pip/poetry)
 - **Database**: PostgreSQL 16 (SQLAlchemy ORM + `psycopg` driver + Alembic for migrations)
 - **Auth**: JWT (`python-jose`/`PyJWT`), bcrypt password hashing
+- **AI Integration**: OpenRouter REST API (via `requests`); model preference stored per-user in `users.default_model`, available models managed in `user_ai_models` table, API keys in `secret_keys` table
 - **Document Tooling**: `python-docx` (DOCX), `PyMuPDF` (PDF extraction)
 - **Orchestration**: Docker Compose (3 services: `postgres`, `backend`, `frontend`)
 
@@ -56,7 +57,7 @@ The startup scripts handle Docker checks, automatic `.env` creation from `.confi
 > chmod +x start_mac_linux.sh Uruchom_Mac.command
 > ```
 
-> If `backend/.env` is missing, the startup scripts automatically copy the bundled `.config_backend` template to `backend/.env`. Remember to add your own OpenAI API Key in the Settings panel before generating materials.
+> If `backend/.env` is missing, the startup scripts automatically copy the bundled `.config_backend` template to `backend/.env`. Remember to add your own OpenRouter API Key in the Settings panel before generating materials.
 
 > App runs at `http://localhost:3000` (Frontend) and `http://localhost:8000` (Backend).
 
@@ -80,8 +81,18 @@ fastapi dev app/main.py
 ```bash
 cd frontend
 npm install
+# Copy the public env template (needed for NEXT_PUBLIC_APP_* variables at dev/build time)
+cp .env.local.example .env.local  # or manually create frontend/.env.local
 npm run dev
 ```
+
+> `frontend/.env.local` should contain:
+> ```
+> NEXT_PUBLIC_APP_NAME=EduGen
+> NEXT_PUBLIC_APP_VERSION=1.0.1
+> NEXT_PUBLIC_APP_RELEASE_DATE=2026-03-11
+> ```
+> In Docker these are injected automatically as build args from the root `.env`.
 
 ---
 

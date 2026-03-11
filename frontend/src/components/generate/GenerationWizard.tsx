@@ -303,7 +303,7 @@ export default function GenerationWizard() {
         </DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Czy na pewno chcesz wygenerować materiał? Operacja wykorzysta tokeny OpenAI i może zająć kilkanaście sekund.
+            Czy na pewno chcesz wygenerować materiał? Operacja wykorzysta tokeny OpenRouter i może zająć kilkanaście sekund.
             Po potwierdzeniu nastąpi przekierowanie do strony statusu generowania.
           </DialogContentText>
         </DialogContent>

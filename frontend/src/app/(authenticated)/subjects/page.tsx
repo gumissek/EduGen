@@ -94,8 +94,8 @@ export default function SubjectsPage() {
                   <Typography variant="h6" gutterBottom>Dodaj pliki źródłowe</Typography>
                   {settings && !settings.has_api_key && (
                     <Alert severity="warning" sx={{ mb: 2 }}>
-                      <AlertTitle>Brak klucza API OpenAI</AlertTitle>
-                      Przetwarzanie plików graficznych (JPG, PNG) oraz skanów PDF wymaga skonfigurowanego klucza OpenAI API.
+                      <AlertTitle>Brak klucza API OpenRouter</AlertTitle>
+                      Przetwarzanie plików graficznych (JPG, PNG) oraz skanów PDF wymaga skonfigurowanego klucza OpenRouter API.
                       Pliki DOCX i tekstowe PDF działają bez klucza.{' '}
                       <MuiLink component={NextLink} href="/settings" underline="hover" fontWeight="bold">
                         Przejdź do Ustawień →

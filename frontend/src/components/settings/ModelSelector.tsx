@@ -107,8 +107,23 @@ export default function ModelSelector() {
   // ---- Delete model ----
   const handleDeleteConfirm = async () => {
     if (deleteId) {
+      const deletedModel = models.find((m) => m.id === deleteId);
       await deleteModel(deleteId);
       setDeleteId(null);
+
+      // If the deleted model was the currently selected one, pick the first remaining
+      if (deletedModel) {
+        const deletedKey = `${deletedModel.provider}/${deletedModel.model_name}`;
+        if (selectedKey === deletedKey) {
+          const remaining = models.filter((m) => m.id !== deleteId);
+          if (remaining.length > 0) {
+            const first = remaining[0];
+            updateSettings({ default_model: `${first.provider}/${first.model_name}` });
+          } else {
+            updateSettings({ default_model: '' });
+          }
+        }
+      }
     }
   };
 
@@ -224,6 +239,13 @@ export default function ModelSelector() {
             </TableBody>
           </Table>
         </TableContainer>
+      )}
+
+      {/* Warning when no model is actively selected */}
+      {models.length > 0 && !models.some((m) => `${m.provider}/${m.model_name}` === selectedKey) && (
+        <Alert severity="warning" sx={{ mt: 2 }}>
+          Żaden model AI nie jest wybrany jako domyślny. Kliknij wiersz modelu, aby go wybrać.
+        </Alert>
       )}
 
       {isUpdating && <CircularProgress size={20} sx={{ mt: 1 }} />}

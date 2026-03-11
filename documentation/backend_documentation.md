@@ -10,7 +10,7 @@ Projekt EduGen opiera się na nowoczesnym, modularnym backendzie. Składa się o
 - **Framework REST API** — FastAPI.
 - **Baza danych** — PostgreSQL 16 z wykorzystaniem SQLAlchemy ORM oraz Alembic do zarządzania migracjami schematu.
 - **Konteneryzacja** — Docker Compose z trzema serwisami: `postgres`, `backend`, `frontend`. Backend i Postgres komunikują się przez wewnętrzną sieć `backend_network`.
-- **Integracja AI** — Komunikacja z modelami AI poprzez OpenRouter API (`https://openrouter.ai/api/v1/chat/completions`) w celu generowania dedykowanych treści edukacyjnych. Wykorzystywana jest biblioteka `requests` zamiast SDK OpenAI.
+- **Integracja AI** — Komunikacja z modelami AI poprzez OpenRouter API (`https://openrouter.ai/api/v1/chat/completions`) w celu generowania dedykowanych treści edukacyjnych. Wykorzystywana jest biblioteka `requests` zamiast dedykowanego SDK.
 - **Menedżer pakietów** — Skonfigurowany za pomocą `pyproject.toml` (wymaga Pythona >= 3.12).
 - **Zadania w tle (Background Tasks)** — `apscheduler` dla codziennych kopii zapasowych oraz tła dla asynchronicznego generowania materiałów edukacyjnych.
 
@@ -57,23 +57,22 @@ Konfiguracja silnika SQLAlchemy (PostgreSQL):
 Definicja trzech serwisów:
 - **postgres** — PostgreSQL 16 z health checkiem, wolumenem `edugen_postgres_data`, w sieci `backend_network`.
 - **backend** — FastAPI z `DATABASE_URL` wskazującym na kontener Postgres, zależny od healthy Postgres.
-- **frontend** — Next.js, zależny od healthy backendu.
+- **frontend** — Next.js, zależny od healthy backendu. Przekazuje `NEXT_PUBLIC_APP_NAME`, `NEXT_PUBLIC_APP_VERSION`, `NEXT_PUBLIC_APP_RELEASE_DATE` jako build args (inlinowane przez Next.js podczas budowania obrazu).
 
 ---
 
 ## 4. Baza Danych i Modele (`app/models/`)
 
 Kod dzieli się na dedykowane pliki modelowe oparte na `DeclarativeBase`. Kluczowe encje:
-- **`user.py`** — Multi-user: `email` (unikalne, indeksowane), `first_name`, `last_name`, `is_active`, `is_superuser`, `premium_level`, `api_quota`, `api_quota_reset`, `is_email_verified`, `email_verification_token`, `reset_password_token`, `last_password_change`, `failed_login_attempts`. Relacje do `UserSettings`, `SecretKey`, `Subject`, `Generation`, `SourceFile`, `Document`, `Prototype`.
+- **`user.py`** — Multi-user: `email` (unikalne, indeksowane), `first_name`, `last_name`, `is_active`, `is_superuser`, `premium_level`, `api_quota`, `api_quota_reset`, `is_email_verified`, `email_verification_token`, `reset_password_token`, `last_password_change`, `failed_login_attempts`, `default_model`. Relacje do `SecretKey`, `Subject`, `Generation`, `SourceFile`, `Document`, `Prototype`.
 - **`secret_key.py`** — Przechowywanie zewnętrznych kluczy API (platform, key_name, secret_key_hash, is_active, last_used_at). FK → `users.id`.
 - **`generation.py`** & **`prototype.py`** — Logika zadań AI: parametry generacji a zrenderowane rezultaty docelowe JSON/HTML. Pole `user_id` (FK → `users.id`, NOT NULL) zapewnia izolację danych per użytkownik.
 - **`source_file.py`** & **`document.py`** — Przetwarzanie dokumentów dostarczanych przez użytkownika. Oba zawierają `user_id` (FK → `users.id`, NOT NULL).
-- **`settings.py`** — Legacy klucz API zapisywany jako AES encrypted string, konfig modelów LLM. FK → `users.id`.
 - **`ai_request.py`** — Logi zapytań do modeli AI (OpenRouter). `user_id` (FK → `users.id`, nullable).
 - **`subject.py`** — Przedmioty edukacyjne. `user_id` (FK → `users.id`, nullable — predefinowane przedmioty nie mają właściciela).
 - **`diagnostic_log.py`** — Logowanie wszystkich błędów rzuconych w apce poprzez exception handler.
 
-> **Usunięte modele:** `session.py` — usunięty, JWT zastępuje sesje serwerowe.
+> **Usunięte modele:** `session.py` — usunięty, JWT zastępuje sesje serwerowe. `settings.py` — usunięty, preferencja modelu przeniesiona do `users.default_model`, klucze API do tabeli `secret_keys`.
 
 ---
 
@@ -109,7 +108,7 @@ Obsługa uwierzytelniania JWT:
 - `create_access_token(user_id, email)` — tworzenie JWT z claimami `sub`, `email`, `iat`, `exp`.
 - `verify_access_token(token)` — dekodowanie i walidacja JWT (zwraca payload lub None).
 - `authenticate_user(db, email, password)` — logowanie na podstawie emaila, śledzenie `failed_login_attempts`.
-- `register_user(db, email, password, ...)` — rejestracja nowego użytkownika z automatycznym tworzeniem `UserSettings`.
+- `register_user(db, email, password, ...)` — rejestracja nowego użytkownika z automatycznym tworzeniem domyślnych modeli AI.
 
 ### `ai_service.py`
 Odpowiada za logikę formowania wytycznych promptów i połączenie z OpenRouter API:
@@ -117,11 +116,11 @@ Odpowiada za logikę formowania wytycznych promptów i połączenie z OpenRouter
 - Wewnętrzna funkcja `_call_openrouter()` realizuje połączienie HTTP z `https://openrouter.ai/api/v1/chat/completions`.
 - Formatyzacja odpowiedzi w trybie JSON (`response_format: {"type": "json_object"}`).
 - **Logowanie** każdego z żądań/odpowiedzi w tabeli `AIRequest`.
-- Funkcje `call_openai_reprompt` oraz `call_openai_reprompt_free_form` do udoskonalania wyników AI (oba korzystają z OpenRouter).
-
+- Funkcje `call_openrouter_reprompt` oraz `call_openrouter_reprompt_free_form` do udoskonalania wyników AI (oba korzystają z OpenRouter).
+- Model używany do generacji pobierany z `User.default_model` (format `provider/model_name`).
 ### `generation_service.py`
 Orkiestracja procesu generowania materiałów:
-- Worker w tle (`generate_prototype_task`) pobierający klucz API priorytetowo z `SecretKey` (tabela secret_keys), następnie fallback na `UserSettings`, **filtrowanych po `generation.user_id`** (izolacja danych).
+- Worker w tle (`generate_prototype_task`) pobierający klucz API z `SecretKey` (tabela `secret_keys`), **filtrowanych po `generation.user_id`** (izolacja danych). Model pobierany z `User.default_model`.
 - Mapowanie wygenerowanych JSONów do HTML (`_render_content_html`) i kluczy odpowiedzi (`_build_answer_key`).
 
 ### Inne serwisy:
@@ -137,7 +136,7 @@ Architektura grupuje endpointy na określone sfery:
 | Router | Opis używalności API |
 |---|---|
 | `/api/auth` | JWT: rejestracja (POST `/register`), logowanie (POST `/login`), wylogowanie (POST `/logout`), profil (GET `/me`). |
-| `/api/settings` | Ustawienia użytkownika — legacy klucze API (AES encrypted), wybór modelu AI. Filtrowane po `user_id`. |
+| `/api/settings` | Ustawienia użytkownika — wybór modelu AI (`default_model` w tabeli `users`). Filtrowane po `user_id`. |
 | `/api/secret-keys` | CRUD kluczy API użytkownika (SecretKey). Dodawanie, usuwanie, walidacja klucza via OpenRouter API. Filtrowane po `user_id`. |
 | `/api/subjects` | Przedmioty edukacyjne (predefinowane + własne użytkownika). Filtrowane po `user_id`. |
 | `/api/task-types` | Pobieranie i dodawanie własnych typów zadań. |

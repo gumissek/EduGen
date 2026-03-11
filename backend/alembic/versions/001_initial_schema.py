@@ -1,8 +1,8 @@
-"""Initial schema
+"""Initial schema (consolidated)
 
 Revision ID: 001
 Revises:
-Create Date: 2026-03-11
+Create Date: 2026-03-12
 
 """
 from typing import Sequence, Union
@@ -40,6 +40,7 @@ def upgrade() -> None:
         sa.Column("reset_password_token_expiry", sa.Text, nullable=True),
         sa.Column("last_password_change", sa.Text, nullable=True),
         sa.Column("failed_login_attempts", sa.Integer, nullable=False, server_default="0"),
+        sa.Column("default_model", sa.String(100), nullable=False, server_default="openai/gpt-5-mini"),
     )
     op.create_unique_constraint("uq_users_email", "users", ["email"])
     op.create_index("ix_users_email", "users", ["email"], unique=True)
@@ -58,15 +59,30 @@ def upgrade() -> None:
     )
     op.create_index("ix_secret_keys_user_id", "secret_keys", ["user_id"])
 
-    # --- settings ---
+    # --- user_ai_models ---
     op.create_table(
-        "settings",
+        "user_ai_models",
         sa.Column("id", sa.String(36), primary_key=True),
-        sa.Column("user_id", sa.String(36), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("openai_api_key_encrypted", sa.Text, nullable=False, server_default=""),
-        sa.Column("default_model", sa.String(100), nullable=False, server_default="gpt-5-mini"),
+        sa.Column(
+            "user_id",
+            sa.String(36),
+            sa.ForeignKey("users.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
+        sa.Column("provider", sa.String(100), nullable=False),
+        sa.Column("model_name", sa.String(255), nullable=False),
+        sa.Column("description", sa.Text, nullable=True),
+        sa.Column("price_description", sa.Text, nullable=True),
+        sa.Column("is_available", sa.Boolean, nullable=False, server_default=sa.true()),
         sa.Column("created_at", sa.Text, nullable=False),
-        sa.Column("updated_at", sa.Text, nullable=False),
+        sa.Column("changed_at", sa.Text, nullable=True),
+        sa.Column("request_made", sa.Integer, nullable=False, server_default="0"),
+    )
+    op.create_index("ix_user_ai_models_user_id", "user_ai_models", ["user_id"])
+    op.create_unique_constraint(
+        "uq_user_ai_models_user_provider_model",
+        "user_ai_models",
+        ["user_id", "provider", "model_name"],
     )
 
     # --- subjects ---
@@ -233,6 +249,6 @@ def downgrade() -> None:
     op.drop_table("source_files")
     op.drop_table("file_content_cache")
     op.drop_table("subjects")
-    op.drop_table("settings")
+    op.drop_table("user_ai_models")
     op.drop_table("secret_keys")
     op.drop_table("users")

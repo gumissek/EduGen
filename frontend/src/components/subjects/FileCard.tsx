@@ -43,7 +43,7 @@ function FileStatusSection({ file }: { file: SourceFile }) {
   if (file.extraction_error === 'NO_API_KEY') {
     return (
       <Alert severity="warning" sx={{ mt: 2, fontSize: '0.75rem', py: 0.5 }}>
-        Brak klucza API OpenAI. Skonfiguruj go w{' '}
+        Brak klucza API OpenRouter. Skonfiguruj go w{' '}
         <Link component={NextLink} href="/settings" underline="hover">
           Ustawieniach
         </Link>
@@ -55,7 +55,7 @@ function FileStatusSection({ file }: { file: SourceFile }) {
   if (file.extraction_error === 'RATE_LIMIT') {
     return (
       <Alert severity="error" sx={{ mt: 2, fontSize: '0.75rem', py: 0.5 }}>
-        Przekroczono limit zapytań API OpenAI (Rate Limit). Usuń plik i spróbuj ponownie za chwilę.
+        Przekroczono limit zapytań API OpenRouter (Rate Limit). Usuń plik i spróbuj ponownie za chwilę.
       </Alert>
     );
   }

@@ -108,12 +108,12 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
         detail.includes('nie zawiera klucza') ||
         detail.includes('nie jest listą')
       ) {
-        // OpenAI returned malformed / unexpected JSON — safe to retry
+        // OpenRouter returned malformed / unexpected JSON — safe to retry
         error('AI zwróciło niepoprawną odpowiedź (błąd formatu JSON). Spróbuj wysłać poprawkę ponownie – zwykle wystarczy powtórzyć zapytanie.');
       } else if (detail.includes('API key') || detail.includes('api_key') || detail.includes('Incorrect API key')) {
-        error('Brak lub nieprawidłowy klucz API OpenAI. Sprawdź konfigurację w Ustawieniach.');
+        error('Brak lub nieprawidłowy klucz API OpenRouter. Sprawdź konfigurację w Ustawieniach.');
       } else if (detail.includes('Rate limit') || detail.includes('rate_limit') || detail.includes('429')) {
-        error('Przekroczono limit zapytań OpenAI (Rate Limit). Poczekaj chwilę i spróbuj ponownie.');
+        error('Przekroczono limit zapytań OpenRouter (Rate Limit). Poczekaj chwilę i spróbuj ponownie.');
       } else if (detail) {
         error(`Błąd aktualizacji AI: ${detail}`);
       } else {

@@ -16,8 +16,8 @@ class SecretKey(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
     user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    platform: Mapped[str] = mapped_column(String(50), nullable=False)  # e.g. 'openai'
-    key_name: Mapped[str] = mapped_column(String(255), nullable=False)  # e.g. 'My OpenAI Key'
+    platform: Mapped[str] = mapped_column(String(50), nullable=False)  # e.g. 'openrouter'
+    key_name: Mapped[str] = mapped_column(String(255), nullable=False)  # e.g. 'My OpenRouter Key'
     secret_key_hash: Mapped[str] = mapped_column(Text, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     last_used_at: Mapped[str | None] = mapped_column(String, nullable=True)

@@ -35,20 +35,21 @@ export default function RepromptInput({ onSend, isLoading }: RepromptInputProps)
       elevation={0} 
       sx={{ 
         position: 'fixed', 
-        bottom: 32, 
-        left: '50%', 
+        bottom: 24, 
+        // On desktop the sidebar is 260px wide, so offset centre into the content area
+        left: { xs: '50%', md: 'calc(50% + 130px)' },
         transform: 'translateX(-50%)', 
-        width: 'calc(100% - 32px)', 
+        width: { xs: 'calc(100% - 32px)', md: 'calc(100% - 292px)' }, 
         maxWidth: 680, 
         borderRadius: '32px',
         p: '6px 6px 6px 20px',
         display: 'flex',
         alignItems: 'center',
         bgcolor: 'background.paper',
-        zIndex: 1000,
+        zIndex: 1200,
         border: '1px solid',
         borderColor: 'divider',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
       }}
     >
       <Box sx={{ color: 'primary.main', display: 'flex', alignItems: 'center' }}>

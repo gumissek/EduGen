@@ -30,10 +30,11 @@ Tabela przechowująca dane uwierzytelniania i profil użytkownika aplikacji (mul
 | reset_password_token_expiry | TEXT | NULL |
 | last_password_change | TEXT | NULL |
 | failed_login_attempts | INTEGER | NOT NULL DEFAULT 0 |
+| default_model | VARCHAR(100) | NOT NULL DEFAULT 'openai/gpt-5-mini' |
 
 ### secret_keys
 
-Tabela przechowująca zewnętrzne klucze API użytkowników (np. OpenAI).
+Tabela przechowująca zewnętrzne klucze API użytkowników (np. OpenRouter).
 
 | Kolumna | Typ | Ograniczenia |
 |---|---|---|
@@ -45,19 +46,6 @@ Tabela przechowująca zewnętrzne klucze API użytkowników (np. OpenAI).
 | is_active | BOOLEAN | NOT NULL DEFAULT TRUE |
 | last_used_at | TEXT | NULL |
 | created_at | TEXT | NOT NULL |
-
-### settings
-
-Ustawienia aplikacji per użytkownik (API key, model AI).
-
-| Kolumna | Typ | Ograniczenia |
-|---|---|---|
-| id | VARCHAR(36) | PRIMARY KEY |
-| user_id | VARCHAR(36) | NOT NULL REFERENCES users(id) ON DELETE CASCADE |
-| openai_api_key_encrypted | TEXT | NOT NULL DEFAULT '' |
-| default_model | VARCHAR(100) | NOT NULL DEFAULT 'gpt-5-mini' |
-| created_at | TEXT | NOT NULL DEFAULT (aktualna data ISO 8601) |
-| updated_at | TEXT | NOT NULL DEFAULT (aktualna data ISO 8601) |
 
 ### user_ai_models
 
@@ -194,7 +182,7 @@ Finalne wygenerowane pliki DOCX.
 
 ### ai_requests
 
-Logi zapytań do modeli OpenAI.
+Logi zapytań do modeli AI (OpenRouter).
 
 | Kolumna | Typ | Ograniczenia |
 |---|---|---|
@@ -236,7 +224,6 @@ Logi zapytań do modeli OpenAI.
 
 ### Jeden-do-wielu
 
-- users → settings
 - users → secret_keys
 - users → user_ai_models
 - users → subjects (nullable FK — predefinowane przedmioty)
@@ -319,6 +306,7 @@ CREATE INDEX ix_diagnostic_logs_created_at ON diagnostic_logs(created_at);
 - JWT zastępuje sesje serwerowe — tabela `sessions` została usunięta.
 - Soft delete dla plików (`source_files.deleted_at`) i dokumentów (`documents.deleted_at`).
 - Deduplikacja plików przez `file_content_cache` (klucz: SHA-256 hash pliku).
-- Klucz OpenAI API szyfrowany AES w polu `settings.openai_api_key_encrypted`.
-- Migracje schematu zarządzane przez **Alembic** (aktualna wersja: `002`).
-- Tabela `secret_keys` przygotowana do obsługi wielu kluczy API per użytkownik.
+- Klucze API szyfrowane AES przechowywane w tabeli `secret_keys` (wiele kluczy per użytkownik).
+- Preferencja modelu AI zapisana bezpośrednio w tabeli `users` (kolumna `default_model`).
+- Migracje schematu zarządzane przez **Alembic** (skonsolidowana migracja: `001`).
+- Tabela `settings` (legacy) została usunięta — cala funkcjonalność przeniesiona do `users` i `secret_keys`.

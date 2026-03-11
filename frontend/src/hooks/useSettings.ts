@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
-import { SettingsResponse, SettingsUpdate, ValidateKeyResponse } from '@/schemas/settings';
+import { SettingsResponse, SettingsUpdate } from '@/schemas/settings';
 import { useSnackbar } from '@/components/ui/SnackbarProvider';
 
 export function useSettings() {
@@ -31,31 +31,11 @@ export function useSettings() {
     },
   });
 
-  const validateKeyMutation = useMutation({
-    mutationFn: async () => {
-      const res = await api.post<ValidateKeyResponse>('/api/settings/validate-key');
-      return res.data;
-    },
-    onSuccess: (data: ValidateKeyResponse) => {
-      if (data.valid) {
-        success('Klucz API jest prawidłowy');
-        queryClient.invalidateQueries({ queryKey: ['settings'] });
-      } else {
-        error('Klucz API jest nieprawidłowy');
-      }
-    },
-    onError: () => {
-      error('Błąd podczas weryfikacji klucza API');
-    },
-  });
-
   return {
     settings: query.data,
     isLoading: query.isLoading,
     isError: query.isError,
     updateSettings: updateMutation.mutate,
     isUpdating: updateMutation.isPending,
-    validateKey: validateKeyMutation.mutateAsync,
-    isValidating: validateKeyMutation.isPending,
   };
 }
