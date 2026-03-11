@@ -94,7 +94,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
       </Box>
       <Box sx={{ p: 3, textAlign: 'center' }}>
         <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
-          {`${process.env.NEXT_PUBLIC_APP_NAME ?? 'EduGen'}_${process.env.NEXT_PUBLIC_APP_VERSION ?? '1.0.0'}_${process.env.NEXT_PUBLIC_APP_RELEASE_DATE ?? ''}`}
+          {`${process.env.NEXT_PUBLIC_APP_NAME ?? 'EduGen'}_${process.env.NEXT_PUBLIC_APP_VERSION ?? '1.0.1'}_${process.env.NEXT_PUBLIC_APP_RELEASE_DATE ?? '2026-03-11'}`}
         </Typography>
       </Box>
     </Box>

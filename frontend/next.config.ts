@@ -3,9 +3,20 @@ import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
 function readVersionInfo(): { appName: string; version: string; releaseDate: string } {
+  // .version lives in the repo root.
+  // Locally: __dirname = <repo>/frontend, so '../.version' resolves to the root file.
+  // Docker:  __dirname = /app (WORKDIR), '../.version' = '/.version' (not found),
+  //          falls through to '.version' which is COPY-ed to /app/.version.
+  const candidates = [
+    resolve(__dirname, '..', '.version'), // root — works in local dev
+    resolve(__dirname, '.version'),       // /app/.version — works in Docker
+  ];
   try {
-    // .version lives in the frontend/ directory (next to this config file)
-    const content = readFileSync(resolve(__dirname, '.version'), 'utf-8');
+    let content: string | undefined;
+    for (const p of candidates) {
+      try { content = readFileSync(p, 'utf-8'); break; } catch { /* try next */ }
+    }
+    if (!content) throw new Error('not found');
     const data: Record<string, string> = {};
     for (const line of content.split(/\r?\n/)) {
       const idx = line.indexOf('=');
@@ -17,7 +28,7 @@ function readVersionInfo(): { appName: string; version: string; releaseDate: str
       releaseDate: data['RELEASE_DATE'] ?? '',
     };
   } catch {
-    return { appName: 'EduGen', version: '1.0.0', releaseDate: '' };
+    return { appName: 'EduGen', version: '1.0.1', releaseDate: '2026-03-11' };
   }
 }
 

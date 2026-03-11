@@ -1,27 +1,23 @@
 FROM node:20-alpine AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
-COPY package.json package-lock.json* ./
+COPY frontend/package.json frontend/package-lock.json* ./
 RUN npm install
 
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 
-COPY package.json package-lock.json* ./
-COPY next.config.ts tsconfig.json next-env.d.ts ./
-COPY public ./public
-COPY src ./src
+COPY frontend/package.json frontend/package-lock.json* ./
+COPY frontend/next.config.ts frontend/tsconfig.json frontend/next-env.d.ts ./
+COPY frontend/public ./public
+COPY frontend/src ./src
+# .version lives in the repo root — copied here so next.config.ts finds it at /app/.version
+COPY .version ./
 
 ENV NEXT_TELEMETRY_DISABLED 1
 ARG BACKEND_URL=http://backend:8000
 ENV BACKEND_URL=$BACKEND_URL
-ARG NEXT_PUBLIC_APP_NAME=EduGen
-ENV NEXT_PUBLIC_APP_NAME=$NEXT_PUBLIC_APP_NAME
-ARG NEXT_PUBLIC_APP_VERSION=1.0.1
-ENV NEXT_PUBLIC_APP_VERSION=$NEXT_PUBLIC_APP_VERSION
-ARG NEXT_PUBLIC_APP_RELEASE_DATE=2026-03-11
-ENV NEXT_PUBLIC_APP_RELEASE_DATE=$NEXT_PUBLIC_APP_RELEASE_DATE
 RUN npm run build
 
 FROM node:20-alpine AS runner

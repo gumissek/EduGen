@@ -81,24 +81,25 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
 
         {/* Spacer */}
         <Box sx={{ flexGrow: 1 }} />
-        
-        {/* User display */}
+
+        {/* Right side: user info + actions — all in one aligned row */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+
+          {/* User name + email */}
           {user && (
-            <Box sx={{ display: { xs: 'none', sm: 'flex' }, alignItems: 'center' , justifyContent : 'center', gap: 0.5 }}>
+            <Box sx={{ display: { xs: 'none', sm: 'flex' }, flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center', mr: 0.5 }}>
               {displayName && (
-                <Typography variant="body2" fontWeight={600} noWrap sx={{ maxWidth: 150 , }}>
+                <Typography variant="body2" fontWeight={600} noWrap sx={{ maxWidth: 160, lineHeight: 1.3 }}>
                   {displayName}
                 </Typography>
               )}
-              <Typography variant="caption" color="text.secondary" noWrap sx={{ maxWidth: 180 }}>
+              <Typography variant="caption" color="text.secondary" noWrap sx={{ maxWidth: 180, lineHeight: 1.3 }}>
                 {user.email}
               </Typography>
             </Box>
           )}
 
-        {/* User info section */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          {/* Quota info — show only if user has no secret keys */}
+          {/* Quota chip — show only if user has no secret keys */}
           {user && !user.has_secret_keys && (
             <Tooltip title={user.api_quota_reset ? `Reset: ${user.api_quota_reset}` : 'Limit zapytań API'}>
               <Chip
@@ -106,7 +107,7 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
                 size="small"
                 variant="outlined"
                 color="warning"
-                sx={{ fontWeight: 600, fontSize: '0.75rem' }}
+                sx={{ fontWeight: 600, fontSize: '0.75rem', flexShrink: 0 }}
               />
             </Tooltip>
           )}
@@ -120,6 +121,7 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
                 sx={{
                   bgcolor: 'primary.light',
                   color: 'primary.contrastText',
+                  flexShrink: 0,
                   '&:hover': { bgcolor: 'primary.main', transform: 'scale(1.05)' },
                   transition: 'all 0.2s',
                 }}
@@ -130,11 +132,12 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
           )}
 
           <Tooltip title={mode === 'dark' ? 'Tryb jasny' : 'Tryb ciemny'}>
-            <IconButton 
-              color="inherit" 
+            <IconButton
+              color="inherit"
               onClick={toggleColorMode}
-              sx={{ 
-                bgcolor: 'action.hover', 
+              sx={{
+                bgcolor: 'action.hover',
+                flexShrink: 0,
                 '&:hover': { bgcolor: 'action.selected', transform: 'scale(1.05)' },
                 transition: 'all 0.2s',
               }}
@@ -142,12 +145,14 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
               {mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
             </IconButton>
           </Tooltip>
+
           <Tooltip title="Wyloguj się">
-            <IconButton 
-              color="error" 
+            <IconButton
+              color="error"
               onClick={handleLogout}
-              sx={{ 
+              sx={{
                 bgcolor: 'error.veryLight',
+                flexShrink: 0,
                 '&:hover': { bgcolor: mode === 'light' ? 'error.veryLight' : 'error.main', color: 'white', transform: 'scale(1.05)' },
                 transition: 'all 0.2s',
               }}
@@ -155,6 +160,7 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
               <LogoutIcon />
             </IconButton>
           </Tooltip>
+
         </Box>
       </Toolbar>
     </AppBar>
