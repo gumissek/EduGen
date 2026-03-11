@@ -1,29 +1,41 @@
-Frontend (Next.js & MUI)
-Framework: Next.js 16+ (App Router) – dla szybkich tras i renderowania komponentów.
+# EDUGEN - TECHNICAL STACK DOCUMENTATION
 
-Język: TypeScript – ścisłe typowanie dla modeli danych (np. GenerationParams).
+## BACKEND ARCHITECTURE (Python 3.12+)
+---
+* Framework: FastAPI (Asynchronous REST API).
+* ORM: SQLAlchemy using PostgreSQL 16 as the database engine.
+* Database Migrations: Managed via Alembic (Current version: 007).
+* Validation & Settings: Pydantic v2 and pydantic-settings.
+* Background Tasks: APScheduler for daily backups and asynchronous AI generation.
+* Document Processing: PyMuPDF (fitz) and python-docx for handling PDF and DOCX files.
+* Security:
+    - Password Hashing: Bcrypt with failed login attempt tracking.
+    - Key Encryption: AES encryption for external OpenAI API keys.
+    - Authentication: Stateless JWT (JSON Web Tokens) with HS256 algorithm.
 
-UI Library: Material UI (MUI) – profesjonalne komponenty, wbudowany system Dark/Light mode.
+## FRONTEND ARCHITECTURE (TypeScript)
+---
+* Framework: Next.js (App Router) with React 19.
+* State Management: TanStack React Query for server-state and caching.
+* UI Library: Material UI (MUI) for components and layout.
+* Rich Text Editor: Tiptap for the document prototype editor.
+* Form Management: React Hook Form integrated with Zod for schema validation.
+* HTTP Client: Axios with interceptors for JWT injection and 401 error handling.
+* Auth Utilities: js-cookie for managing the "edugen-auth" JWT cookie.
 
-State Management: TanStack Query (React Query) – do obsługi asynchronicznych zapytań do API i cache'owania listy plików.
+## DATABASE & STORAGE (PostgreSQL 16)
+---
+* Key Strategy: UUIDs (VARCHAR(36)) used as primary keys.
+* Time Storage: ISO 8601 strings stored as TEXT.
+* Optimization: Unique and non-unique indexing on user_id, created_at, and status fields.
+* File Management:
+    - SHA-256 hashing for global file content deduplication (file_content_cache).
+    - Soft delete implementation for source files and documents (deleted_at).
+* Data Isolation: Multi-user isolation enforced via user_id foreign keys on all data tables.
 
-Edytor: TipTap lub Quill – lekki edytor WYSIWYG do modyfikacji prototypu przed eksportem.
-
-Backend (FastAPI & Python)
-Framework: FastAPI – asynchroniczny silnik API o wysokiej wydajności.
-
-Manager: uv – nowoczesny, ultra-szybki manager pakietów (zastępujący pip/poetry).
-
-AI Orchestration: OpenAI SDK (modele GPT-5 dla Vision i GPT-5-mini dla tekstu).
-
-Przetwarzanie dokumentów:
-
-python-docx: Generowanie plików .docx.
-
-PyMuPDF (fitz): Ekstrakcja tekstu z PDF.
-
-python-magic: Detekcja typów plików.
-
-Baza danych: SQLite
-
-Build: Docker compose
+## INFRASTRUCTURE & DEVOPS
+--- 
+* Containerization: Docker Compose with three distinct services (postgres, backend, frontend).
+* Networking: Internal communication via 'backend_network'.
+* Storage: Persistent volumes for PostgreSQL data and a host-mapped './data' directory for backups and documents.
+* Environment Control: Configuration via .env files (based on .env.example).
