@@ -10,6 +10,13 @@ Database documentation: `documentation\database_documentation.md`
 Tech Stack: `documentation\tech_stack.md`
 Modules documentation: `documentation\modules\<module_name>_module_documentation.md`
 
+### Guidelines for Documentation
+
+- Always update the documentation when making changes to the code
+- Use the documentation to understand the code
+- Use the documentation to make changes to the code
+- Keep the documentation up to date with the latest changes
+
 ## BACKEND
 
 ### Guidelines for PYTHON
@@ -134,9 +141,3 @@ Modules documentation: `documentation\modules\<module_name>_module_documentation
 - Ensure content is accessible when device orientation is locked for users with fixed devices
 - Provide alternatives to motion-based interactions for users with vestibular disorders
 
-### Guidelines for Documentation
-
-- Always update the documentation when making changes to the code
-- Use the documentation to understand the code
-- Use the documentation to make changes to the code
-- Keep the documentation up to date with the latest changes
