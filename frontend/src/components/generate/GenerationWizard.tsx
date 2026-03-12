@@ -183,10 +183,22 @@ export default function GenerationWizard() {
   }
 
   return (
-    <Paper sx={{ p: { xs: 3, md: 5 }, borderRadius: '24px', border: '1px solid', borderColor: 'divider', boxShadow: '0 4px 24px rgba(0,0,0,0.02)' }}>
-      {/* Selected content type badge – visible after step 0 */}
+    <Paper sx={{ p: { xs: 2, sm: 3, md: 5 }, borderRadius: '24px', border: '1px solid', borderColor: 'divider', boxShadow: '0 4px 24px rgba(0,0,0,0.02)' }}>
+      {/* Selected content type badge */}
       {activeStep > 0 && contentTypeLabel && (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4, p: 2, borderRadius: 3, bgcolor: 'background.default', border: 1, borderColor: 'divider', flexWrap: 'wrap' }}>
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: { xs: 'column', sm: 'row' },
+          alignItems: { xs: 'flex-start', sm: 'center' }, 
+          gap: { xs: 1.5, sm: 2 }, 
+          mb: { xs: 3, md: 4 }, 
+          p: 2, 
+          borderRadius: 3, 
+          bgcolor: 'background.default', 
+          border: 1, 
+          borderColor: 'divider', 
+          flexWrap: 'wrap' 
+        }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <Box sx={{ p: 1, borderRadius: 2, bgcolor: 'primary.main', color: 'primary.contrastText', display: 'flex' }}>
                <AutoAwesomeIcon fontSize="small" />
@@ -229,35 +241,57 @@ export default function GenerationWizard() {
         </Box>
       )}
 
-      <Stepper 
-        activeStep={activeStep} 
-        alternativeLabel 
-        sx={{ 
-          mb: 5,
-          '& .MuiStepLabel-label': { fontWeight: 500, mt: 1 },
-          '& .MuiStepLabel-label.Mui-active': { color: 'primary.main', fontWeight: 700 },
-          '& .MuiStepLabel-label.Mui-completed': { color: 'text.primary', fontWeight: 600 },
-          '& .MuiStepConnector-line': { borderColor: 'divider', borderWidth: 2, borderRadius: 1 },
-        }}
-      >
-        {ALL_STEPS.map((label, index) => {
-          const isSkipped = index === QUESTIONS_STEP && isFreeForm;
-          return (
-            <Step key={label} completed={activeStep > index && !isSkipped}>
-              <StepLabel
-                optional={isSkipped ? <span className="step-not-applicable">Nie dotyczy</span> : undefined}
-                StepIconProps={isSkipped ? { style: { color: 'var(--mui-palette-divider)' } } : undefined}
-              >
-                {label}
-              </StepLabel>
-            </Step>
-          );
-        })}
-      </Stepper>
+      {/* RWD: Wrapper wymuszający scrollowanie Steppera na wąskich ekranach */}
+      <Box sx={{ 
+        width: '100%', 
+        overflowX: 'auto', 
+        pb: 1,
+        mb: { xs: 3, md: 5 },
+        scrollbarWidth: 'none',
+        '&::-webkit-scrollbar': { display: 'none' }
+      }}>
+        <Stepper 
+          activeStep={activeStep} 
+          alternativeLabel 
+          sx={{ 
+            minWidth: { xs: 500, sm: 'auto' },
+            '& .MuiStepLabel-label': { fontWeight: 500, mt: 1 },
+            '& .MuiStepLabel-label.Mui-active': { color: 'primary.main', fontWeight: 700 },
+            '& .MuiStepLabel-label.Mui-completed': { color: 'text.primary', fontWeight: 600 },
+            '& .MuiStepConnector-line': { borderColor: 'divider', borderWidth: 2, borderRadius: 1 },
+          }}
+        >
+          {ALL_STEPS.map((label, index) => {
+            const isSkipped = index === QUESTIONS_STEP && isFreeForm;
+            return (
+              <Step key={label} completed={activeStep > index && !isSkipped}>
+                <StepLabel
+                  optional={
+                    isSkipped ? (
+                      <Typography 
+                        component="span" 
+                        color="error" 
+                        sx={{ fontSize: "11px", fontWeight: 600, letterSpacing: "0.02em" }}
+                      >
+                        Nie dotyczy
+                      </Typography>
+                    ) : undefined
+                  }
+                  slotProps={{
+                    stepIcon: isSkipped ? { style: { color: 'var(--mui-palette-divider)' } } : undefined
+                  }}
+                >
+                  {label}
+                </StepLabel>
+              </Step>
+            );
+          })}
+        </Stepper>
+      </Box>
 
       <FormProvider {...methods}>
         <form onSubmit={(e) => e.preventDefault()}>
-          <Box sx={{ minHeight: 300, py: 2 }}>
+          <Box sx={{ minHeight: 300, py: { xs: 1, sm: 2 } }}>
             {activeStep === 0 && <StepContentType />}
             {activeStep === 1 && <StepSubjectConfig />}
             {activeStep === 2 && !isFreeForm && <StepQuestionConfig />}
@@ -265,16 +299,25 @@ export default function GenerationWizard() {
             {activeStep === 4 && <StepReview />}
           </Box>
 
-          <Box sx={{ display: 'flex', flexDirection: 'row', pt: 2, mt: 4, borderTop: 1, borderColor: 'divider' }}>
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: { xs: 'column-reverse', sm: 'row' }, 
+            gap: 2,
+            pt: 3, 
+            mt: { xs: 2, md: 4 }, 
+            borderTop: 1, 
+            borderColor: 'divider' 
+          }}>
             <Button
               color="inherit"
               disabled={activeStep === 0 || isCreating}
               onClick={handleBack}
-              sx={{ mr: 1 }}
+              sx={{ width: { xs: '100%', sm: 'auto' } }}
             >
               Wstecz
             </Button>
-            <Box sx={{ flex: '1 1 auto' }} />
+            
+            <Box sx={{ flex: '1 1 auto', display: { xs: 'none', sm: 'block' } }} />
             
             {isLastStep ? (
               <Button 
@@ -283,11 +326,16 @@ export default function GenerationWizard() {
                 disabled={isCreating}
                 onClick={handleGenerateClick}
                 startIcon={isCreating ? <CircularProgress size={20} color="inherit" /> : <AutoAwesomeIcon />}
+                sx={{ width: { xs: '100%', sm: 'auto' } }}
               >
                 {isCreating ? 'Generowanie...' : 'Generuj materiał'}
               </Button>
             ) : (
-              <Button variant="contained" onClick={handleNext}>
+              <Button 
+                variant="contained" 
+                onClick={handleNext}
+                sx={{ width: { xs: '100%', sm: 'auto' } }}
+              >
                 Dalej
               </Button>
             )}
@@ -295,7 +343,6 @@ export default function GenerationWizard() {
         </form>
       </FormProvider>
 
-      {/* Confirmation dialog */}
       <Dialog open={confirmOpen} onClose={() => !isCreating && setConfirmOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <AutoAwesomeIcon color="primary" />
@@ -307,8 +354,21 @@ export default function GenerationWizard() {
             Po potwierdzeniu nastąpi przekierowanie do strony statusu generowania.
           </DialogContentText>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setConfirmOpen(false)} disabled={isCreating} color="inherit">
+        <DialogActions sx={{ 
+          px: 3, 
+          pb: 3, 
+          display: 'flex',
+          flexDirection: { xs: 'column', sm: 'row' }, 
+          gap: { xs: 1.5, sm: 1 },
+          // Reset child margins applied by DialogActions to work with flex gap properly
+          '& > :not(style)': { m: '0 !important' } 
+        }}>
+          <Button 
+            onClick={() => setConfirmOpen(false)} 
+            disabled={isCreating} 
+            color="inherit"
+            sx={{ width: { xs: '100%', sm: 'auto' } }}
+          >
             Anuluj
           </Button>
           <Button
@@ -317,6 +377,7 @@ export default function GenerationWizard() {
             color="primary"
             disabled={isCreating}
             startIcon={isCreating ? <CircularProgress size={18} color="inherit" /> : <AutoAwesomeIcon />}
+            sx={{ width: { xs: '100%', sm: 'auto' } }}
           >
             {isCreating ? 'Generowanie...' : 'Tak, generuj'}
           </Button>

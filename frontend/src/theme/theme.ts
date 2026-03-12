@@ -185,15 +185,15 @@ const baseThemeOptions: ThemeOptions = {
 
     MuiStepLabel: {
       styleOverrides: {
-        root: {
-          // Etykieta "Nie dotyczy" dla pominiętych kroków
+        // Zmieniamy obiekt na funkcję wyciągającą { theme }
+        root: ({ theme }) => ({
           ".step-not-applicable": {
             fontSize: "11px",
             fontWeight: 600,
-            color: "var(--mui-palette-error-main)",
+            color: theme.palette.error.main,
             letterSpacing: "0.02em",
           },
-        },
+        }),
       },
     },
   },
