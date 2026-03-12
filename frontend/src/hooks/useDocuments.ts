@@ -12,6 +12,11 @@ interface DocumentListResponse {
   per_page: number;
 }
 
+interface MoveToDraftResponse {
+  generation_id: string;
+  message: string;
+}
+
 export function useDocuments(subjectId?: string) {
   const queryClient = useQueryClient();
   const { success, error } = useSnackbar();
@@ -118,6 +123,20 @@ export function useDocumentDetails(id: string) {
     },
   });
 
+  const moveToDraftMutation = useMutation({
+    mutationFn: async () => {
+      const res = await api.post<MoveToDraftResponse>(`/api/documents/${id}/move-to-draft`);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['documents'] });
+      success('Materiał przeniesiony do wersji roboczych');
+    },
+    onError: () => {
+      error('Nie udało się przenieść materiału do wersji roboczych');
+    },
+  });
+
   return {
     document: query.data,
     isLoading: query.isLoading,
@@ -128,5 +147,7 @@ export function useDocumentDetails(id: string) {
     isExportingPDF: generatePDFMutation.isPending,
     exportWord: generateWordMutation.mutate,
     isExportingWord: generateWordMutation.isPending,
+    moveToDraft: moveToDraftMutation.mutateAsync,
+    isMovingToDraft: moveToDraftMutation.isPending,
   };
 }

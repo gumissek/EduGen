@@ -26,3 +26,24 @@ class PrototypeUpdate(BaseModel):
 
 class RepromptRequest(BaseModel):
     prompt: str
+
+
+class PrototypeListItemResponse(BaseModel):
+    id: str
+    generation_id: str
+    subject_id: str
+    subject_name: str
+    title: str
+    content_type: str
+    education_level: str
+    class_level: str
+    created_at: str
+    updated_at: str
+
+    class Config:
+        from_attributes = True
+
+
+class PrototypeListResponse(BaseModel):
+    prototypes: list[PrototypeListItemResponse]
+    total: int

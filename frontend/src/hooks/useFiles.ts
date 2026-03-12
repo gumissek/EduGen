@@ -65,11 +65,34 @@ export function useFiles(subjectId?: string | null) {
     },
   });
 
+  const downloadMutation = useMutation({
+    mutationFn: async (file: SourceFile) => {
+      const res = await api.get(`/api/files/${file.id}/download`, { responseType: 'blob' });
+      return { blob: res.data as Blob, filename: file.filename };
+    },
+    onSuccess: ({ blob, filename }) => {
+      const url = window.URL.createObjectURL(new Blob([blob]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename || 'plik');
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode?.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      success('Pobieranie rozpoczęte');
+    },
+    onError: () => {
+      error('Nie udało się pobrać pliku');
+    },
+  });
+
   return {
     files: query.data || [],
     isLoading: query.isLoading,
     isError: query.isError,
     uploadFile: uploadMutation.mutateAsync,
     deleteFile: deleteMutation.mutateAsync,
+    downloadFile: downloadMutation.mutateAsync,
+    isDownloading: downloadMutation.isPending,
   };
 }

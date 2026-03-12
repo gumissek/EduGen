@@ -12,6 +12,8 @@ import Chip from '@mui/material/Chip';
 import Breadcrumbs from '@mui/material/Breadcrumbs';
 import Link from '@mui/material/Link';
 import CircularProgress from '@mui/material/CircularProgress';
+import Tabs from '@mui/material/Tabs';
+import Tab from '@mui/material/Tab';
 import AddIcon from '@mui/icons-material/Add';
 import DescriptionIcon from '@mui/icons-material/Description';
 import AssignmentIcon from '@mui/icons-material/Assignment';
@@ -21,6 +23,9 @@ import MenuBookIcon from '@mui/icons-material/MenuBook';
 import SchoolIcon from '@mui/icons-material/School';
 import ClassIcon from '@mui/icons-material/Class';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
+import EditNoteIcon from '@mui/icons-material/EditNote';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import DeleteIcon from '@mui/icons-material/Delete';
 import Tooltip from '@mui/material/Tooltip';
 import IconButton from '@mui/material/IconButton';
 import CardActions from '@mui/material/CardActions';
@@ -41,6 +46,42 @@ interface DocumentListResponse {
   page: number;
   per_page: number;
 }
+
+interface DraftListResponse {
+  prototypes: DraftMaterial[];
+  total: number;
+}
+
+interface SourceFileListResponse {
+  files: Array<{ filename: string }>;
+  total: number;
+}
+
+interface DraftMaterial {
+  id: string;
+  generation_id: string;
+  subject_id: string;
+  subject_name: string;
+  title: string;
+  content_type: string;
+  education_level: string;
+  class_level: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface DrillMaterial {
+  id: string;
+  generation_id: string;
+  subject_id: string;
+  subject_name: string;
+  title: string;
+  content_type: string;
+  education_level: string;
+  class_level: string;
+}
+
+type MaterialSection = 'ready' | 'drafts';
 
 /**
  * Drill-down hierarchy (5 levels):
@@ -83,10 +124,16 @@ export default function DashboardPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { success, error } = useSnackbar();
-  const [drill, setDrill] = React.useState<DrillState>({ level: 'type' });
+  const [section, setSection] = React.useState<MaterialSection>('ready');
+  const [readyDrill, setReadyDrill] = React.useState<DrillState>({ level: 'type' });
+  const [draftDrill, setDraftDrill] = React.useState<DrillState>({ level: 'type' });
   const [deleteId, setDeleteId] = React.useState<string | null>(null);
+  const [deleteDraftGenerationId, setDeleteDraftGenerationId] = React.useState<string | null>(null);
 
-  // Fetch all documents (up to 1000) for client-side grouping
+  const drill = section === 'ready' ? readyDrill : draftDrill;
+  const setDrill = section === 'ready' ? setReadyDrill : setDraftDrill;
+
+  // Ready materials
   const { data: docsData, isLoading } = useQuery<Document[]>({
     queryKey: ['documents', 'all'],
     queryFn: async () => {
@@ -94,7 +141,43 @@ export default function DashboardPage() {
       return res.data.documents;
     },
   });
+
+  // Draft materials
+  const { data: draftsData, isLoading: isLoadingDrafts } = useQuery<DraftMaterial[]>({
+    queryKey: ['prototypes', 'all-drafts'],
+    queryFn: async () => {
+      const res = await api.get<DraftListResponse>('/api/prototypes');
+      return res.data.prototypes;
+    },
+  });
+
   const allDocs: Document[] = React.useMemo(() => docsData ?? [], [docsData]);
+  const allDrafts: DraftMaterial[] = React.useMemo(() => draftsData ?? [], [draftsData]);
+
+  const activeMaterials = React.useMemo<DrillMaterial[]>(() => {
+    if (section === 'ready') {
+      return allDocs.map((d) => ({
+        id: d.id,
+        generation_id: d.generation_id,
+        subject_id: d.subject_id,
+        subject_name: d.subject_name ?? '',
+        title: d.title,
+        content_type: d.content_type,
+        education_level: d.education_level ?? '',
+        class_level: d.class_level ?? '',
+      }));
+    }
+    return allDrafts.map((d) => ({
+      id: d.id,
+      generation_id: d.generation_id,
+      subject_id: d.subject_id,
+      subject_name: d.subject_name,
+      title: d.title,
+      content_type: d.content_type,
+      education_level: d.education_level,
+      class_level: d.class_level,
+    }));
+  }, [section, allDocs, allDrafts]);
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -114,13 +197,46 @@ export default function DashboardPage() {
     }
   };
 
+  const deleteDraftMutation = useMutation({
+    mutationFn: async (generationId: string) => {
+      await api.delete(`/api/prototypes/${generationId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['prototypes', 'all-drafts'] });
+      success('Wersja robocza została usunięta');
+    },
+    onError: () => error('Błąd podczas usuwania wersji roboczej'),
+  });
+
+  const handleDeleteDraftConfirm = () => {
+    if (deleteDraftGenerationId) {
+      deleteDraftMutation.mutate(deleteDraftGenerationId);
+      setDeleteDraftGenerationId(null);
+    }
+  };
+
+  const copySubjectFiles = async (subjectId: string, subjectName: string) => {
+    try {
+      const res = await api.get<SourceFileListResponse>(`/api/files?subject_id=${subjectId}`);
+      const filenames = res.data.files.map((f) => f.filename);
+      const text = filenames.length > 0
+        ? filenames.join('\n')
+        : `Brak plików źródłowych dla: ${subjectName}`;
+
+      await navigator.clipboard.writeText(text);
+      success('Skopiowano listę plików źródłowych');
+    } catch {
+      error('Nie udało się skopiować listy plików');
+    }
+  };
+
   // --- Derived data for each drill level ---
 
   // Level 1: unique content types that have at least 1 document
   const contentTypeGroups = React.useMemo(() => {
     const counts: Record<string, number> = {};
-    for (const doc of allDocs) {
-      const ct = doc.content_type || '';
+    for (const item of activeMaterials) {
+      const ct = item.content_type || '';
       if (ct) counts[ct] = (counts[ct] || 0) + 1;
     }
     const known = CONTENT_TYPES.filter(t => counts[t.value]).map(t => ({ ...t, count: counts[t.value] }));
@@ -129,12 +245,12 @@ export default function DashboardPage() {
       .filter(([v]) => !knownValues.has(v))
       .map(([v, count]) => ({ value: v, label: v, count }));
     return [...known, ...unknown];
-  }, [allDocs]);
+  }, [activeMaterials]);
 
   // Level 2: unique education levels for selected content_type
   const educationLevelGroups = React.useMemo(() => {
     if (!drill.contentType) return [];
-    const filtered = allDocs.filter(d => d.content_type === drill.contentType);
+    const filtered = activeMaterials.filter(d => d.content_type === drill.contentType);
     const counts: Record<string, number> = {};
     for (const doc of filtered) {
       const el = (doc.education_level ?? '').trim();
@@ -147,12 +263,12 @@ export default function DashboardPage() {
         count,
       }))
       .sort((a, b) => a.label.localeCompare(b.label, 'pl'));
-  }, [allDocs, drill.contentType]);
+  }, [activeMaterials, drill.contentType]);
 
   // Level 3: unique class levels for selected content_type + education_level
   const classLevelGroups = React.useMemo(() => {
     if (!drill.contentType || !drill.educationLevel) return [];
-    const filtered = allDocs.filter(
+    const filtered = activeMaterials.filter(
       d => d.content_type === drill.contentType && (d.education_level ?? '').trim() === drill.educationLevel,
     );
     const counts: Record<string, number> = {};
@@ -163,12 +279,12 @@ export default function DashboardPage() {
     return Object.entries(counts)
       .map(([value, count]) => ({ value, label: value, count }))
       .sort((a, b) => a.label.localeCompare(b.label, 'pl', { numeric: true }));
-  }, [allDocs, drill.contentType, drill.educationLevel]);
+  }, [activeMaterials, drill.contentType, drill.educationLevel]);
 
   // Level 4: unique subjects for selected content_type + education_level + class_level
   const subjectGroups = React.useMemo(() => {
     if (!drill.contentType || !drill.educationLevel || !drill.classLevel) return [];
-    const filtered = allDocs.filter(
+    const filtered = activeMaterials.filter(
       d =>
         d.content_type === drill.contentType &&
         (d.education_level ?? '').trim() === drill.educationLevel &&
@@ -183,11 +299,11 @@ export default function DashboardPage() {
       map[sid].count++;
     }
     return Object.entries(map).map(([id, { name, count }]) => ({ id, name, count }));
-  }, [allDocs, drill.contentType, drill.educationLevel, drill.classLevel]);
+  }, [activeMaterials, drill.contentType, drill.educationLevel, drill.classLevel]);
 
   // Level 5: actual documents for selected content_type + education_level + class_level + subject
   const visibleDocs = React.useMemo(() => {
-    if (drill.level !== 'documents' || !drill.subjectId) return [];
+    if (section !== 'ready' || drill.level !== 'documents' || !drill.subjectId) return [];
     return allDocs.filter(
       d =>
         d.content_type === drill.contentType &&
@@ -195,7 +311,18 @@ export default function DashboardPage() {
         ((d.class_level ?? '').trim() || 'Brak') === drill.classLevel &&
         d.subject_id === drill.subjectId,
     );
-  }, [allDocs, drill]);
+  }, [allDocs, drill, section]);
+
+  const visibleDrafts = React.useMemo(() => {
+    if (section !== 'drafts' || drill.level !== 'documents' || !drill.subjectId) return [];
+    return allDrafts.filter(
+      d =>
+        d.content_type === drill.contentType &&
+        (d.education_level ?? '').trim() === drill.educationLevel &&
+        ((d.class_level ?? '').trim() || 'Brak') === drill.classLevel &&
+        d.subject_id === drill.subjectId,
+    );
+  }, [allDrafts, drill, section]);
 
   // --- Navigation helpers ---
 
@@ -220,7 +347,7 @@ export default function DashboardPage() {
 
   const currentTypeLabel = CONTENT_TYPES.find(t => t.value === drill.contentType)?.label ?? drill.contentType;
 
-  if (isLoading) {
+  if (isLoading || isLoadingDrafts) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
         <CircularProgress />
@@ -244,6 +371,15 @@ export default function DashboardPage() {
           Wygeneruj nowy
         </Button>
       </Box>
+
+      <Tabs
+        value={section}
+        onChange={(_, value: MaterialSection) => setSection(value)}
+        sx={{ mb: 3 }}
+      >
+        <Tab value="ready" label="Gotowe materiały" />
+        <Tab value="drafts" label="Wersje robocze" />
+      </Tabs>
 
       {/* Breadcrumbs */}
       {drill.level !== 'type' && (
@@ -292,8 +428,12 @@ export default function DashboardPage() {
           {contentTypeGroups.length === 0 ? (
             <EmptyState
               icon={<DescriptionIcon />}
-              title="Brak dokumentów"
-              description="Nie wygenerowałeś/aś jeszcze żadnych materiałów edukacyjnych. Przejdź do kreatora, aby zacząć!"
+              title={section === 'ready' ? 'Brak dokumentów' : 'Brak wersji roboczych'}
+              description={
+                section === 'ready'
+                  ? 'Nie wygenerowałeś/aś jeszcze żadnych materiałów edukacyjnych. Przejdź do kreatora, aby zacząć!'
+                  : 'Nie masz jeszcze zapisanych wersji roboczych. Zapisz prototyp w edytorze, aby pojawił się tutaj.'
+              }
               actionLabel="Kreator materiałów"
               onAction={() => router.push('/generate')}
             />
@@ -381,16 +521,28 @@ export default function DashboardPage() {
                   <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
                     Baza wiedzy
                   </Typography>
-                  <Tooltip title="Zarządzaj plikami źródłowymi">
-                    <IconButton
-                      size="small"
-                      color="info"
-                      onClick={() => router.push(`/subjects?subjectId=${s.id}`)}
-                      sx={{ bgcolor: 'rgba(2, 136, 209, 0.08)', '&:hover': { bgcolor: 'rgba(2, 136, 209, 0.16)' } }}
-                    >
-                      <FolderOpenIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Tooltip title="Kopiuj listę plików źródłowych">
+                      <IconButton
+                        size="small"
+                        color="info"
+                        onClick={() => copySubjectFiles(s.id, s.name)}
+                        sx={{ bgcolor: 'rgba(2, 136, 209, 0.08)', '&:hover': { bgcolor: 'rgba(2, 136, 209, 0.16)' } }}
+                      >
+                        <ContentCopyIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Zarządzaj plikami źródłowymi">
+                      <IconButton
+                        size="small"
+                        color="info"
+                        onClick={() => router.push(`/subjects?subjectId=${s.id}`)}
+                        sx={{ bgcolor: 'rgba(2, 136, 209, 0.08)', '&:hover': { bgcolor: 'rgba(2, 136, 209, 0.16)' } }}
+                      >
+                        <FolderOpenIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
                 </CardActions>
               </Card>
             </Grid2>
@@ -399,7 +551,7 @@ export default function DashboardPage() {
       )}
 
       {/* Level 5 — Documents */}
-      {drill.level === 'documents' && (
+      {section === 'ready' && drill.level === 'documents' && (
         <>
           {visibleDocs.length === 0 ? (
             <EmptyState icon={<DescriptionIcon />} title="Brak materiałów" description="Brak materiałów dla wybranych kryteriów." />
@@ -415,6 +567,103 @@ export default function DashboardPage() {
         </>
       )}
 
+      {/* Level 5 — Drafts */}
+      {section === 'drafts' && drill.level === 'documents' && (
+        <>
+          {visibleDrafts.length === 0 ? (
+            <EmptyState icon={<EditNoteIcon />} title="Brak wersji roboczych" description="Brak zapisanych wersji roboczych dla wybranych kryteriów." />
+          ) : (
+            <Grid2 container spacing={3}>
+              {visibleDrafts.map((draft) => (
+                <Grid2 size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={draft.id}>
+                  <Card
+                    variant="outlined"
+                    sx={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      height: '100%',
+                      borderWidth: '1px',
+                      borderColor: 'divider',
+                      boxShadow: '0 4px 16px rgba(0,0,0,0.04)',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      '&:hover': {
+                        borderColor: 'secondary.main',
+                        transform: 'translateY(-4px)',
+                        boxShadow: '0 12px 32px rgba(0,0,0,0.08)'
+                      }
+                    }}
+                  >
+                    <CardActionArea
+                      onClick={() => router.push(`/generate/${draft.generation_id}/editor`)}
+                      sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}
+                    >
+                      <CardContent sx={{ p: 3 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
+                          <Box
+                            sx={{
+                              color: 'secondary.main',
+                              mr: 2,
+                              bgcolor: 'rgba(156, 39, 176, 0.08)',
+                              width: 48,
+                              height: 48,
+                              borderRadius: '12px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0
+                            }}
+                          >
+                            <EditNoteIcon />
+                          </Box>
+                          <Box>
+                            <Typography
+                              variant="h6"
+                              component="div"
+                              sx={{
+                                fontWeight: 'bold',
+                                fontSize: '1.1rem',
+                                lineHeight: 1.3,
+                                mb: 0.5,
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden'
+                              }}
+                            >
+                              {draft.title}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+                              Ostatnia edycja: {new Date(draft.updated_at).toLocaleString('pl-PL')}
+                            </Typography>
+                          </Box>
+                        </Box>
+                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                          <Chip label="Wersja robocza" size="small" color="secondary" variant="outlined" />
+                        </Box>
+                      </CardContent>
+                    </CardActionArea>
+                    <CardActions sx={{ justifyContent: 'flex-end', px: 2, pb: 2, pt: 0 }}>
+                      <IconButton
+                        size="small"
+                        color="error"
+                        title="Usuń wersję roboczą"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setDeleteDraftGenerationId(draft.generation_id);
+                        }}
+                        sx={{ bgcolor: 'rgba(229, 57, 53, 0.08)', '&:hover': { bgcolor: 'rgba(229, 57, 53, 0.16)' } }}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </CardActions>
+                  </Card>
+                </Grid2>
+              ))}
+            </Grid2>
+          )}
+        </>
+      )}
+
       <ConfirmDialog
         open={!!deleteId}
         title="Usuń materiał"
@@ -423,6 +672,17 @@ export default function DashboardPage() {
         severity="error"
         onConfirm={handleDeleteConfirm}
         onCancel={() => setDeleteId(null)}
+      />
+
+      <ConfirmDialog
+        open={!!deleteDraftGenerationId}
+        title="Usuń wersję roboczą"
+        message="Czy na pewno chcesz usunąć tę wersję roboczą? Tej operacji nie można cofnąć."
+        confirmLabel="Usuń"
+        severity="error"
+        isLoading={deleteDraftMutation.isPending}
+        onConfirm={handleDeleteDraftConfirm}
+        onCancel={() => setDeleteDraftGenerationId(null)}
       />
     </Box>
   );

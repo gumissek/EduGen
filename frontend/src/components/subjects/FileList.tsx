@@ -11,9 +11,10 @@ import ConfirmDialog from '@/components/ui/ConfirmDialog';
 interface FileListProps {
   files: SourceFile[];
   onDelete: (id: string) => void;
+  onDownload: (file: SourceFile) => void;
 }
 
-export default function FileList({ files, onDelete }: FileListProps) {
+export default function FileList({ files, onDelete, onDownload }: FileListProps) {
   const [deleteId, setDeleteId] = React.useState<string | null>(null);
 
   const handleDeleteConfirm = () => {
@@ -38,7 +39,7 @@ export default function FileList({ files, onDelete }: FileListProps) {
       <Grid2 container spacing={3}>
         {files.map((file) => (
           <Grid2 size={{xs:12, sm:6, md:4}} key={file.id}>
-            <FileCard file={file} onDelete={setDeleteId} />
+            <FileCard file={file} onDelete={setDeleteId} onDownload={onDownload} />
           </Grid2>
         ))}
       </Grid2>

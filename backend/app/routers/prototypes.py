@@ -9,6 +9,7 @@ import traceback
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import and_
 from sqlalchemy.orm import Session as DBSession
 
 logger = logging.getLogger(__name__)
@@ -19,12 +20,65 @@ from app.encryption import decrypt_api_key
 from app.models.user import User
 from app.models.generation import Generation
 from app.models.prototype import Prototype
+from app.models.document import Document
+from app.models.subject import Subject
 from app.models.secret_key import SecretKey
-from app.schemas.prototype import PrototypeResponse, PrototypeUpdate, RepromptRequest
+from app.schemas.prototype import (
+    PrototypeResponse,
+    PrototypeUpdate,
+    RepromptRequest,
+    PrototypeListItemResponse,
+    PrototypeListResponse,
+)
 from app.services.ai_service import call_openrouter_reprompt, call_openrouter_reprompt_free_form, TYPES_WITHOUT_QUESTIONS
 from app.services.generation_service import _render_content_html, _build_answer_key
 
 router = APIRouter(prefix="/prototypes", tags=["prototypes"])
+
+
+@router.get("", response_model=PrototypeListResponse)
+def list_prototypes(
+    db: DBSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """List editable prototype drafts (prototypes without active finalized documents)."""
+    rows = (
+        db.query(Prototype, Generation, Subject)
+        .join(Generation, Prototype.generation_id == Generation.id)
+        .join(Subject, Subject.id == Generation.subject_id)
+        .outerjoin(
+            Document,
+            and_(
+                Document.generation_id == Generation.id,
+                Document.deleted_at.is_(None),
+            ),
+        )
+        .filter(
+            Generation.user_id == current_user.id,
+            Prototype.user_id == current_user.id,
+            Document.id.is_(None),
+        )
+        .order_by(Prototype.updated_at.desc())
+        .all()
+    )
+
+    prototypes = [
+        PrototypeListItemResponse(
+            id=prototype.id,
+            generation_id=generation.id,
+            subject_id=(generation.subject_id or ""),
+            subject_name=(subject.name or ""),
+            title=(generation.topic or "Wersja robocza"),
+            content_type=(generation.content_type or ""),
+            education_level=(generation.education_level or ""),
+            class_level=str(generation.class_level).strip() if generation.class_level else "",
+            created_at=prototype.created_at,
+            updated_at=prototype.updated_at,
+        )
+        for prototype, generation, subject in rows
+    ]
+
+    return PrototypeListResponse(prototypes=prototypes, total=len(prototypes))
 
 
 def _get_user_generation(db: DBSession, generation_id: str, user_id: str) -> Generation:
@@ -81,6 +135,29 @@ def update_prototype(
     db.refresh(prototype)
 
     return PrototypeResponse.model_validate(prototype)
+
+
+@router.delete("/{generation_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_prototype_draft(
+    generation_id: str,
+    db: DBSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Delete a draft generation+prototype if it is not finalized as an active document."""
+    generation = _get_user_generation(db, generation_id, current_user.id)
+
+    has_active_document = db.query(Document).filter(
+        Document.generation_id == generation.id,
+        Document.deleted_at.is_(None),
+    ).first()
+    if has_active_document:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot delete draft for finalized material",
+        )
+
+    db.delete(generation)
+    db.commit()
 
 
 @router.post("/{generation_id}/restore", response_model=PrototypeResponse)

@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks, status
+from fastapi.responses import FileResponse as FastAPIFileResponse
 from sqlalchemy.orm import Session as DBSession
 
 from app.database import get_db
@@ -118,6 +120,32 @@ def list_files(
     return FileListResponse(
         files=[_to_response(f) for f in files],
         total=len(files),
+    )
+
+
+@router.get("/{file_id}/download")
+def download_file(
+    file_id: str,
+    db: DBSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Download a source file uploaded by the current user."""
+    source_file = db.query(SourceFile).filter(
+        SourceFile.id == file_id,
+        SourceFile.user_id == current_user.id,
+        SourceFile.deleted_at.is_(None),
+    ).first()
+    if not source_file:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
+
+    file_path = Path(source_file.original_path)
+    if not file_path.exists():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found on disk")
+
+    return FastAPIFileResponse(
+        path=str(file_path),
+        filename=source_file.filename,
+        media_type="application/octet-stream",
     )
 
 

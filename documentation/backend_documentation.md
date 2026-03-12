@@ -142,10 +142,27 @@ Architektura grupuje endpointy na określone sfery:
 | `/api/task-types` | Pobieranie i dodawanie własnych typów zadań. |
 | `/api/files` | Wrzucanie i cache'owanie plików pomocniczych. Filtrowane po `user_id`. |
 | `/api/generations` | Rozpoczęcie generacji materiałów (background task). Filtrowane po `user_id`. |
-| `/api/prototypes` | Edytor generowanych materiałów z AI Reprompt. Weryfikacja własności przez `Generation.user_id`. |
+| `/api/prototypes` | Edytor generowanych materiałów z AI Reprompt. Weryfikacja własności przez `Generation.user_id`. Zawiera także listę wersji roboczych (prototypy bez aktywnego dokumentu końcowego). |
 | `/api/documents` | Finalizowane pliki DOCX. Filtrowane po `user_id`. Bulk download z izolacją. |
 | `/api/backups` | Zarządzanie kopiami zapasowymi. |
 | `/api/diagnostics` | Dashboard logów błędów i zapytań AI. |
+
+### Dodatkowe endpointy workflow (wersje robocze i pliki)
+
+- **Pliki źródłowe:**
+	- `GET /api/files/{file_id}/download` — pobieranie wcześniej wgranego pliku źródłowego (`SourceFile.original_path`) z walidacją właściciela i `deleted_at IS NULL`.
+
+- **Prototypy / wersje robocze:**
+	- `GET /api/prototypes` — lista wersji roboczych do edycji (prototypy użytkownika, dla których nie istnieje aktywny dokument końcowy).
+	- `DELETE /api/prototypes/{generation_id}` — usuwanie wersji roboczej (kasowanie `generation` z kaskadą do `prototype`), z blokadą gdy istnieje aktywny dokument końcowy.
+	- Odpowiedź zawiera metadane do drill-down: `content_type`, `education_level`, `class_level`, `subject_id`, `subject_name`, `title`, `updated_at`.
+
+- **Dokumenty końcowe → wersje robocze:**
+	- `POST /api/documents/{document_id}/move-to-draft` — zamienia dokument końcowy na wersję roboczą:
+		- soft-delete dokumentu (`documents.deleted_at`),
+		- ustawienie `generation.status = "ready"`,
+		- odświeżenie `updated_at` dla `generation` i `prototype`,
+		- zwrot `generation_id` do przekierowania użytkownika do edytora roboczego.
 
 ---
 

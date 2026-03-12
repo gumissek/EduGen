@@ -14,6 +14,7 @@ import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import DescriptionIcon from '@mui/icons-material/Description';
 import ImageIcon from '@mui/icons-material/Image';
 import DeleteIcon from '@mui/icons-material/Delete';
+import DownloadIcon from '@mui/icons-material/Download';
 import CircularProgress from '@mui/material/CircularProgress';
 import NextLink from 'next/link';
 import { SourceFile } from '@/types';
@@ -22,6 +23,7 @@ import { format } from 'date-fns';
 interface FileCardProps {
   file: SourceFile;
   onDelete: (id: string) => void;
+  onDownload: (file: SourceFile) => void;
 }
 
 const getFileIcon = (mimeType: string) => {
@@ -112,7 +114,7 @@ function FileStatusSection({ file }: { file: SourceFile }) {
   );
 }
 
-export default function FileCard({ file, onDelete }: FileCardProps) {
+export default function FileCard({ file, onDelete, onDownload }: FileCardProps) {
   return (
     <Card variant="outlined" sx={{ 
       display: 'flex', 
@@ -144,6 +146,9 @@ export default function FileCard({ file, onDelete }: FileCardProps) {
         <FileStatusSection file={file} />
       </CardContent>
       <CardActions sx={{ justifyContent: 'flex-end', px: 2, pb: 2 }}>
+        <IconButton size="small" onClick={() => onDownload(file)} color="primary" title="Pobierz plik">
+          <DownloadIcon fontSize="small" />
+        </IconButton>
         <IconButton size="small" onClick={() => onDelete(file.id)} color="error" title="Usuń plik">
           <DeleteIcon fontSize="small" />
         </IconButton>

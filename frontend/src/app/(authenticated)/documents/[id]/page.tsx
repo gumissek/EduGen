@@ -9,9 +9,11 @@ import SaveIcon from '@mui/icons-material/Save';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import DescriptionIcon from '@mui/icons-material/Description';
 import KeyboardArrowLeftIcon from '@mui/icons-material/KeyboardArrowLeft';
+import EditNoteIcon from '@mui/icons-material/EditNote';
 import { useRouter } from 'next/navigation';
 import { useDocumentDetails } from '@/hooks/useDocuments';
 import dynamic from 'next/dynamic';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 
 const TipTapEditor = dynamic(() => import('@/components/editor/TipTapEditor'), {
   ssr: false,
@@ -33,11 +35,14 @@ export default function DocumentDetailsPage({ params }: { params: Promise<{ id: 
     exportPDF, 
     isExportingPDF, 
     exportWord, 
-    isExportingWord 
+    isExportingWord,
+    moveToDraft,
+    isMovingToDraft,
   } = useDocumentDetails(id);
 
   const [content, setContent] = React.useState('');
   const [isEdited, setIsEdited] = React.useState(false);
+  const [isMoveDialogOpen, setIsMoveDialogOpen] = React.useState(false);
 
   React.useEffect(() => {
     if (document?.content && !isEdited) {
@@ -48,6 +53,12 @@ export default function DocumentDetailsPage({ params }: { params: Promise<{ id: 
   const handleSave = async () => {
     await updateDocument(content);
     setIsEdited(false);
+  };
+
+  const handleMoveToDraft = async () => {
+    const result = await moveToDraft();
+    setIsMoveDialogOpen(false);
+    router.push(`/generate/${result.generation_id}/editor`);
   };
 
   if (isLoading) return <CircularProgress />;
@@ -81,6 +92,16 @@ export default function DocumentDetailsPage({ params }: { params: Promise<{ id: 
           >
             Zapisz
           </Button>
+          <Button
+            variant="outlined"
+            color="secondary"
+            startIcon={<EditNoteIcon />}
+            onClick={() => setIsMoveDialogOpen(true)}
+            disabled={isMovingToDraft}
+            sx={{ borderRadius: 2 }}
+          >
+            Edytuj i przenieś na wersję roboczą
+          </Button>
           <Button 
             variant="outlined" 
             color="secondary"
@@ -113,6 +134,17 @@ export default function DocumentDetailsPage({ params }: { params: Promise<{ id: 
           }} 
         />
       </Box>
+
+      <ConfirmDialog
+        open={isMoveDialogOpen}
+        title="Przenieś do wersji roboczej"
+        message="Czy na pewno chcesz zamienić ten dokument w wersję roboczą w celu edycji?"
+        confirmLabel="Tak, przenieś"
+        severity="warning"
+        isLoading={isMovingToDraft}
+        onConfirm={handleMoveToDraft}
+        onCancel={() => setIsMoveDialogOpen(false)}
+      />
     </Box>
   );
 }

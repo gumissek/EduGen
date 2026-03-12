@@ -40,7 +40,7 @@ export default function SubjectsPage() {
     }
   }, [subjects, selectedSubjectId, urlSubjectId]);
 
-  const { files, uploadFile, deleteFile } = useFiles(selectedSubjectId);
+  const { files, uploadFile, deleteFile, downloadFile } = useFiles(selectedSubjectId);
 
   const handleUpload = React.useCallback(
     (formData: FormData, onProgress: (p: number) => void) =>
@@ -106,7 +106,7 @@ export default function SubjectsPage() {
                 </Box>
                 <Divider sx={{ mb: 3 }} />
                 <Typography variant="h6" gutterBottom>Wgrane pliki</Typography>
-                <FileList files={files} onDelete={deleteFile} />
+                <FileList files={files} onDelete={deleteFile} onDownload={downloadFile} />
               </>
             ) : (
               <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>

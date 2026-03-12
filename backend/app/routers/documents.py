@@ -27,6 +27,7 @@ from app.schemas.document import (
     DocumentUpdateRequest,
     DocumentListResponse,
     BulkDownloadRequest,
+    MoveToDraftResponse,
 )
 from app.services.docx_service import generate_docx
 
@@ -335,3 +336,42 @@ def delete_document(
 
     document.deleted_at = datetime.now(timezone.utc).isoformat()
     db.commit()
+
+
+@router.post("/{document_id}/move-to-draft", response_model=MoveToDraftResponse)
+def move_document_to_draft(
+    document_id: str,
+    db: DBSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Move a finalized document back to editable draft mode."""
+    document = db.query(Document).filter(
+        Document.id == document_id,
+        Document.user_id == current_user.id,
+        Document.deleted_at.is_(None),
+    ).first()
+    if not document:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
+
+    generation = db.query(Generation).filter(
+        Generation.id == document.generation_id,
+        Generation.user_id == current_user.id,
+    ).first()
+    if not generation:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Generation not found")
+
+    prototype = db.query(Prototype).filter(Prototype.generation_id == generation.id).first()
+    if not prototype:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Prototype not found")
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+    document.deleted_at = now_iso
+    generation.status = "ready"
+    generation.updated_at = now_iso
+    prototype.updated_at = now_iso
+    db.commit()
+
+    return MoveToDraftResponse(
+        generation_id=generation.id,
+        message="Document moved to draft mode",
+    )

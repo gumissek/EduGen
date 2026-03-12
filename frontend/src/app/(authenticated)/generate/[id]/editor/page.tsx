@@ -201,7 +201,7 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
             disabled={saveMutation.isPending}
             sx={{ flex: { xs: 1, sm: 'none' } }}
           >
-            {saveMutation.isPending ? 'Zapisywanie...' : 'Zapisz postęp'}
+            {saveMutation.isPending ? 'Zapisywanie...' : 'Zapisz wersję roboczą'}
           </Button>
           <Button 
             variant="contained" 

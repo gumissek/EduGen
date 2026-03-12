@@ -27,6 +27,12 @@ Aplikacja korzysta z Next.js App Router. Wszystkie pliki `page.tsx` w folderach 
 - `/diagnostics` — diagnostyka działania (dostępna z panelu admina)
 - `/admin-panel` — panel administracyjny (wyłącznie dla superuserów) z kafelkami do sekcji zarządzania
 
+#### Aktualny podział na `/dashboard`
+- Widok materiałów ma 2 sekcje:
+  - **Gotowe materiały** — dokumenty sfinalizowane (jak wcześniej) z drill-down: typ treści → poziom edukacji → klasa → przedmiot → lista materiałów.
+  - **Wersje robocze** — zapisane prototypy (bez aktywnego dokumentu końcowego) z identycznym drill-down i przejściem do edytora `/generate/[id]/editor`.
+  - Karty wersji roboczych mają akcję usuwania z modalem potwierdzenia (`DELETE /api/prototypes/{generation_id}`).
+
 ### Ścieżki publiczne (w `src/app/`)
 - `/login` — ekran logowania (email + hasło)
 - `/register` — ekran rejestracji nowego konta (email, imię, nazwisko, hasło, potwierdzenie hasła)
@@ -56,6 +62,7 @@ Główny proces biznesowy to generowanie dokumentów. Elementy go wspierające:
 ### `editor/`
 - Edytor dokumentów oparty na silniku **Tiptap** dający interfejs modyfikacji wygenerowanej treści.
 - **`RepromptInput.tsx`** — pasek prompt przyklejony na stałe do dołu ekranu (`position: fixed`). Na desktopie uwzględnia szerokość Sidebara (260 px) poprzez `left: calc(50% + 130px)` i `width: calc(100% - 292px)`, dzięki czemu jest wyśrodkowany w obszarze treści, a nie w całym viewporcie.
+- Edytor prototypu (`/generate/[id]/editor`) zapisuje zmiany przyciskiem **„Zapisz wersję roboczą”** do tabeli `prototypes` (`PUT /api/prototypes/{generation_id}`), dzięki czemu materiał można później kontynuować i finalizować.
 
 ### `layout/`
 - Layout aplikacji (Sidebar, TopBar).
@@ -64,6 +71,8 @@ Główny proces biznesowy to generowanie dokumentów. Elementy go wspierające:
 
 ### Inne
 - `documents/`, `subjects/`, `settings/` — komponenty odpowiadające logice poszczególnych domen.
+  - **`documents/[id]/page.tsx`** — podgląd gotowego materiału zawiera akcję **„Edytuj i przenieś na wersję roboczą”** z modalem potwierdzenia; po akceptacji wywoływany jest `POST /api/documents/{document_id}/move-to-draft` i następuje przekierowanie do edytora roboczego.
+  - **`subjects/FileList.tsx` + `subjects/FileCard.tsx`** — dodana opcja pobierania wgranego pliku źródłowego (`GET /api/files/{file_id}/download`).
   - **`settings/ApiKeyForm.tsx`** — CRUD kluczy API (tabela secret_keys). Dodawanie, usuwanie, walidacja klucza via OpenRouter. Na ekranach mobilnych (xs) zamiast tabeli wyświetla karty z kluczowymi informacjami i przyciskami akcji.
   - **`settings/ModelSelector.tsx`** — wybór domyślnego modelu AI (tabela `user_ai_models`). Wyświetla alertem ostrzeżenie jeśli żaden model nie jest wybrany. Po usunięciu aktualnie wybranego modelu automatycznie przełącza na pierwszy z pozostałych (lub czyści wybór jeśli lista jest pusta). Dialog dodawania z linkiem do openrouter.ai/models. Na ekranach mobilnych (xs) zamiast tabeli wyświetla interaktywne karty z przyciskiem radio.
 - `ui/` — fundamentalne reużywalne fragmenty interfejsu (własne wrappery dla przycisków, powiadomienia Snackbar itp).
@@ -95,6 +104,7 @@ Za pobieranie, cache'owanie i mutację danych odpowiedzialny jest pakiet **TanSt
 | `useSubjects.ts`, `useLevels.ts` | Dane słownikowe (przedmioty, poziomy zaawansowania). | React Query |
 | `useTaskTypes.ts` | Pobieranie z backendu dostępnych typów zadań. | React Query |
 | `useFiles.ts` | CRUD plików źródłowych dla generatorów. | React Query |
+| `useFiles.ts` | Dodatkowo pobieranie pliku źródłowego (`downloadFile`). | React Query |
 | `useSecretKeys.ts` | CRUD kluczy API użytkownika (tabela secret_keys). List, create, delete, validate. | React Query |
 | `useCurrentUser.ts` | Pobieranie profilu zalogowanego użytkownika (`/api/auth/me`) z polami: email, imię, nazwisko, is_superuser, api_quota, has_secret_keys. | React Query |
 
