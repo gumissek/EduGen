@@ -5,7 +5,7 @@ import { useFormContext } from 'react-hook-form';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Paper from '@mui/material/Paper';
-import Grid from '@mui/material/Grid';
+import Grid2 from '@mui/material/Grid2'; 
 import Divider from '@mui/material/Divider';
 import Chip from '@mui/material/Chip';
 import SchoolIcon from '@mui/icons-material/School';
@@ -39,10 +39,11 @@ export default function StepReview() {
     <Box>
       <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>Podsumowanie konfiguracji</Typography>
       <Paper variant="outlined" sx={{ p: { xs: 3, md: 4 }, mb: 3, borderRadius: '24px', borderWidth: 1, borderColor: 'divider', bgcolor: 'rgba(1, 72, 131, 0.01)', boxShadow: '0 8px 32px rgba(0,0,0,0.04)' }}>
-        <Grid container spacing={2}>
-          <Grid item xs={6} sm={4}>
+        <Grid2 container spacing={2}>
+          
+          <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
             <Typography variant="caption" color="text.secondary">Typ materiału</Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, mt: 0.5 }}>
               <Typography variant="body1" fontWeight="medium">{contentTypeLabel}</Typography>
               {isFreeForm && (
                 <Chip
@@ -54,83 +55,90 @@ export default function StepReview() {
                 />
               )}
             </Box>
-          </Grid>
-          <Grid item xs={6} sm={4}>
+          </Grid2>
+          
+          <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
             <Typography variant="caption" color="text.secondary">Przedmiot</Typography>
             <Typography variant="body1" fontWeight="medium">{subjectName}</Typography>
-          </Grid>
-          <Grid item xs={6} sm={4}>
+          </Grid2>
+          
+          <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
             <Typography variant="caption" color="text.secondary">Poziom edukacji</Typography>
             <Typography variant="body1" fontWeight="medium">{educationLevel}</Typography>
-          </Grid>
-          <Grid item xs={6} sm={4}>
+          </Grid2>
+          
+          <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
             <Typography variant="caption" color="text.secondary">Klasa / Semestr</Typography>
             <Typography variant="body1" fontWeight="medium">{values.class_level}</Typography>
-          </Grid>
+          </Grid2>
           
-          <Grid item xs={12}><Divider /></Grid>
+          <Grid2 size={12}><Divider /></Grid2>
 
-          <Grid item xs={12}>
+          <Grid2 size={12}>
             <Typography variant="caption" color="text.secondary">Temat</Typography>
             <Typography variant="body1" fontWeight="medium">{values.topic}</Typography>
-          </Grid>
+          </Grid2>
 
           {values.instructions && (
             <>
-              <Grid item xs={12}><Divider /></Grid>
-              <Grid item xs={12}>
+              <Grid2 size={12}><Divider /></Grid2>
+              <Grid2 size={12}>
                 <Typography variant="caption" color="text.secondary">Dodatkowe zalecenia</Typography>
                 <Typography variant="body1" fontWeight="medium">{values.instructions}</Typography>
-              </Grid>
+              </Grid2>
             </>
           )}
 
           {!isFreeForm && (
             <>
-              <Grid item xs={12}><Divider /></Grid>
+              <Grid2 size={12}><Divider /></Grid2>
 
-              <Grid item xs={4} sm={3}>
+              <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
                 <Typography variant="caption" color="text.secondary">Liczba zadań</Typography>
                 <Typography variant="body1" fontWeight="medium">{values.total_questions}</Typography>
-              </Grid>
-              <Grid item xs={4} sm={3}>
+              </Grid2>
+              
+              <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
                 <Typography variant="caption" color="text.secondary">Pytania Otwarte | Zamknięte</Typography>
                 <Typography variant="body1" fontWeight="medium">{values.open_questions} | {values.closed_questions}</Typography>
-              </Grid>
-              <Grid item xs={4} sm={3}>
+              </Grid2>
+              
+              <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
                 <Typography variant="caption" color="text.secondary">Trudność</Typography>
                 <Typography variant="body1" fontWeight="medium">{difficultyLabel}</Typography>
-              </Grid>
-              <Grid item xs={12} sm={3}>
+              </Grid2>
+              
+              <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
                 <Typography variant="caption" color="text.secondary">Liczba wariantów</Typography>
                 <Typography variant="body1" fontWeight="medium">{values.variants_count}</Typography>
-              </Grid>
+              </Grid2>
+              
               {values.task_types && values.task_types.length > 0 && (
-                <Grid item xs={12} sx={{ mt: 1 }}>
+                <Grid2 size={12} sx={{ mt: 1 }}>
                   <Typography variant="caption" color="text.secondary">Wybrane typy zadań</Typography>
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
                     {values.task_types.map((type: string) => (
                       <Chip key={type} label={type} size="small" variant="outlined" color="primary" />
                     ))}
                   </Box>
-                </Grid>
+                </Grid2>
               )}
             </>
           )}
 
           {isFreeForm && (
             <>
-              <Grid item xs={12}><Divider /></Grid>
-              <Grid item xs={6} sm={4}>
+              <Grid2 size={12}><Divider /></Grid2>
+              <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
                 <Typography variant="caption" color="text.secondary">Trudność</Typography>
                 <Typography variant="body1" fontWeight="medium">{difficultyLabel}</Typography>
-              </Grid>
+              </Grid2>
             </>
           )}
 
-          <Grid item xs={12}><Divider /></Grid>
+          <Grid2 size={12}><Divider /></Grid2>
 
-          <Grid item xs={12}>
+          <Grid2 size={12}>
             <Typography variant="caption" color="text.secondary">Wybrane pliki źródłowe</Typography>
             {selectedFiles.length > 0 ? (
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
@@ -143,8 +151,9 @@ export default function StepReview() {
                 Brak (generowanie na bazie wiedzy własnej AI i instrukcji)
               </Typography>
             )}
-          </Grid>
-        </Grid>
+          </Grid2>
+          
+        </Grid2>
       </Paper>
       
       <Typography variant="body2" color="text.secondary">

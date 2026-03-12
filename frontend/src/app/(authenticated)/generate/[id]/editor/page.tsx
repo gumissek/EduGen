@@ -52,7 +52,7 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
   const [content, setContent] = React.useState('');
   const [isEdited, setIsEdited] = React.useState(false);
 
-  // Fetch prototype data (contains the generated content)
+  // Fetch prototype data
   const { data: prototype, isLoading, isError } = useQuery<PrototypeData>({
     queryKey: ['prototype', id],
     queryFn: async () => {
@@ -63,7 +63,6 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
     retryDelay: 2000,
   });
 
-  // Set initial content once loaded (prefer edited_content over original)
   React.useEffect(() => {
     if (prototype && !isEdited) {
       const initialContent = prototype.edited_content || prototype.original_content;
@@ -71,7 +70,6 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
     }
   }, [prototype, isEdited]);
 
-  // Save manual edits mutation — PUT /api/prototypes/{generation_id}
   const saveMutation = useMutation({
     mutationFn: async (htmlContent: string) => {
       await api.put(`/api/prototypes/${id}`, { edited_content: htmlContent });
@@ -85,7 +83,6 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
     },
   });
 
-  // Reprompt mutation — POST /api/prototypes/{generation_id}/reprompt
   const repromptMutation = useMutation({
     mutationFn: async (prompt: string) => {
       const res = await api.post(`/api/prototypes/${id}/reprompt`, { prompt });
@@ -108,7 +105,6 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
         detail.includes('nie zawiera klucza') ||
         detail.includes('nie jest listą')
       ) {
-        // OpenRouter returned malformed / unexpected JSON — safe to retry
         error('AI zwróciło niepoprawną odpowiedź (błąd formatu JSON). Spróbuj wysłać poprawkę ponownie – zwykle wystarczy powtórzyć zapytanie.');
       } else if (detail.includes('API key') || detail.includes('api_key') || detail.includes('Incorrect API key')) {
         error('Brak lub nieprawidłowy klucz API OpenRouter. Sprawdź konfigurację w Ustawieniach.');
@@ -122,12 +118,9 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
     },
   });
 
-  // Finalize mutation — POST /api/documents/{generation_id}/finalize
   const finalizeMutation = useMutation({
     mutationFn: async () => {
-      // Save pending edits first
       await saveMutation.mutateAsync(content);
-      // Create final document — use generation_id from prototype, not prototype id
       const generationId = prototype!.generation_id;
       const res = await api.post(`/api/documents/${generationId}/finalize`);
       return res.data as DocumentData;
@@ -167,7 +160,8 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
   }
 
   return (
-    <Box sx={{ height: 'calc(100vh - 140px)', display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ minHeight: 'calc(100vh - 140px)', display: 'flex', flexDirection: 'column' }}>
+      
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Typography variant="h5" fontWeight="bold">
           Edytor materiału
@@ -193,16 +187,20 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
         </Box>
       </Box>
 
-      <Box sx={{ flexGrow: 1, position: 'relative', pb: 10 }}>
+      {/* pb zostało lekko podniesione na mobile dla lepszej widoczności pod klawiaturą */}
+      <Box sx={{ flexGrow: 1, position: 'relative', pb: { xs: 12, md: 10 } }}>
         <TipTapEditor 
           initialContent={content} 
           onChange={handleEditorChange} 
         />
         
-        <RepromptInput 
-          onSend={async (p) => { await repromptMutation.mutateAsync(p); }} 
-          isLoading={repromptMutation.isPending} 
-        />
+        {/* Dodano div chroniący przed nakładaniem tekstu na sticked element */}
+        <Box sx={{ mt: 4 }}>
+          <RepromptInput 
+            onSend={async (p) => { await repromptMutation.mutateAsync(p); }} 
+            isLoading={repromptMutation.isPending} 
+          />
+        </Box>
       </Box>
     </Box>
   );

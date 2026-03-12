@@ -34,19 +34,18 @@ export default function RepromptInput({ onSend, isLoading }: RepromptInputProps)
     <Paper 
       elevation={0} 
       sx={{ 
-        position: 'fixed', 
-        bottom: 24, 
-        // On desktop the sidebar is 260px wide, so offset centre into the content area
-        left: { xs: '50%', md: 'calc(50% + 130px)' },
-        transform: 'translateX(-50%)', 
-        width: { xs: 'calc(100% - 32px)', md: 'calc(100% - 292px)' }, 
+        // Zmiana na sticky - komponent naturalnie dopasowuje się do kontenera
+        position: 'sticky', 
+        bottom: { xs: 16, md: 24 }, 
+        margin: '0 auto', 
+        width: { xs: 'calc(100% - 32px)', md: '100%' }, 
         maxWidth: 680, 
         borderRadius: '32px',
         p: '6px 6px 6px 20px',
         display: 'flex',
         alignItems: 'center',
         bgcolor: 'background.paper',
-        zIndex: 1200,
+        zIndex: 10, 
         border: '1px solid',
         borderColor: 'divider',
         boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
