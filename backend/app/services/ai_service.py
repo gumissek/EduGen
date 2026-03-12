@@ -41,12 +41,7 @@ CONTENT_TYPE_LABELS = {
     "test": "sprawdzian",
     "quiz": "kartkówka",
     "exam": "test",
-    "lesson_materials": "materiały na zajęcia",
-    # legacy keys
-    "karta_pracy": "karta pracy",
-    "sprawdzian": "sprawdzian",
-    "kartkowka": "kartkówka",
-    "materialy": "materiały na zajęcia",
+    "lesson_materials": "Konspekt zajęć",
 }
 
 # Types that don't use the questions format (no Q&A, no variants)

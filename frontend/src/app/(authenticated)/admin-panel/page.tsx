@@ -6,7 +6,7 @@ import Typography from '@mui/material/Typography';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import CardActionArea from '@mui/material/CardActionArea';
-import Grid from '@mui/material/Grid';
+import Grid2 from '@mui/material/Grid2';
 import Alert from '@mui/material/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
 import BugReportIcon from '@mui/icons-material/BugReport';
@@ -86,9 +86,9 @@ export default function AdminPanelPage() {
         Zarządzaj systemem EduGen. Wybierz jedną z poniższych sekcji.
       </Typography>
 
-      <Grid container spacing={3}>
+      <Grid2 container spacing={3}>
         {adminTiles.map((tile) => (
-          <Grid item xs={12} sm={6} md={4} key={tile.title}>
+          <Grid2  size={{xs:12, sm:6, md:4}} key={tile.title}>
             <Card
               variant="outlined"
               sx={{
@@ -119,9 +119,9 @@ export default function AdminPanelPage() {
                 </CardContent>
               </CardActionArea>
             </Card>
-          </Grid>
+          </Grid2>
         ))}
-      </Grid>
+      </Grid2>
     </Box>
   );
 }

@@ -109,7 +109,7 @@ docker compose up --build
 if %ERRORLEVEL% NEQ 0 (
     echo.
     echo ============================================
-    echo   Wystapil blad podczas uruchamiania Docker
+    echo  Aplikacja zostala zatrzymana pomyslnie.
     echo ============================================
     pause
     exit /b 1

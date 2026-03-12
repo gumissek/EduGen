@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Box from '@mui/material/Box';
-import Grid from '@mui/material/Grid';
+import Grid2 from '@mui/material/Grid2';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
@@ -59,9 +59,9 @@ export default function SubjectsPage() {
         Przedmioty i materiały źródłowe
       </Typography>
       
-      <Grid container spacing={{ xs: 2, md: 3 }} sx={{ flexGrow: 1 }}>
+      <Grid2 container spacing={{ xs: 2, md: 3 }} sx={{ flexGrow: 1 }}>
         {/* Left column: Subjects */}
-        <Grid item xs={12} md={3}>
+        <Grid2 size={{xs:12, md:3}} >
           <Paper sx={{ height: { xs: 'auto', md: '100%' }, display: 'flex', flexDirection: 'column' }}>
             <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Typography variant="h6">Przedmioty</Typography>
@@ -83,10 +83,10 @@ export default function SubjectsPage() {
               />
             </Box>
           </Paper>
-        </Grid>
+        </Grid2>
 
         {/* Right column: Files */}
-        <Grid item xs={12} md={9}>
+        <Grid2 size={{xs:12, md:9}} >
           <Paper sx={{ height: '100%', p: 3, display: 'flex', flexDirection: 'column' }}>
             {selectedSubjectId ? (
               <>
@@ -114,8 +114,8 @@ export default function SubjectsPage() {
               </Box>
             )}
           </Paper>
-        </Grid>
-      </Grid>
+        </Grid2>
+      </Grid2>
 
       <SubjectDialog 
         open={isDialogOpen} 

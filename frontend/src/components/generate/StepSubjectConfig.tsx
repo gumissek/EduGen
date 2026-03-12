@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useFormContext, Controller } from 'react-hook-form';
-import Grid from '@mui/material/Grid';
+import Grid2 from '@mui/material/Grid2';
 import TextField from '@mui/material/TextField';
 import MenuItem from '@mui/material/MenuItem';
 import Autocomplete, { createFilterOptions } from '@mui/material/Autocomplete';
@@ -82,10 +82,10 @@ export default function StepSubjectConfig() {
   return (
     <Box>
       <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>Podstawowe parametry</Typography>
-      <Grid container spacing={4}>
+      <Grid2 container spacing={4}>
 
         {/* Subject */}
-        <Grid item xs={12} md={6}>
+        <Grid2 size={{xs:12, md:6}} >
           <TextField
             select
             fullWidth
@@ -101,10 +101,10 @@ export default function StepSubjectConfig() {
               </MenuItem>
             ))}
           </TextField>
-        </Grid>
+        </Grid2>
 
         {/* Education level (enum + custom) */}
-        <Grid item xs={12} md={6}>
+        <Grid2 size={{xs:12, md:6}}>
           <Controller
             name="education_level"
             control={control}
@@ -197,10 +197,10 @@ export default function StepSubjectConfig() {
               );
             }}
           />
-        </Grid>
+        </Grid2>
 
         {/* Class level (enum + custom) */}
-        <Grid item xs={12} md={6}>
+        <Grid2 size={{xs:12, md:6}}>
           <Controller
             name="class_level"
             control={control}
@@ -295,11 +295,11 @@ export default function StepSubjectConfig() {
               );
             }}
           />
-        </Grid>
+        </Grid2>
 
         {/* Language level (conditional) */}
         {isLanguageSubject && (
-          <Grid item xs={12} md={6}>
+          <Grid2 size={{xs:12, md:6}}>
             <TextField
               select
               fullWidth
@@ -314,11 +314,11 @@ export default function StepSubjectConfig() {
                 <MenuItem key={lvl} value={lvl}>{lvl}</MenuItem>
               ))}
             </TextField>
-          </Grid>
+          </Grid2>
         )}
 
         {/* Topic */}
-        <Grid item xs={12}>
+        <Grid2 size={{xs:12}}>
           <TextField
             fullWidth
             label="Temat przewodni"
@@ -327,10 +327,10 @@ export default function StepSubjectConfig() {
             {...register('topic')}
             required
           />
-        </Grid>
+        </Grid2>
 
         {/* Optional instructions */}
-        <Grid item xs={12}>
+        <Grid2 size={{xs:12}}>
           <TextField
             fullWidth
             multiline
@@ -340,8 +340,8 @@ export default function StepSubjectConfig() {
             helperText={errors.instructions?.message}
             {...register('instructions')}
           />
-        </Grid>
-      </Grid>
+        </Grid2>
+      </Grid2>
     </Box>
   );
 }

@@ -71,7 +71,11 @@ export default function RepromptInput({ onSend, isLoading }: RepromptInputProps)
         onKeyDown={handleKeyDown}
         disabled={isLoading}
         sx={{ mx: 2, '& .MuiInputBase-input': { py: 1.5, fontSize: '0.95rem' } }}
-        InputProps={{ disableUnderline: true }}
+        slotProps={{
+          input:{
+            disableUnderline: true,
+          }
+        }}
       />
       <IconButton 
         onClick={handleSend} 

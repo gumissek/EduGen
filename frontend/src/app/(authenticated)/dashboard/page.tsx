@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import Grid from '@mui/material/Grid';
+import Grid2 from '@mui/material/Grid2';
 import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
 import CardActionArea from '@mui/material/CardActionArea';
@@ -298,9 +298,9 @@ export default function DashboardPage() {
               onAction={() => router.push('/generate')}
             />
           ) : (
-            <Grid container spacing={3}>
+            <Grid2 container spacing={3}>
               {contentTypeGroups.map((ct) => (
-                <Grid item xs={12} sm={6} md={4} lg={3} key={ct.value}>
+                <Grid2 size={{xs:12, sm:6, md:4, lg:3}} key={ct.value}>
                   <Card variant="outlined" sx={{ height: '100%', borderColor: 'divider', borderWidth: '2px', transition: 'all 0.2s', '&:hover': { borderColor: 'primary.main', bgcolor: 'rgba(1, 72, 131, 0.02)' } }}>
                     <CardActionArea onClick={() => goToEducationLevels(ct.value)} sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start' }}>
                       <CardContent sx={{ textAlign: 'left', p: 0, width: '100%' }}>
@@ -312,18 +312,18 @@ export default function DashboardPage() {
                       </CardContent>
                     </CardActionArea>
                   </Card>
-                </Grid>
+                </Grid2>
               ))}
-            </Grid>
+            </Grid2>
           )}
         </>
       )}
 
       {/* Level 2 — Education Levels */}
       {drill.level === 'educationLevel' && (
-        <Grid container spacing={3}>
+        <Grid2 container spacing={3}>
           {educationLevelGroups.map((el) => (
-            <Grid item xs={12} sm={6} md={4} lg={3} key={el.value}>
+            <Grid2 size={{xs:12, sm:6, md:4, lg:3}} key={el.value}>
               <Card variant="outlined" sx={{ height: '100%', borderColor: 'divider', borderWidth: '2px', transition: 'all 0.2s', '&:hover': { borderColor: 'secondary.main', bgcolor: 'rgba(33, 174, 76, 0.02)' } }}>
                 <CardActionArea onClick={() => goToClassLevels(el.value, el.label)} sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start' }}>
                   <CardContent sx={{ textAlign: 'left', p: 0, width: '100%' }}>
@@ -335,16 +335,16 @@ export default function DashboardPage() {
                   </CardContent>
                 </CardActionArea>
               </Card>
-            </Grid>
+            </Grid2>
           ))}
-        </Grid>
+        </Grid2>
       )}
 
       {/* Level 3 — Class Levels */}
       {drill.level === 'classLevel' && (
-        <Grid container spacing={3}>
+        <Grid2 container spacing={3}>
           {classLevelGroups.map((cl) => (
-            <Grid item xs={12} sm={6} md={4} lg={3} key={cl.value}>
+            <Grid2 size={{xs:12, sm:6, md:4, lg:3}} key={cl.value}>
               <Card variant="outlined" sx={{ height: '100%', borderColor: 'divider', borderWidth: '2px', transition: 'all 0.2s', '&:hover': { borderColor: 'success.main', bgcolor: 'rgba(33, 174, 76, 0.02)' } }}>
                 <CardActionArea onClick={() => goToSubjects(cl.value)} sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start' }}>
                   <CardContent sx={{ textAlign: 'left', p: 0, width: '100%' }}>
@@ -356,16 +356,16 @@ export default function DashboardPage() {
                   </CardContent>
                 </CardActionArea>
               </Card>
-            </Grid>
+            </Grid2>
           ))}
-        </Grid>
+        </Grid2>
       )}
 
       {/* Level 4 — Subjects */}
       {drill.level === 'subject' && (
-        <Grid container spacing={3}>
+        <Grid2 container spacing={3}>
           {subjectGroups.map((s) => (
-            <Grid item xs={12} sm={6} md={4} lg={3} key={s.id}>
+            <Grid2 size={{xs:12, sm:6, md:4, lg:3}} key={s.id}>
               <Card variant="outlined" sx={{ height: '100%', borderColor: 'divider', borderWidth: '2px', transition: 'all 0.2s', '&:hover': { borderColor: 'info.main', bgcolor: 'rgba(2, 136, 209, 0.02)' }, display: 'flex', flexDirection: 'column' }}>
                 <CardActionArea onClick={() => goToDocuments(s.id, s.name)} sx={{ p: 3, flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start' }}>
                   <CardContent sx={{ textAlign: 'left', p: 0, width: '100%' }}>
@@ -393,9 +393,9 @@ export default function DashboardPage() {
                   </Tooltip>
                 </CardActions>
               </Card>
-            </Grid>
+            </Grid2>
           ))}
-        </Grid>
+        </Grid2>
       )}
 
       {/* Level 5 — Documents */}
@@ -404,13 +404,13 @@ export default function DashboardPage() {
           {visibleDocs.length === 0 ? (
             <EmptyState icon={<DescriptionIcon />} title="Brak materiałów" description="Brak materiałów dla wybranych kryteriów." />
           ) : (
-            <Grid container spacing={3}>
+            <Grid2 container spacing={3}>
               {visibleDocs.map((doc) => (
-                <Grid item xs={12} sm={6} md={4} lg={3} key={doc.id}>
+                <Grid2 size={{xs:12, sm:6, md:4, lg:3}} key={doc.id}>
                   <DocumentCard document={doc} onDelete={setDeleteId} />
-                </Grid>
+                </Grid2>
               ))}
-            </Grid>
+            </Grid2>
           )}
         </>
       )}

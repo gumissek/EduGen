@@ -37,7 +37,7 @@ export default function SubjectList({ subjects, selectedSubjectId, onSelect, onD
 
   return (
     <>
-      <List sx={{ width: '100%', bgcolor: 'transparent', display: 'flex', flexDirection: 'column', gap: 1.5, p: 0 }}>
+      <List sx={{ width: '100%', bgcolor: 'transparent', display: 'flex', flexDirection: 'column', gap: 1.5, p: 0 , pt: 0.5}}>
         {subjects.map((subject) => {
           const isSelected = selectedSubjectId === subject.id;
           return (

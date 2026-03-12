@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import Grid from '@mui/material/Grid';
+import Grid2 from '@mui/material/Grid2';
 import { SourceFile } from '@/types';
 import FileCard from './FileCard';
 import EmptyState from '@/components/ui/EmptyState';
@@ -35,13 +35,13 @@ export default function FileList({ files, onDelete }: FileListProps) {
 
   return (
     <>
-      <Grid container spacing={3}>
+      <Grid2 container spacing={3}>
         {files.map((file) => (
-          <Grid item xs={12} sm={6} md={4} key={file.id}>
+          <Grid2 size={{xs:12, sm:6, md:4}} key={file.id}>
             <FileCard file={file} onDelete={setDeleteId} />
-          </Grid>
+          </Grid2>
         ))}
-      </Grid>
+      </Grid2>
       
       <ConfirmDialog
         open={!!deleteId}
