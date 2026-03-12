@@ -52,11 +52,6 @@ interface DraftListResponse {
   total: number;
 }
 
-interface SourceFileListResponse {
-  files: Array<{ filename: string }>;
-  total: number;
-}
-
 interface DraftMaterial {
   id: string;
   generation_id: string;
@@ -236,21 +231,6 @@ export default function DashboardPage() {
     },
     onError: () => error('Błąd podczas kopiowania wersji roboczej'),
   });
-
-  const copySubjectFiles = async (subjectId: string, subjectName: string) => {
-    try {
-      const res = await api.get<SourceFileListResponse>(`/api/files?subject_id=${subjectId}`);
-      const filenames = res.data.files.map((f) => f.filename);
-      const text = filenames.length > 0
-        ? filenames.join('\n')
-        : `Brak plików źródłowych dla: ${subjectName}`;
-
-      await navigator.clipboard.writeText(text);
-      success('Skopiowano listę plików źródłowych');
-    } catch {
-      error('Nie udało się skopiować listy plików');
-    }
-  };
 
   // --- Derived data for each drill level ---
 

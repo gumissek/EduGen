@@ -17,9 +17,12 @@ export default function RegisterPage() {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #014883 0%, #009FE3 100%)',
-        p: 2,
+        minHeight: '100%',
+        background: (theme) =>
+          theme.palette.mode === 'light'
+            ? 'linear-gradient(135deg, rgba(1,72,131,0.08) 0%, rgba(255,255,255,1) 70%)'
+            : 'linear-gradient(135deg, rgba(47,110,163,0.18) 0%, rgba(18,18,18,1) 70%)',
+        p: { xs: 2, sm: 3 },
       }}
     >
       <Paper
@@ -32,7 +35,8 @@ export default function RegisterPage() {
           maxWidth: 480,
           width: '100%',
           borderRadius: '24px',
-          boxShadow: '0 24px 64px rgba(0,0,0,0.3)',
+          boxShadow: (theme) =>
+            theme.palette.mode === 'light' ? '0 18px 44px rgba(0,0,0,0.12)' : '0 18px 44px rgba(0,0,0,0.45)',
         }}
       >
         <Box sx={{ 

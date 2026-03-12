@@ -3,6 +3,7 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Paper from '@mui/material/Paper';
 import Divider from '@mui/material/Divider';
+import Alert from '@mui/material/Alert';
 import ApiKeyForm from '@/components/settings/ApiKeyForm';
 import ModelSelector from '@/components/settings/ModelSelector';
 import VpnKeyIcon from '@mui/icons-material/VpnKey';
@@ -18,6 +19,9 @@ export default function SettingsPage() {
         <Typography variant="body1" color="text.secondary">
           Zarządzaj kluczami API i modelem sztucznej inteligencji.
         </Typography>
+        <Alert severity="info" sx={{ mt: 2 }}>
+           Nie mamy dostępu do Twoich kluczy API! Twój klucz jest szyfrowany i przechowywany bezpiecznie w bazie danych. Używamy go tylko do komunikacji z funkcjami AI.
+        </Alert>
       </Box>
       
       <Paper variant="outlined" sx={{ p: { xs: 3, sm: 4 }, mb: 4, borderRadius: '24px', borderColor: 'divider', boxShadow: '0 4px 24px rgba(0,0,0,0.02)' }}>

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
 import { AxiosError } from 'axios';
+import { useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import type { LoginRequest, LoginResponse, RegisterRequest } from '@/schemas/auth';
 
@@ -11,6 +12,7 @@ const AUTH_COOKIE = 'edugen-auth';
 
 export function useAuth() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,6 +30,7 @@ export function useAuth() {
         expires: 7, // 7 days
         sameSite: 'lax',
       });
+      queryClient.clear();
       router.push('/dashboard');
     } catch (err: unknown) {
       const message =
@@ -69,6 +72,11 @@ export function useAuth() {
       // Ignore errors — still clear local state
     }
     Cookies.remove(AUTH_COOKIE);
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem('edugen-generation-step');
+      window.localStorage.removeItem('edugen-generation-draft');
+    }
+    queryClient.clear();
     router.push('/login');
   };
 

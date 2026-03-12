@@ -42,6 +42,7 @@ Aplikacja korzysta z Next.js App Router. Wszystkie pliki `page.tsx` w folderach 
 - `/about` — publiczna strona „O nas” z mock danymi
 - `/login` — ekran logowania (email + hasło)
 - `/register` — ekran rejestracji nowego konta (email, imię, nazwisko, hasło, potwierdzenie hasła)
+- Publiczne strony korzystają z `PublicChrome` (stały topbar + stała stopka) i mają oddzielny topbar od strefy zalogowanej.
 
 ---
 
@@ -73,13 +74,19 @@ Główny proces biznesowy to generowanie dokumentów. Elementy go wspierające:
 ### `layout/`
 - Layout aplikacji (Sidebar, TopBar).
 - **`Sidebar.tsx`** wyświetla wersję aplikacji w stopce (`NEXT_PUBLIC_APP_NAME`, `NEXT_PUBLIC_APP_VERSION`, `NEXT_PUBLIC_APP_RELEASE_DATE`). Zmienne są wstrzykiwane **w czasie budowania** (build-time). W trybie lokalnym (`npm run dev`) Next.js odczytuje je z `frontend/.env.local`. W Dockerze są przekazywane jako build args w `docker-compose.yml` → `Dockerfile` (`ARG`/`ENV`). Zawiera linki: Generuj, Materiały, Przedmioty i Pliki, Ustawienia.
+- **`Sidebar.tsx`** wyświetla w dolnej sekcji: logo, kontakt e-mail oraz wersję aplikacji (`NEXT_PUBLIC_APP_NAME`, `NEXT_PUBLIC_APP_VERSION`, `NEXT_PUBLIC_APP_RELEASE_DATE`). Zmienne są wstrzykiwane **w czasie budowania** (build-time). W trybie lokalnym (`npm run dev`) Next.js odczytuje je z `frontend/.env.local`. W Dockerze są przekazywane jako build args w `docker-compose.yml` → `Dockerfile` (`ARG`/`ENV`). Zawiera linki: Generuj, Materiały, Przedmioty i Pliki, Ustawienia.
 - **`TopBar.tsx`** wyświetla: tytuł strony, imię/nazwisko i email zalogowanego użytkownika, chip z api_quota (jeśli brak secret_keys), przycisk panelu admina (dla superuserów), przełącznik motywu i przycisk wylogowania.
+- **`TopBar.tsx`** wyświetla: tytuł strony, imię/nazwisko i email zalogowanego użytkownika, chip z api_quota (jeśli brak secret_keys), przycisk panelu admina (dla superuserów), globalny przycisk **„Odśwież stronę”**, przełącznik motywu i przycisk wylogowania.
+- **`PublicTopBar.tsx`** — topbar dla niezalogowanych z nawigacją (`Start`, `O nas`), akcjami `Login`/`Register` oraz przełącznikiem motywu.
+- **`PublicChrome.tsx`** — warstwa layoutu dla publicznych tras; odpowiada za stały publiczny topbar i stopkę.
+- **`AppFooter.tsx`** — stopka dla strefy publicznej; zawiera logo (`/logo.png`) i kontakt.
 
 ### Inne
 - `documents/`, `subjects/`, `settings/` — komponenty odpowiadające logice poszczególnych domen.
   - **`documents/[id]/page.tsx`** — podgląd gotowego materiału zawiera akcję **„Edytuj i przenieś na wersję roboczą”** z modalem potwierdzenia; po akceptacji wywoływany jest `POST /api/documents/{document_id}/move-to-draft` i następuje przekierowanie do edytora roboczego.
   - **`subjects/FileList.tsx` + `subjects/FileCard.tsx`** — dodana opcja pobierania wgranego pliku źródłowego (`GET /api/files/{file_id}/download`).
   - **`settings/ApiKeyForm.tsx`** — CRUD kluczy API (tabela secret_keys). Dodawanie, usuwanie, walidacja klucza via OpenRouter. Na ekranach mobilnych (xs) zamiast tabeli wyświetla karty z kluczowymi informacjami i przyciskami akcji.
+  - **`(authenticated)/settings/page.tsx`** — zawiera informację bezpieczeństwa, że klucz OpenRouter nie jest przechowywany w `localStorage`, tylko szyfrowany po stronie backendu.
   - **`settings/ModelSelector.tsx`** — wybór domyślnego modelu AI (tabela `user_ai_models`). Wyświetla alertem ostrzeżenie jeśli żaden model nie jest wybrany. Po usunięciu aktualnie wybranego modelu automatycznie przełącza na pierwszy z pozostałych (lub czyści wybór jeśli lista jest pusta). Dialog dodawania z linkiem do openrouter.ai/models. Na ekranach mobilnych (xs) zamiast tabeli wyświetla interaktywne karty z przyciskiem radio.
   - Backupy zostały przeniesione z ustawień użytkownika do sekcji admin (`/admin-panel/database`).
 - `ui/` — fundamentalne reużywalne fragmenty interfejsu (własne wrappery dla przycisków, powiadomienia Snackbar itp).
@@ -90,10 +97,12 @@ Główny proces biznesowy to generowanie dokumentów. Elementy go wspierające:
 
 Frontend korzysta z bezstanowej autoryzacji JWT:
 
-- **`login(data)`** — wysyła `{email, password}` do `POST /api/auth/login`, zapisuje `access_token` w ciasteczku `edugen-auth` (7 dni, SameSite=Lax) via `js-cookie`, przekierowuje do `/dashboard`.
+- **`login(data)`** — wysyła `{email, password}` do `POST /api/auth/login`, zapisuje `access_token` w ciasteczku `edugen-auth` (7 dni, SameSite=Lax) via `js-cookie`, czyści cache React Query i przekierowuje do `/dashboard`.
 - **`register(data)`** — wysyła `{email, password, first_name, last_name}` do `POST /api/auth/register`, po sukcesie automatycznie loguje użytkownika.
-- **`logout()`** — wywołuje `POST /api/auth/logout`, usuwa ciasteczko `edugen-auth`, przekierowuje do `/login`.
+- **`logout()`** — wywołuje `POST /api/auth/logout`, usuwa ciasteczko `edugen-auth`, czyści cache React Query oraz lokalny draft kreatora (`edugen-generation-*`), a następnie przekierowuje do `/login`.
 - **`isAuthenticated()`** — sprawdza istnienie ciasteczka `edugen-auth`.
+
+> Klucze OpenRouter nie są przechowywane po stronie przeglądarki (w tym w `localStorage`).
 
 ### `src/lib/api.ts`
 - Żądania wysyłane są na ścieżkę bazową `/api`, którą deweloperskie proxy lub Next.js rewrites w `next.config.ts` przekierowują do backendu pod adresem konfigurowanym przez zmienną `BACKEND_URL`.

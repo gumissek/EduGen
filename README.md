@@ -13,7 +13,9 @@ This application emphasizes privacy and data control by running entirely on `loc
 - **Source File Processing**: OCR capabilities for images/scans using Vision, text extraction from PDF (via PyMuPDF) and DOCX (via python-docx).
 - **Drafting & Finalization**: WYSIWYG Editor (TipTap) to review/edit AI prototypes, followed by DOCX generation with shuffled questions for multiple test variants.
 - **Privacy & Security**: Entirely local environment (`localhost` only, no LAN access), AES-encrypted API keys stored in `secret_keys` table, bcrypt-hashed passwords, and automatic daily database backups.
+- **Secure Key Handling**: OpenRouter API keys are managed only through backend endpoints and encrypted storage (not persisted in browser `localStorage`).
 - **Background Processing**: FastAPI BackgroundTasks for async AI generation and document processing.
+- **Unified UX Shell**: Separate topbars for authenticated vs public routes, plus a global footer (logo + contact) visible across the app.
 
 ---
 
@@ -60,6 +62,13 @@ The startup scripts handle Docker checks, automatic `.env` creation from `.confi
 > If `backend/.env` is missing, the startup scripts automatically copy the bundled `.config_backend` template to `backend/.env`. Remember to add your own OpenRouter API Key in the Settings panel before generating materials.
 
 > App runs at `http://localhost:3000` (Frontend) and `http://localhost:8000` (Backend).
+
+### UI Notes (current behavior)
+
+- Public routes (`/`, `/about`, `/login`, `/register`) use a dedicated topbar with `Login`, `Register`, theme toggle, and public navigation.
+- Authenticated routes keep a separate topbar with user profile/actions and use the sidebar layout.
+- Dashboard and Subjects views include a manual **"Odśwież stronę"** action in page headers.
+- Global footer includes project logo (`frontend/public/logo.png`) and contact actions.
 
 **Stopping the application:**
 - **Windows:** Press `CTRL + C` in the console window, then confirm with `T` or `Y` + `Enter`.

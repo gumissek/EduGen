@@ -164,6 +164,12 @@ Po otwarciu przeglądarki pod adresem **http://localhost:3000** zostaniesz przek
 
 > Aplikacja obsługuje wielu niezależnych użytkowników. Każde konto posiada własne, odizolowane dane (przedmioty, pliki, wygenerowane materiały). Nie istnieje żadne domyślne hasło — każdy użytkownik samodzielnie tworzy swoje konto.
 
+### Aktualny interfejs (UI)
+
+- Dla użytkownika niezalogowanego i zalogowanego wyświetlane są **różne topbary** (zależnie od strefy aplikacji).
+- W całej aplikacji widoczna jest wspólna **stopka** z logo i kontaktem.
+- Na wybranych stronach (np. Materiały i Przedmioty) dostępny jest przycisk **„Odśwież stronę”**.
+
 ---
 
 ## Zatrzymywanie aplikacji

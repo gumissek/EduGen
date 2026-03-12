@@ -198,3 +198,4 @@ Architektura grupuje endpointy na określone sfery:
 - Hashowanie haseł via `bcrypt` z śledzeniem nieudanych prób logowania.
 - Path Traversal Protection — operacje plikowe ograniczone do `DATA_DIR`.
 - Cookie `edugen-auth` z `SameSite=Lax` i 7-dniowym max-age.
+- Frontend po `login/logout` czyści cache zapytań (React Query), co eliminuje chwilowe wyświetlenie danych innego użytkownika po przelogowaniu i wzmacnia izolację danych opartą o `user_id` po stronie API.

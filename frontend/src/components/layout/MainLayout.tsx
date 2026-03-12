@@ -37,7 +37,9 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       >
         <Toolbar sx={{ minHeight: { xs: 64, sm: 70 }, mb: { xs: 1, sm: 2 } }} /> {/* Spacer for TopBar */}
         <Box sx={{ maxWidth: 1440, width: '100%', mx: 'auto', flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-          {children}
+          <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+            {children}
+          </Box>
         </Box>
       </Box>
     </Box>

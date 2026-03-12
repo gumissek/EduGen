@@ -12,6 +12,7 @@ import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 import LogoutIcon from '@mui/icons-material/Logout';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
 import Tooltip from '@mui/material/Tooltip';
@@ -130,6 +131,21 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
               </IconButton>
             </Tooltip>
           )}
+
+          <Tooltip title="Odśwież stronę">
+            <IconButton
+              color="inherit"
+              onClick={() => window.location.reload()}
+              sx={{
+                bgcolor: 'action.hover',
+                flexShrink: 0,
+                '&:hover': { bgcolor: 'action.selected', transform: 'scale(1.05)' },
+                transition: 'all 0.2s',
+              }}
+            >
+              <RefreshIcon />
+            </IconButton>
+          </Tooltip>
 
           <Tooltip title={mode === 'dark' ? 'Tryb jasny' : 'Tryb ciemny'}>
             <IconButton
