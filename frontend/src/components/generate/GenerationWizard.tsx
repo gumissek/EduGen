@@ -183,7 +183,15 @@ export default function GenerationWizard() {
   }
 
   return (
-    <Paper sx={{ p: { xs: 2, sm: 3, md: 5 }, borderRadius: '24px', border: '1px solid', borderColor: 'divider', boxShadow: '0 4px 24px rgba(0,0,0,0.02)' }}>
+    <Paper sx={{ 
+      p: { xs: 2, sm: 3, md: 5 }, 
+      borderRadius: '24px', 
+      border: '1px solid', 
+      borderColor: 'divider', 
+      boxShadow: '0 4px 24px rgba(0,0,0,0.02)',
+      width: '100%',
+      overflow: 'hidden' // Zabezpieczenie przed rozpychaniem przez zawartość
+    }}>
       {/* Selected content type badge */}
       {activeStep > 0 && contentTypeLabel && (
         <Box sx={{ 
@@ -241,52 +249,75 @@ export default function GenerationWizard() {
         </Box>
       )}
 
-      {/* RWD: Wrapper wymuszający scrollowanie Steppera na wąskich ekranach */}
+      {/* RWD: Zoptymalizowany wrapper scrollujący Stepper */}
       <Box sx={{ 
-        width: '100%', 
+        width: { xs: 'calc(100% + 32px)', sm: '100%' }, // Poszerzenie o padding Paper na mobile
+        mx: { xs: -2, sm: 0 }, // Ujemne marginesy dla scrollowania edge-to-edge
+        px: { xs: 2, sm: 0 },  // Przywrócenie wewnętrznego paddingu
         overflowX: 'auto', 
+        WebkitOverflowScrolling: 'touch', // Płynne przewijanie na iOS
         pb: 1,
         mb: { xs: 3, md: 5 },
         scrollbarWidth: 'none',
         '&::-webkit-scrollbar': { display: 'none' }
       }}>
-        <Stepper 
-          activeStep={activeStep} 
-          alternativeLabel 
-          sx={{ 
-            minWidth: { xs: 500, sm: 'auto' },
-            '& .MuiStepLabel-label': { fontWeight: 500, mt: 1 },
-            '& .MuiStepLabel-label.Mui-active': { color: 'primary.main', fontWeight: 700 },
-            '& .MuiStepLabel-label.Mui-completed': { color: 'text.primary', fontWeight: 600 },
-            '& .MuiStepConnector-line': { borderColor: 'divider', borderWidth: 2, borderRadius: 1 },
-          }}
-        >
-          {ALL_STEPS.map((label, index) => {
-            const isSkipped = index === QUESTIONS_STEP && isFreeForm;
-            return (
-              <Step key={label} completed={activeStep > index && !isSkipped}>
-                <StepLabel
-                  optional={
-                    isSkipped ? (
-                      <Typography 
-                        component="span" 
-                        color="error" 
-                        sx={{ fontSize: "11px", fontWeight: 600, letterSpacing: "0.02em" }}
-                      >
-                        Nie dotyczy
-                      </Typography>
-                    ) : undefined
-                  }
-                  slotProps={{
-                    stepIcon: isSkipped ? { style: { color: 'var(--mui-palette-divider)' } } : undefined
-                  }}
-                >
-                  {label}
-                </StepLabel>
-              </Step>
-            );
-          })}
-        </Stepper>
+      <Stepper 
+        activeStep={activeStep} 
+        alternativeLabel 
+        sx={{ 
+          // Zapewnia, że stepper rozciągnie się do szerokości swoich dzieci (uruchamiając scroll w kontenerze)
+          minWidth: { xs: 'max-content', sm: '100%' }, 
+          
+          // Nadajemy minimalną szerokość pojedynczemu krokowi, by zachować równe odstępy
+          '& .MuiStep-root': {
+            minWidth: { xs: '110px', sm: 'auto' },
+          },
+          
+          '& .MuiStepLabel-label': { 
+            fontWeight: 500, 
+            mt: 1,
+            // Mniejsza czcionka na mobile i blokada zawijania tekstu
+            fontSize: { xs: '0.75rem', sm: '0.875rem' },
+            whiteSpace: { xs: 'nowrap', sm: 'normal' }, 
+          },
+          '& .MuiStepLabel-label.Mui-active': { color: 'primary.main', fontWeight: 700 },
+          '& .MuiStepLabel-label.Mui-completed': { color: 'text.primary', fontWeight: 600 },
+          '& .MuiStepConnector-line': { borderColor: 'divider', borderWidth: 2, borderRadius: 1 },
+        }}
+      >
+        {ALL_STEPS.map((label, index) => {
+          const isSkipped = index === QUESTIONS_STEP && isFreeForm;
+          return (
+            <Step key={label} completed={activeStep > index && !isSkipped}>
+              <StepLabel
+                optional={
+                  isSkipped ? (
+                    <Typography 
+                      component="span" 
+                      color="error" 
+                      sx={{ 
+                        display: "block", // Upewniamy się, że to ląduje w nowej linii pod etykietą
+                        textAlign: "center",
+                        fontSize: { xs: "9px", sm: "11px" }, // Mniejsza uwaga na mobile
+                        fontWeight: 600, 
+                        letterSpacing: "0.02em",
+                        mt: { xs: 0.5, sm: 0 }
+                      }}
+                    >
+                      Nie dotyczy
+                    </Typography>
+                  ) : undefined
+                }
+                slotProps={{
+                  stepIcon: isSkipped ? { style: { color: 'var(--mui-palette-divider)' } } : undefined
+                }}
+              >
+                {label}
+              </StepLabel>
+            </Step>
+          );
+        })}
+      </Stepper>
       </Box>
 
       <FormProvider {...methods}>
@@ -302,7 +333,7 @@ export default function GenerationWizard() {
           <Box sx={{ 
             display: 'flex', 
             flexDirection: { xs: 'column-reverse', sm: 'row' }, 
-            gap: 2,
+            gap: { xs: 1.5, sm: 2 },
             pt: 3, 
             mt: { xs: 2, md: 4 }, 
             borderTop: 1, 
@@ -360,7 +391,6 @@ export default function GenerationWizard() {
           display: 'flex',
           flexDirection: { xs: 'column', sm: 'row' }, 
           gap: { xs: 1.5, sm: 1 },
-          // Reset child margins applied by DialogActions to work with flex gap properly
           '& > :not(style)': { m: '0 !important' } 
         }}>
           <Button 

@@ -69,6 +69,8 @@ if not exist ".env" (
         echo         - POSTGRES_PASSWORD
         echo         - JWT_SECRET_KEY
         echo.
+        pause
+        exit /b 0
     ) else (
         echo [BLAD] Brak pliku .env.example w glownym katalogu projektu.
         echo Pobierz ponownie projekt lub utwórz plik .env recznie na podstawie dokumentacji.
@@ -103,6 +105,15 @@ echo.
 
 :: Uruchamianie kontenerow w trybie interaktywnym (CTRL+C zatrzyma kontenery)
 docker compose up --build
+
+if %ERRORLEVEL% NEQ 0 (
+    echo.
+    echo ============================================
+    echo   Wystapil blad podczas uruchamiania Docker
+    echo ============================================
+    pause
+    exit /b 1
+)
 
 powershell -Command "Write-Host '' ; Write-Host '============================================' -ForegroundColor Yellow ; Write-Host '  Aplikacja zostala zatrzymana.' -ForegroundColor Yellow ; Write-Host '============================================' -ForegroundColor Yellow"
 

@@ -25,6 +25,7 @@ curl.exe -s -f -o "%TEMP_VERSION%" "%REMOTE_VERSION_URL%"
 if %ERRORLEVEL% NEQ 0 (
     echo [UWAGA] Nie mozna pobrac pliku .version z: %REPO_URL% ^(%MASTER_BRANCH%^). Sprawdz polaczenie z internetem.
     echo.
+    goto koniec
     exit /b 0
 )
 
@@ -37,6 +38,7 @@ if "%REMOTE_VERSION%"=="" (
     echo [UWAGA] Nie mozna odczytac zdalnej wersji z pobranego pliku.
     echo.
     exit /b 0
+    goto koniec
 )
 
 echo Lokalna wersja:  %LOCAL_VERSION%
@@ -63,6 +65,7 @@ if /i "%UPDATE%"=="T" (
         echo [UWAGA] Git nie jest zainstalowany. Nie moge wykonac automatycznej aktualizacji.
         echo.
         exit /b 0
+        goto koniec
     )
 
     git rev-parse --git-dir >nul 2>&1
@@ -70,6 +73,7 @@ if /i "%UPDATE%"=="T" (
         echo [UWAGA] Katalog nie jest repozytorium git - wykonaj aktualizacje recznie.
         echo.
         exit /b 0
+        goto koniec
     )
 
     set CURRENT_BRANCH=
@@ -79,6 +83,7 @@ if /i "%UPDATE%"=="T" (
         echo         Automatyczna aktualizacja obsluguje tylko galaz '%MASTER_BRANCH%'.
         echo.
         exit /b 0
+        goto koniec
     )
 
     :: [ZMIANA 2] Sprawdzenie czy sa niezatwierdzone zmiany przed wykonaniem pull
@@ -88,6 +93,7 @@ if /i "%UPDATE%"=="T" (
         echo [BLAD] Automatyczna aktualizacja zostala przerwana, aby nie nadpisac Twojej pracy.
         echo.
         exit /b 0
+        goto koniec
     )
 
     :: [ZMIANA 3] Uzycie standardowego 'origin master' zamiast bezposredniego linku
@@ -96,7 +102,10 @@ if /i "%UPDATE%"=="T" (
     
     if !ERRORLEVEL! EQU 0 (
         echo.
-        echo [OK] Aktualizacja zakonczona sukcesem. Uruchom aplikacje ponownie, aby zastosowac zmiany.
+        echo [OK] Aktualizacja pobrana! Zmiany w plikach skryptow mogly zostac nadpisane.
+        echo Zamknij to okno i uruchom aplikacje ponownie.
+        pause
+        exit
     ) else (
         echo.
         echo [BLAD] Nie udalo sie wykonac automatycznej aktualizacji (Sprawdz logi gita powyzej).
@@ -104,5 +113,6 @@ if /i "%UPDATE%"=="T" (
 ) else (
     echo [UWAGA] Pominieto aktualizacje.
 )
+:koniec
 echo.
 exit /b 0
