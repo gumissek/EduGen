@@ -1,19 +1,32 @@
 @echo off
 setlocal EnableDelayedExpansion
 
-if exist "check_update.bat" (
-    call check_update.bat
-    if errorlevel 1 (
-        echo [UWAGA] Wystapil problem podczas sprawdzania aktualizacji. Kontynuuje uruchamianie aplikacji.
+:: Sprawdzenie aktualnej galezi Git
+set CURRENT_BRANCH=
+FOR /F "tokens=*" %%i IN ('git rev-parse --abbrev-ref HEAD 2^>nul') DO set CURRENT_BRANCH=%%i
+
+if /i "!CURRENT_BRANCH!"=="master" (
+    if exist "check_update.bat" (
+        call check_update.bat
+        if errorlevel 1 (
+            echo [UWAGA] Wystapil problem podczas sprawdzania aktualizacji. Kontynuuje uruchamianie aplikacji.
+            echo.
+        )
+    ) else (
+        echo [UWAGA] Brak pliku check_update.bat - pomijam sprawdzanie aktualizacji.
         echo.
     )
 ) else (
-    echo [UWAGA] Brak pliku check_update.bat - pomijam sprawdzanie aktualizacji.
+    if "!CURRENT_BRANCH!"=="" (
+        echo [UWAGA] Nie wykryto repozytorium Git ^(lub Git nie jest zainstalowany^). Pomijam sprawdzanie aktualizacji.
+    ) else (
+        echo [INFO] Aktualna galaz to '!CURRENT_BRANCH!' ^(nie 'master'^). Pomijam sprawdzanie aktualizacji.
+    )
     echo.
 )
 
 echo ============================================
-echo         EduGen - Uruchamianie aplikacji
+echo        EduGen - Uruchamianie aplikacji
 echo ============================================
 echo.
 

@@ -3,6 +3,7 @@ services:
     image: postgres:16
     container_name: edugen-postgres
     restart: unless-stopped
+    stop_grace_period: 5s # natychmiastowe ubijanie kontenera
     env_file:
       - .env                          # dostarcza POSTGRES_PASSWORD
     environment:
@@ -26,6 +27,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: edugen-backend
+    stop_grace_period: 2s # natychmiastowe ubijanie kontenera
     ports:
       - "127.0.0.1:8000:8000"
     volumes:
@@ -61,6 +63,7 @@ services:
       args:
         BACKEND_URL: http://backend:8000
     container_name: edugen-frontend
+    stop_grace_period: 2s # natychmiastowe ubijanie kontenera
     ports:
       - "127.0.0.1:3000:3000"
     volumes:

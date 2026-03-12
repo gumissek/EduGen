@@ -19,9 +19,9 @@ fi
 echo "Pobieranie informacji o repozytorium..."
 REMOTE_VERSION=""
 if command -v curl &>/dev/null; then
-    REMOTE_VERSION=$(curl -fsSL "$REMOTE_VERSION_URL" 2>/dev/null | grep "^VERSION=" | cut -d'=' -f2 || true)
+    REMOTE_VERSION=$(curl -fsSL "$REMOTE_VERSION_URL" 2>/dev/null | grep "^VERSION=" | cut -d'=' -f2 || echo "")
 elif command -v wget &>/dev/null; then
-    REMOTE_VERSION=$(wget -qO- "$REMOTE_VERSION_URL" 2>/dev/null | grep "^VERSION=" | cut -d'=' -f2 || true)
+    REMOTE_VERSION=$(wget -qO- "$REMOTE_VERSION_URL" 2>/dev/null | grep "^VERSION=" | cut -d'=' -f2 || echo "")
 else
     echo "[UWAGA] Brak narzedzia curl/wget - pomijam sprawdzanie aktualizacji."
     echo ""
@@ -29,15 +29,14 @@ else
 fi
 
 if [ -z "$REMOTE_VERSION" ]; then
-    echo "[UWAGA] Nie mozna pobrac pliku .version z: $REPO_URL ($MASTER_BRANCH)."
-    echo ""
+    echo "[UWAGA] Nie mozna odczytac zdalnej wersji z pobranego pliku."
+    echo "Sprawdz polaczenie z internetem lub dostepnosc pliku na: $REPO_URL ($MASTER_BRANCH)."
     echo ""
     exit 0
 fi
 
 echo "Lokalna wersja:  $LOCAL_VERSION"
 echo "Zdalna wersja:   $REMOTE_VERSION"
-echo "Zrodlo:          $REPO_URL ($MASTER_BRANCH)"
 echo ""
 
 if [ "$LOCAL_VERSION" = "$REMOTE_VERSION" ]; then
@@ -75,13 +74,22 @@ if [[ "$confirm" =~ ^[Tt]$ ]]; then
         exit 0
     fi
 
-    echo "Pobieranie aktualizacji z $REPO_URL ($MASTER_BRANCH)..."
-    if git pull "$REPO_URL" "$MASTER_BRANCH"; then
+    # [ZMIANA 1] Sprawdzenie czy sa niezatwierdzone zmiany przed wykonaniem pull
+    if [ -n "$(git status --porcelain)" ]; then
+        echo "[BLAD] Wykryto lokalne zmiany w plikach projektu."
+        echo "[BLAD] Automatyczna aktualizacja zostala przerwana, aby nie nadpisac Twojej pracy."
         echo ""
-        echo "[OK] Aktualizacja zakonczona. Uruchom aplikacje ponownie aby zastosowac zmiany."
+        exit 0
+    fi
+
+    # [ZMIANA 2] Uzycie standardowego 'origin master' zamiast bezposredniego linku
+    echo "Pobieranie aktualizacji z galezi $MASTER_BRANCH..."
+    if git pull origin "$MASTER_BRANCH"; then
+        echo ""
+        echo "[OK] Aktualizacja zakonczona sukcesem. Uruchom aplikacje ponownie, aby zastosowac zmiany."
     else
         echo ""
-        echo "[UWAGA] Nie udalo sie wykonac automatycznej aktualizacji."
+        echo "[BLAD] Nie udalo sie wykonac automatycznej aktualizacji (Sprawdz logi gita powyzej)."
     fi
 else
     echo "[UWAGA] Pominieto aktualizacje."

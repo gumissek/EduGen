@@ -1,13 +1,26 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [ -f "check_update.sh" ]; then
-    bash check_update.sh || {
-        echo "[UWAGA] Wystapil problem podczas sprawdzania aktualizacji. Kontynuuje uruchamianie aplikacji."
+# ── Sprawdzenie aktualnej gałęzi Git ─────────────────────────────────────────
+# Używamy || echo "", aby zapobiec przerwaniu skryptu przez 'set -e', gdy nie ma repozytorium
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+
+if [ "$CURRENT_BRANCH" = "master" ]; then
+    if [ -f "check_update.sh" ]; then
+        bash check_update.sh || {
+            echo "[UWAGA] Wystapil problem podczas sprawdzania aktualizacji. Kontynuuje uruchamianie aplikacji."
+            echo ""
+        }
+    else
+        echo "[UWAGA] Brak pliku check_update.sh - pomijam sprawdzanie aktualizacji."
         echo ""
-    }
+    fi
 else
-    echo "[UWAGA] Brak pliku check_update.sh - pomijam sprawdzanie aktualizacji."
+    if [ -z "$CURRENT_BRANCH" ]; then
+        echo "[UWAGA] Nie wykryto repozytorium Git (lub Git nie jest zainstalowany). Pomijam sprawdzanie aktualizacji."
+    else
+        echo "[INFO] Aktualna galaz to '$CURRENT_BRANCH' (nie 'master'). Pomijam sprawdzanie aktualizacji."
+    fi
     echo ""
 fi
 
