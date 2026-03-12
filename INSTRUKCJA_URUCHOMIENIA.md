@@ -99,7 +99,6 @@ Skrypty startowe (`start_windows.bat` / `start_mac_linux.sh`) automatycznie wykr
 **Opcja B – Ręczna instalacja:**
 1. Znajdź główny folder projektu **EduGen** na swoim urządzeniu.
 2. Skopiuj plik **`.env.example`** w głównym katalogu projektu i zmień jego nazwę na **`.env`**.
-3. Otwierz plik `.env` w edytorze tekstowym, zmień `POSTGRES_PASSWORD` na bezpieczne i wygeneruj unikalny 64-znakowy ciąg dla `JWT_SECRET_KEY`.
 3. Otwórz plik `.env` w edytorze tekstowym, zmień `POSTGRES_PASSWORD` na bezpieczne oraz wygeneruj unikalny 64-znakowy ciąg dla `JWT_SECRET_KEY`. Klucz API OpenRouter dodasz po uruchomieniu aplikacji w panelu **Ustawienia**.
 
 ---
@@ -174,12 +173,12 @@ Aplikacja pozostaje uruchomiona w tle tak długo, jak aktywne jest okno konsoli 
 ### Komputery Windows:
 1. Przejdź z powrotem do użytego wcześniej, otwartego wiersza poleceń (konsoli) wewnątrz którego załadowany został i uruchomiony plik **`start_windows.bat`**.
 2. Na klawiaturze naciśnij jednocześnie klawisze **CTRL + C**.
-3. Gdy konsola zapyta o potwierdzenie procedury zamknięcia środowiskowego procesu wykonawczego pytaniem ("Przerwanie działania skryptu wsadowego? / Terminate batch job?") wpisz w dolnej podpowiedzi pole konsoli wiersza na znak **T** (lub **Y** w zależności od języka systemu) i ostatecznie wciśnij akceptację poleceniem **Enter**. Skrypt samodzielnie zatrzyma wyodrębnione kontenery i bezpiecznie odłoży środowisko w stan wstrzymania.
+3. Gdy konsola zapyta o potwierdzenie procedury zamknięcia ("Przerwanie działania skryptu wsadowego? / Terminate batch job?") wpisz w pole konsoli wiersza na znak **T** (lub **Y** w zależności od języka systemu) i zaakceptuj wciskając **Enter**. Skrypt samodzielnie zatrzyma aplikację.
 
 ### Komputery macOS / Linux:
 1. Przełącz do otwartego okna **Terminal**, w którym działa **`start_mac_linux.sh`** lub **`Uruchom_Mac.command`**.
 2. Na klawiaturze naciśnij jednocześnie klawisze **CTRL + C**.
-3. Kontenery automatycznie rozpoczną się zatrzymywać dzięki obsłudze tzw. "trapa", informując w terminalu o rozpoczęciu domyślnego wyłączania procesu dla całych architektur aplikacji poprzez funkcje deweloperskie zachowujące pełną niezależność, np. _"Zatrzymywanie kontenerow..."_.
+3. Terminal zapyta o potwierdzenie procedury zamknięcia. Wpisz **T** (lub **Y** w zależności od języka systemu) i zatwierdź wciskając **Enter**. Skrypt samodzielnie zatrzyma aplikację.
 
 ---
 
@@ -199,4 +198,4 @@ Skrypty startowe automatycznie tworzą plik `.env` z szablonu `.env.example`, je
 ### Strona WWW nie odpowiada i generuje się w nieskończoność 
 - Początkowe uruchomienie aplikacji może trwać dłużej ze względu na potrzebę pobrania obrazów instalacyjnych z Internetu. Poczekaj cierpliwie, aż proces się zakończy.
 - Upewnij się, że wpisujesz poprawny adres URL w przeglądarce: **http://localhost:3000**. Sprawdź, czy nie ma literówek i czy nie próbujesz połączyć się przez HTTPS.
-- Sprawdź komunikaty w oknie konsoli, aby zidentyfikować problem. Jeśli widzisz błędy, zrób zrzut ekranu i skontaktuj się z administratorem.
+- Sprawdź komunikaty w oknie konsoli, aby zidentyfikować problem. Jeśli widzisz błędy, zrób zrzut ekranu i skontaktuj się z pod adresem email: **bilinski.piotr89@gmail.com**.
