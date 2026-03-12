@@ -85,7 +85,8 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
 
   const repromptMutation = useMutation({
     mutationFn: async (prompt: string) => {
-      const res = await api.post(`/api/prototypes/${id}/reprompt`, { prompt });
+      // 150 s — matches the 90 s backend timeout + generous network margin
+      const res = await api.post(`/api/prototypes/${id}/reprompt`, { prompt }, { timeout: 150_000 });
       return res.data as PrototypeData;
     },
     onSuccess: (data: PrototypeData) => {
@@ -96,9 +97,35 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
       success('AI zaktualizowało treść');
     },
     onError: (err: unknown) => {
-      const axiosErr = err as { response?: { data?: { detail?: string } } };
-      const detail: string = axiosErr?.response?.data?.detail ?? '';
+      const axiosErr = err as {
+        response?: { status?: number; data?: { detail?: string } };
+        code?: string;
+        message?: string;
+      };
 
+      // ── Network / proxy errors (no HTTP response received) ──────────────────
+      if (!axiosErr.response) {
+        const code = axiosErr.code ?? '';
+        const msg  = (axiosErr.message ?? '').toLowerCase();
+        if (code === 'ECONNABORTED' || msg.includes('timeout')) {
+          error('Zapytanie do AI trwało zbyt długo i zostało anulowane. Spróbuj ponownie lub wybierz szybszy model AI w Ustawieniach.');
+        } else {
+          // ECONNRESET / socket hang up / network error
+          error('Połączenie z serwerem zostało przerwane. AI może nadal przetwarzać Twoje zapytanie — odśwież stronę za chwilę lub spróbuj ponownie.');
+        }
+        return;
+      }
+
+      const status = axiosErr.response.status ?? 0;
+      const detail: string = axiosErr.response.data?.detail ?? '';
+
+      // ── 504 Gateway Timeout (backend hard limit hit) ─────────────────────────
+      if (status === 504) {
+        error(detail || 'Zapytanie do AI przekroczyło limit czasu serwera. Spróbuj ponownie lub wybierz szybszy model AI.');
+        return;
+      }
+
+      // ── Application-level errors from the detail field ───────────────────────
       if (
         detail.includes('nieprawidłowy JSON') ||
         detail.includes('JSONDecodeError') ||
@@ -187,20 +214,36 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
         </Box>
       </Box>
 
-      {/* pb zostało lekko podniesione na mobile dla lepszej widoczności pod klawiaturą */}
-      <Box sx={{ flexGrow: 1, position: 'relative', pb: { xs: 12, md: 10 } }}>
-        <TipTapEditor 
-          initialContent={content} 
-          onChange={handleEditorChange} 
-        />
+      {/* Kontener dla edytora i sticky inputu */}
+      <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', position: 'relative' }}>
         
-        {/* Dodano div chroniący przed nakładaniem tekstu na sticked element */}
-        <Box sx={{ mt: 4 }}>
+        {/* Kontener edytora */}
+        <Box sx={{ flexGrow: 1, pb: 4 }}>
+          <TipTapEditor 
+            initialContent={content} 
+            onChange={handleEditorChange} 
+          />
+        </Box>
+        
+        {/* Sticky wrapper kontrolujący pozycję Inputu */}
+        <Box 
+          sx={{ 
+            position: 'sticky', 
+            bottom: { xs: 16, md: 24 }, 
+            zIndex: 50, // Podbity z-index, aby przysłaniał test za nim podczas scrolla
+            display: 'flex',
+            justifyContent: 'center',
+            width: '100%',
+            px: { xs: 2, md: 0 }, // Zabezpieczenie na mobile, żeby input nie przyklejał się do krawędzi ekranu
+            mt: 2
+          }}
+        >
           <RepromptInput 
             onSend={async (p) => { await repromptMutation.mutateAsync(p); }} 
             isLoading={repromptMutation.isPending} 
           />
         </Box>
+
       </Box>
     </Box>
   );

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import traceback
@@ -99,8 +100,11 @@ def restore_original(
     return PrototypeResponse.model_validate(prototype)
 
 
+_REPROMPT_TIMEOUT_SECONDS = 90  # Hard cap for the AI call
+
+
 @router.post("/{generation_id}/reprompt", response_model=PrototypeResponse)
-def reprompt(
+async def reprompt(
     generation_id: str,
     body: RepromptRequest,
     db: DBSession = Depends(get_db),
@@ -119,7 +123,6 @@ def reprompt(
     )
     if secret_key:
         api_key = decrypt_api_key(secret_key.secret_key_hash)
-        from datetime import datetime, timezone
         secret_key.last_used_at = datetime.now(timezone.utc).isoformat()
 
     if not api_key:
@@ -128,16 +131,21 @@ def reprompt(
             detail="API key not configured — add a key in Settings",
         )
 
-    model = current_user.default_model or "openai/gpt-5-mini"
+    model = current_user.default_model or "openai/gpt-4o-mini"
 
     # Use edited content if available, otherwise original
     current_content = prototype.edited_content or prototype.original_content
 
     try:
         if generation.content_type in TYPES_WITHOUT_QUESTIONS:
-            # Free-form types (worksheet / lesson_materials) — update HTML directly
-            new_html = call_openrouter_reprompt_free_form(
-                db, generation, current_content, body.prompt, api_key, model
+            # Free-form types (worksheet / lesson_materials) — run in thread executor
+            # to avoid blocking the event loop, with a hard timeout.
+            new_html = await asyncio.wait_for(
+                asyncio.to_thread(
+                    call_openrouter_reprompt_free_form,
+                    db, generation, current_content, body.prompt, api_key, model,
+                ),
+                timeout=_REPROMPT_TIMEOUT_SECONDS,
             )
             prototype.edited_content = new_html
             prototype.updated_at = datetime.now(timezone.utc).isoformat()
@@ -145,9 +153,13 @@ def reprompt(
             db.refresh(prototype)
             return PrototypeResponse.model_validate(prototype)
 
-        result = call_openrouter_reprompt(
-            db, generation, current_content, body.prompt, api_key, model,
-            raw_questions_json=prototype.raw_questions_json,
+        result = await asyncio.wait_for(
+            asyncio.to_thread(
+                call_openrouter_reprompt,
+                db, generation, current_content, body.prompt, api_key, model,
+                raw_questions_json=prototype.raw_questions_json,
+            ),
+            timeout=_REPROMPT_TIMEOUT_SECONDS,
         )
 
         # Update prototype
@@ -163,6 +175,15 @@ def reprompt(
 
         return PrototypeResponse.model_validate(prototype)
 
+    except asyncio.TimeoutError:
+        logger.error("Reprompt timed out (>%ds) for generation %s", _REPROMPT_TIMEOUT_SECONDS, generation_id)
+        raise HTTPException(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            detail=(
+                f"Zapytanie do AI przekroczyło limit czasu ({_REPROMPT_TIMEOUT_SECONDS}s). "
+                "Spróbuj ponownie lub wybierz szybszy model AI w Ustawieniach."
+            ),
+        )
     except Exception as e:
         logger.error(
             "Reprompt error for generation %s [%s]: %s\n%s",
