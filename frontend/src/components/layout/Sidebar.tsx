@@ -10,12 +10,14 @@ import ListItemText from '@mui/material/ListItemText';
 import Box from '@mui/material/Box';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
+import Stack from '@mui/material/Stack';
+import Link from '@mui/material/Link';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import SettingsIcon from '@mui/icons-material/Settings';
-import BugReportIcon from '@mui/icons-material/BugReport';
 import { usePathname, useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 const drawerWidth = 260;
 
@@ -24,7 +26,6 @@ const menuItems = [
   { text: 'Materiały', icon: <DashboardIcon />, path: '/dashboard' },
   { text: 'Przedmioty i Pliki', icon: <FolderOpenIcon />, path: '/subjects' },
   { text: 'Ustawienia', icon: <SettingsIcon />, path: '/settings' },
-  { text: 'Diagnostyka', icon: <BugReportIcon />, path: '/diagnostics' },
 ];
 
 interface SidebarProps {
@@ -94,10 +95,23 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
           })}
         </List>
       </Box>
-      <Box sx={{ p: 3, textAlign: 'center' }}>
-        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
-          {`${process.env.NEXT_PUBLIC_APP_NAME ?? 'EduGen'}_${process.env.NEXT_PUBLIC_APP_VERSION ?? '1.0.0'}_${process.env.NEXT_PUBLIC_APP_RELEASE_DATE ?? ''}`}
-        </Typography>
+      <Box sx={{ p: 2.5, borderTop: '1px solid', borderColor: 'divider' }}>
+        <Stack spacing={1.1}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box sx={{ width: 22, height: 22, position: 'relative', borderRadius: 1, overflow: 'hidden' }}>
+              <Image src="/logo.png" alt="EduGen logo" fill sizes="22px" />
+            </Box>
+            <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+              EduGen
+            </Typography>
+          </Box>
+          <Link href="mailto:bilinski.piotr89@gmail.com" underline="hover" color="text.secondary" variant="caption">
+            bilinski.piotr89@gmail.com
+          </Link>
+          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500, lineHeight: 1.5 }}>
+            {`${process.env.NEXT_PUBLIC_APP_NAME ?? 'EduGen'}_${process.env.NEXT_PUBLIC_APP_VERSION ?? '1.0.1'}_${process.env.NEXT_PUBLIC_APP_RELEASE_DATE ?? '2026-03-11'}`}
+          </Typography>
+        </Stack>
       </Box>
     </Box>
   );

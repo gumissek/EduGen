@@ -1,8 +1,8 @@
-"""Initial schema
+"""Initial schema (consolidated)
 
 Revision ID: 001
 Revises:
-Create Date: 2026-03-09
+Create Date: 2026-03-12
 
 """
 from typing import Sequence, Union
@@ -21,71 +21,123 @@ def upgrade() -> None:
     op.create_table(
         "users",
         sa.Column("id", sa.String(36), primary_key=True),
+        sa.Column("email", sa.String(255), nullable=False, unique=True),
+        sa.Column("first_name", sa.String(255), nullable=True),
+        sa.Column("last_name", sa.String(255), nullable=True),
         sa.Column("password_hash", sa.Text, nullable=False),
-        sa.Column("created_at", sa.String, nullable=False),
-        sa.Column("updated_at", sa.String, nullable=False),
-        sa.Column("last_login_at", sa.String, nullable=True),
+        sa.Column("is_active", sa.Boolean, nullable=False, server_default=sa.true()),
+        sa.Column("is_superuser", sa.Boolean, nullable=False, server_default=sa.false()),
+        sa.Column("created_at", sa.Text, nullable=False),
+        sa.Column("updated_at", sa.Text, nullable=False),
+        sa.Column("last_login_at", sa.Text, nullable=True),
+        sa.Column("premium_level", sa.Integer, nullable=False, server_default="0"),
+        sa.Column("api_quota", sa.Integer, nullable=False, server_default="1000"),
+        sa.Column("api_quota_reset", sa.Text, nullable=True),
+        sa.Column("is_email_verified", sa.Boolean, nullable=False, server_default=sa.false()),
+        sa.Column("email_verification_token", sa.String(255), nullable=True),
+        sa.Column("email_verification_token_expiry", sa.Text, nullable=True),
+        sa.Column("reset_password_token", sa.String(255), nullable=True),
+        sa.Column("reset_password_token_expiry", sa.Text, nullable=True),
+        sa.Column("last_password_change", sa.Text, nullable=True),
+        sa.Column("failed_login_attempts", sa.Integer, nullable=False, server_default="0"),
+        sa.Column("default_model", sa.String(100), nullable=False, server_default="openai/gpt-5-mini"),
     )
+    op.create_unique_constraint("uq_users_email", "users", ["email"])
+    op.create_index("ix_users_email", "users", ["email"], unique=True)
 
-    # --- sessions ---
+    # --- secret_keys ---
     op.create_table(
-        "sessions",
+        "secret_keys",
         sa.Column("id", sa.String(36), primary_key=True),
         sa.Column("user_id", sa.String(36), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("token", sa.Text, nullable=False, unique=True),
-        sa.Column("created_at", sa.String, nullable=False),
-        sa.Column("expires_at", sa.String, nullable=False),
-        sa.Column("last_activity_at", sa.String, nullable=False),
+        sa.Column("platform", sa.String(50), nullable=False),
+        sa.Column("key_name", sa.String(255), nullable=False),
+        sa.Column("secret_key_hash", sa.Text, nullable=False),
+        sa.Column("is_active", sa.Boolean, nullable=False, server_default=sa.true()),
+        sa.Column("last_used_at", sa.Text, nullable=True),
+        sa.Column("created_at", sa.Text, nullable=False),
     )
-    op.create_index("idx_sessions_user", "sessions", ["user_id"])
-    op.create_index("idx_sessions_expiration", "sessions", ["expires_at"])
+    op.create_index("ix_secret_keys_user_id", "secret_keys", ["user_id"])
 
-    # --- settings ---
+    # --- user_ai_models ---
     op.create_table(
-        "settings",
+        "user_ai_models",
         sa.Column("id", sa.String(36), primary_key=True),
-        sa.Column("user_id", sa.String(36), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("openai_api_key_encrypted", sa.Text, nullable=False, server_default=""),
-        sa.Column("default_model", sa.String(100), nullable=False, server_default="gpt-5-mini"),
-        sa.Column("created_at", sa.String, nullable=False),
-        sa.Column("updated_at", sa.String, nullable=False),
+        sa.Column(
+            "user_id",
+            sa.String(36),
+            sa.ForeignKey("users.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
+        sa.Column("provider", sa.String(100), nullable=False),
+        sa.Column("model_name", sa.String(255), nullable=False),
+        sa.Column("description", sa.Text, nullable=True),
+        sa.Column("price_description", sa.Text, nullable=True),
+        sa.Column("is_available", sa.Boolean, nullable=False, server_default=sa.true()),
+        sa.Column("created_at", sa.Text, nullable=False),
+        sa.Column("changed_at", sa.Text, nullable=True),
+        sa.Column("request_made", sa.Integer, nullable=False, server_default="0"),
+    )
+    op.create_index("ix_user_ai_models_user_id", "user_ai_models", ["user_id"])
+    op.create_unique_constraint(
+        "uq_user_ai_models_user_provider_model",
+        "user_ai_models",
+        ["user_id", "provider", "model_name"],
     )
 
     # --- subjects ---
     op.create_table(
         "subjects",
         sa.Column("id", sa.String(36), primary_key=True),
+        sa.Column("user_id", sa.String(36), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=True),
         sa.Column("name", sa.String(255), nullable=False),
         sa.Column("is_custom", sa.Integer, nullable=False, server_default="0"),
-        sa.Column("created_at", sa.String, nullable=False),
+        sa.Column("created_at", sa.Text, nullable=False),
+    )
+    op.create_index("ix_subjects_user_id", "subjects", ["user_id"])
+
+    # --- file_content_cache ---
+    op.create_table(
+        "file_content_cache",
+        sa.Column("file_hash", sa.String(64), primary_key=True),
+        sa.Column("file_type", sa.String(20), nullable=False),
+        sa.Column("extracted_text", sa.Text, nullable=True),
+        sa.Column("summary", sa.Text, nullable=True),
+        sa.Column("page_count", sa.Integer, nullable=True),
+        sa.Column("created_at", sa.Text, nullable=False),
     )
 
     # --- source_files ---
     op.create_table(
         "source_files",
         sa.Column("id", sa.String(36), primary_key=True),
+        sa.Column("user_id", sa.String(36), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
         sa.Column("subject_id", sa.String(36), sa.ForeignKey("subjects.id", ondelete="CASCADE"), nullable=False),
         sa.Column("filename", sa.Text, nullable=False),
         sa.Column("original_path", sa.Text, nullable=False),
         sa.Column("file_type", sa.String(20), nullable=False),
         sa.Column("file_size", sa.Integer, nullable=False),
+        sa.Column("file_hash", sa.String(64), nullable=True),
         sa.Column("extracted_text", sa.Text, nullable=True),
         sa.Column("summary", sa.Text, nullable=True),
         sa.Column("page_count", sa.Integer, nullable=True),
-        sa.Column("created_at", sa.String, nullable=False),
-        sa.Column("deleted_at", sa.String, nullable=True),
+        sa.Column("created_at", sa.Text, nullable=False),
+        sa.Column("deleted_at", sa.Text, nullable=True),
     )
-    op.create_index("idx_source_files_subject", "source_files", ["subject_id"])
-    op.create_index("idx_source_files_created_at", "source_files", ["created_at"])
+    op.create_index("ix_source_files_user_id", "source_files", ["user_id"])
+    op.create_index("ix_source_files_subject", "source_files", ["subject_id"])
+    op.create_index("ix_source_files_created_at", "source_files", ["created_at"])
+    op.create_index("ix_source_files_file_hash", "source_files", ["file_hash"])
 
     # --- generations ---
     op.create_table(
         "generations",
         sa.Column("id", sa.String(36), primary_key=True),
-        sa.Column("subject_id", sa.String(36), sa.ForeignKey("subjects.id"), nullable=False),
+        sa.Column("user_id", sa.String(36), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
+        sa.Column("subject_id", sa.String(36), sa.ForeignKey("subjects.id", ondelete="CASCADE"), nullable=False),
         sa.Column("content_type", sa.String(50), nullable=False),
-        sa.Column("education_level", sa.String(20), nullable=False),
-        sa.Column("class_level", sa.Integer, nullable=False),
+        sa.Column("education_level", sa.String(255), nullable=False),
+        sa.Column("class_level", sa.String(100), nullable=False),
         sa.Column("language_level", sa.String(10), nullable=True),
         sa.Column("topic", sa.Text, nullable=False),
         sa.Column("instructions", sa.Text, nullable=True),
@@ -94,52 +146,61 @@ def upgrade() -> None:
         sa.Column("open_questions", sa.Integer, nullable=False),
         sa.Column("closed_questions", sa.Integer, nullable=False),
         sa.Column("variants_count", sa.Integer, nullable=False, server_default="1"),
-        sa.Column("created_at", sa.String, nullable=False),
-        sa.Column("updated_at", sa.String, nullable=False),
+        sa.Column("task_types", sa.Text, nullable=True),
+        sa.Column("created_at", sa.Text, nullable=False),
+        sa.Column("updated_at", sa.Text, nullable=False),
         sa.Column("status", sa.String(20), nullable=False, server_default="draft"),
         sa.Column("error_message", sa.Text, nullable=True),
     )
-    op.create_index("idx_generations_subject", "generations", ["subject_id"])
-    op.create_index("idx_generations_created_at", "generations", ["created_at"])
-    op.create_index("idx_generations_status", "generations", ["status"])
+    op.create_index("ix_generations_user_id", "generations", ["user_id"])
+    op.create_index("ix_generations_subject", "generations", ["subject_id"])
+    op.create_index("ix_generations_created_at", "generations", ["created_at"])
+    op.create_index("ix_generations_status", "generations", ["status"])
 
     # --- generation_source_files ---
     op.create_table(
         "generation_source_files",
-        sa.Column("generation_id", sa.String(36), sa.ForeignKey("generations.id", ondelete="CASCADE"), primary_key=True),
-        sa.Column("source_file_id", sa.String(36), sa.ForeignKey("source_files.id", ondelete="CASCADE"), primary_key=True),
+        sa.Column("generation_id", sa.String(36), sa.ForeignKey("generations.id", ondelete="CASCADE"), nullable=False),
+        sa.Column("source_file_id", sa.String(36), sa.ForeignKey("source_files.id", ondelete="CASCADE"), nullable=False),
+        sa.PrimaryKeyConstraint("generation_id", "source_file_id"),
     )
 
     # --- prototypes ---
     op.create_table(
         "prototypes",
         sa.Column("id", sa.String(36), primary_key=True),
+        sa.Column("user_id", sa.String(36), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
         sa.Column("generation_id", sa.String(36), sa.ForeignKey("generations.id", ondelete="CASCADE"), nullable=False, unique=True),
         sa.Column("original_content", sa.Text, nullable=False),
         sa.Column("edited_content", sa.Text, nullable=True),
         sa.Column("answer_key", sa.Text, nullable=False),
-        sa.Column("created_at", sa.String, nullable=False),
-        sa.Column("updated_at", sa.String, nullable=False),
+        sa.Column("raw_questions_json", sa.Text, nullable=True),
+        sa.Column("created_at", sa.Text, nullable=False),
+        sa.Column("updated_at", sa.Text, nullable=False),
     )
+    op.create_index("ix_prototypes_user_id", "prototypes", ["user_id"])
 
     # --- documents ---
     op.create_table(
         "documents",
         sa.Column("id", sa.String(36), primary_key=True),
+        sa.Column("user_id", sa.String(36), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
         sa.Column("generation_id", sa.String(36), sa.ForeignKey("generations.id", ondelete="CASCADE"), nullable=False),
         sa.Column("filename", sa.Text, nullable=False),
         sa.Column("file_path", sa.Text, nullable=False),
         sa.Column("variants_count", sa.Integer, nullable=False),
-        sa.Column("created_at", sa.String, nullable=False),
-        sa.Column("deleted_at", sa.String, nullable=True),
+        sa.Column("created_at", sa.Text, nullable=False),
+        sa.Column("deleted_at", sa.Text, nullable=True),
     )
-    op.create_index("idx_documents_generation", "documents", ["generation_id"])
-    op.create_index("idx_documents_created_at", "documents", ["created_at"])
+    op.create_index("ix_documents_user_id", "documents", ["user_id"])
+    op.create_index("ix_documents_generation", "documents", ["generation_id"])
+    op.create_index("ix_documents_created_at", "documents", ["created_at"])
 
     # --- ai_requests ---
     op.create_table(
         "ai_requests",
         sa.Column("id", sa.String(36), primary_key=True),
+        sa.Column("user_id", sa.String(36), sa.ForeignKey("users.id", ondelete="SET NULL"), nullable=True),
         sa.Column("generation_id", sa.String(36), sa.ForeignKey("generations.id", ondelete="SET NULL"), nullable=True),
         sa.Column("model_name", sa.String(100), nullable=False),
         sa.Column("prompt_tokens", sa.Integer, nullable=True),
@@ -148,10 +209,11 @@ def upgrade() -> None:
         sa.Column("request_type", sa.String(50), nullable=False),
         sa.Column("request_payload", sa.Text, nullable=True),
         sa.Column("response_payload", sa.Text, nullable=True),
-        sa.Column("created_at", sa.String, nullable=False),
+        sa.Column("created_at", sa.Text, nullable=False),
     )
-    op.create_index("idx_ai_requests_generation", "ai_requests", ["generation_id"])
-    op.create_index("idx_ai_requests_created_at", "ai_requests", ["created_at"])
+    op.create_index("ix_ai_requests_user_id", "ai_requests", ["user_id"])
+    op.create_index("ix_ai_requests_generation", "ai_requests", ["generation_id"])
+    op.create_index("ix_ai_requests_created_at", "ai_requests", ["created_at"])
 
     # --- backups ---
     op.create_table(
@@ -159,10 +221,10 @@ def upgrade() -> None:
         sa.Column("id", sa.String(36), primary_key=True),
         sa.Column("backup_path", sa.Text, nullable=False),
         sa.Column("size_bytes", sa.Integer, nullable=False),
-        sa.Column("created_at", sa.String, nullable=False),
-        sa.Column("expires_at", sa.String, nullable=False),
+        sa.Column("created_at", sa.Text, nullable=False),
+        sa.Column("expires_at", sa.Text, nullable=False),
     )
-    op.create_index("idx_backups_expiration", "backups", ["expires_at"])
+    op.create_index("ix_backups_expiration", "backups", ["expires_at"])
 
     # --- diagnostic_logs ---
     op.create_table(
@@ -171,9 +233,9 @@ def upgrade() -> None:
         sa.Column("level", sa.String(20), nullable=False),
         sa.Column("message", sa.Text, nullable=False),
         sa.Column("metadata_json", sa.Text, nullable=True),
-        sa.Column("created_at", sa.String, nullable=False),
+        sa.Column("created_at", sa.Text, nullable=False),
     )
-    op.create_index("idx_diagnostic_logs_created_at", "diagnostic_logs", ["created_at"])
+    op.create_index("ix_diagnostic_logs_created_at", "diagnostic_logs", ["created_at"])
 
 
 def downgrade() -> None:
@@ -185,7 +247,8 @@ def downgrade() -> None:
     op.drop_table("generation_source_files")
     op.drop_table("generations")
     op.drop_table("source_files")
+    op.drop_table("file_content_cache")
     op.drop_table("subjects")
-    op.drop_table("settings")
-    op.drop_table("sessions")
+    op.drop_table("user_ai_models")
+    op.drop_table("secret_keys")
     op.drop_table("users")

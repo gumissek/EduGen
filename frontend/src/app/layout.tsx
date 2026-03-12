@@ -4,6 +4,7 @@ import './globals.css';
 import ThemeRegistry from '@/theme/ThemeRegistry';
 import { ColorModeProvider } from '@/theme/ColorModeContext';
 import AppProviders from './AppProviders';
+import PublicChrome from '@/components/layout/PublicChrome';
 
 const inter = Inter({ subsets: ['latin', 'latin-ext'] });
 
@@ -22,7 +23,9 @@ export default function RootLayout({
       <body className={inter.className}>
         <ColorModeProvider>
           <ThemeRegistry>
-            <AppProviders>{children}</AppProviders>
+            <AppProviders>
+              <PublicChrome>{children}</PublicChrome>
+            </AppProviders>
           </ThemeRegistry>
         </ColorModeProvider>
       </body>

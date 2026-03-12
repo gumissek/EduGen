@@ -1,0 +1,53 @@
+# git
+.git
+.gitignore
+
+# env
+.env
+.env.*
+
+# logs
+*.log
+
+# ide
+.vscode
+.idea
+
+# python
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/*.pyd
+**/.pytest_cache
+
+# virtual environments (biggest context reduction)
+.venv/
+venv/
+env/
+.venv
+venv
+env
+
+# tests
+tests/
+test/
+
+# type stubs and cache
+*.pyi
+.mypy_cache/
+.ruff_cache/
+
+# node (just in case)
+**/node_modules
+
+# build artifacts
+**/dist
+**/build
+**/.next
+
+# backup files
+*.bak
+*.tmp
+
+# docker
+docker-compose.override.yml

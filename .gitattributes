@@ -1,0 +1,15 @@
+# 1. Automatyczne wykrywanie plików tekstowych
+# Jeśli tekst -> wymuś LF w repozytorium i w working directory.
+* text=auto eol=lf
+
+# 2. Jawne określenie skryptów (bezpieczeństwo)
+# Nawet jeśli ktoś pracuje na Windowsie, te pliki zawsze będą miały LF.
+*.sh      text eol=lf
+*.py      text eol=lf
+*.js      text eol=lf
+*.ts      text eol=lf
+*.tsx     text eol=lf
+*.bash    text eol=lf
+*.yaml    text eol=lf
+*.yml    text eol=lf
+

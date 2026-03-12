@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import json
+import logging
 import traceback
 from contextlib import asynccontextmanager
-from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,37 +15,7 @@ from app.config import settings
 from app.database import SessionLocal
 from app.models import *  # noqa: F401, F403 — register all models
 
-
-def _ensure_directories():
-    """Create required data directories."""
-    dirs = [
-        Path(settings.DATA_DIR),
-        Path(settings.DATA_DIR) / "subjects",
-        Path(settings.DATA_DIR) / "documents",
-        Path(settings.DATA_DIR) / "backups",
-    ]
-    for d in dirs:
-        d.mkdir(parents=True, exist_ok=True)
-
-
-def _seed_database():
-    """Seed default user if it doesn't exist."""
-    db = SessionLocal()
-    try:
-        from app.models.user import User
-
-        # Seed default user
-        user = db.query(User).first()
-        if not user:
-            from app.services.auth_service import hash_password
-            user = User(
-                password_hash=hash_password("Start1234!"),
-                must_change_password=True,
-            )
-            db.add(user)
-            db.commit()
-    finally:
-        db.close()
+logger = logging.getLogger(__name__)
 
 
 def _start_backup_scheduler():
@@ -72,52 +42,11 @@ def _start_backup_scheduler():
         return None
 
 
-def _run_migrations():
-    """Ensure the DB schema is up to date.
-
-    Uses SQLAlchemy create_all (idempotent) for the base tables, then
-    applies any missing columns manually.  This avoids Alembic multi-worker
-    race conditions on SQLite while still being safe to run in every worker.
-    """
-    from sqlalchemy import inspect, text
-    from app.database import Base, engine
-
-    # create_all creates missing tables; wrapped in try/except to handle
-    # the rare race condition when two uvicorn workers start simultaneously.
-    try:
-        Base.metadata.create_all(bind=engine)
-    except Exception:
-        pass  # Another worker already created the tables — safe to ignore
-
-    # --- migration 002: add must_change_password if missing ---
-    with engine.connect() as conn:
-        inspector = inspect(engine)
-        if inspector.has_table("users"):
-            columns = [c["name"] for c in inspector.get_columns("users")]
-            if "must_change_password" not in columns:
-                try:
-                    conn.execute(
-                        text("ALTER TABLE users ADD COLUMN must_change_password INTEGER NOT NULL DEFAULT 1")
-                    )
-                    conn.commit()
-                except Exception:
-                    # Another worker already added the column — safe to ignore
-                    pass
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan: startup and shutdown."""
-    # Startup
-    _ensure_directories()
-
-    # Run DB migrations (creates tables + applies any new columns)
-    _run_migrations()
-
-    # Seed data
-    _seed_database()
-
-    # Start backup scheduler
+    # Startup — migrations and directories are handled by app/init_app.py
+    # which runs as a separate process before uvicorn is started.
     scheduler = _start_backup_scheduler()
 
     yield
@@ -128,9 +57,9 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="EduGen Local API",
+    title="EduGen API",
     description="Backend API for educational content generation",
-    version="0.1.0",
+    version="0.2.0",
     lifespan=lifespan,
 )
 
@@ -182,7 +111,7 @@ def health_check():
 
 
 # Register routers
-from app.routers import auth, settings as settings_router, subjects, files, generations, prototypes, documents, backups, diagnostics, levels, task_types  # noqa: E402
+from app.routers import auth, settings as settings_router, subjects, files, generations, prototypes, documents, backups, diagnostics, levels, task_types, secret_keys, user_ai_models as user_ai_models_router, admin  # noqa: E402
 
 app.include_router(auth.router, prefix="/api")
 app.include_router(settings_router.router, prefix="/api")
@@ -195,3 +124,6 @@ app.include_router(backups.router, prefix="/api")
 app.include_router(diagnostics.router, prefix="/api")
 app.include_router(levels.router, prefix="/api")
 app.include_router(task_types.router, prefix="/api")
+app.include_router(secret_keys.router, prefix="/api")
+app.include_router(user_ai_models_router.router, prefix="/api")
+app.include_router(admin.router, prefix="/api")

@@ -33,25 +33,33 @@ export default function RepromptInput({ onSend, isLoading }: RepromptInputProps)
   return (
     <Paper 
       elevation={0} 
-      sx={{ 
-        position: 'fixed', 
-        bottom: 32, 
-        left: '50%', 
-        transform: 'translateX(-50%)', 
-        width: 'calc(100% - 32px)', 
+      sx={(theme) => ({ 
+        width: '100%', 
         maxWidth: 680, 
         borderRadius: '32px',
         p: '6px 6px 6px 20px',
         display: 'flex',
         alignItems: 'center',
-        bgcolor: 'background.paper',
-        zIndex: 1000,
-        border: '1px solid',
-        borderColor: 'divider',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
-      }}
+        
+        // Zależne od motywu tło i obramowanie w odcieniach fioletu
+        bgcolor: theme.palette.mode === 'dark' ? '#1c0b2b' : '#fdf5ff',
+        border: '2px solid',
+        borderColor: theme.palette.mode === 'dark' ? '#702b9d' : '#e0b3ff',
+        
+        // Fioletowa poświata zamiast standardowego szarego cienia
+        boxShadow: theme.palette.mode === 'dark' 
+          ? '0 8px 32px rgba(162, 85, 247, 0.2)' 
+          : '0 8px 32px rgba(192, 132, 252, 0.25)',
+        
+        // Lekki blur dla fajnego efektu nad tekstem (jeśli coś pod niego wjeżdża)
+        backdropFilter: 'blur(8px)',
+      })}
     >
-      <Box sx={{ color: 'primary.main', display: 'flex', alignItems: 'center' }}>
+      <Box sx={{ 
+        color: (theme) => theme.palette.mode === 'dark' ? '#c879ff' : '#9333ea', 
+        display: 'flex', 
+        alignItems: 'center' 
+      }}>
         <AutoAwesomeIcon />
       </Box>
       <TextField
@@ -63,19 +71,29 @@ export default function RepromptInput({ onSend, isLoading }: RepromptInputProps)
         onKeyDown={handleKeyDown}
         disabled={isLoading}
         sx={{ mx: 2, '& .MuiInputBase-input': { py: 1.5, fontSize: '0.95rem' } }}
-        InputProps={{ disableUnderline: true }}
+        slotProps={{
+          input:{
+            disableUnderline: true,
+          }
+        }}
       />
       <IconButton 
-        color="primary" 
         onClick={handleSend} 
         disabled={!prompt.trim() || isLoading}
-        sx={{ 
-          bgcolor: prompt.trim() ? 'primary.main' : 'rgba(0,0,0,0.04)', 
-          color: prompt.trim() ? 'primary.contrastText' : 'text.disabled',
-          '&:hover': { bgcolor: prompt.trim() ? 'primary.dark' : 'rgba(0,0,0,0.04)' },
+        sx={(theme) => ({ 
+          // Aktywny przycisk dostaje różowo-fioletowy gradient
+          background: prompt.trim() 
+            ? 'linear-gradient(45deg, #d946ef, #9333ea)' 
+            : (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)'), 
+          color: prompt.trim() ? '#fff' : 'text.disabled',
+          '&:hover': { 
+            background: prompt.trim() 
+              ? 'linear-gradient(45deg, #c026d3, #7e22ce)' 
+              : (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)') 
+          },
           transition: 'all 0.2s',
           p: 1.5
-        }}
+        })}
       >
         {isLoading ? <CircularProgress size={24} color="inherit" /> : <SendIcon fontSize="small" />}
       </IconButton>

@@ -19,9 +19,13 @@ import Alert from '@mui/material/Alert';
 import Tooltip from '@mui/material/Tooltip';
 import IconButton from '@mui/material/IconButton';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import DownloadIcon from '@mui/icons-material/Download';
+import Button from '@mui/material/Button';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import api from '@/lib/api';
+import AlertTitle from '@mui/material/AlertTitle';
+import { useAdminAccess } from '@/hooks/useAdminAccess';
 
 interface DiagnosticLog {
   id: string;
@@ -45,6 +49,7 @@ const LEVEL_CHIP: Record<string, { label: string; color: 'default' | 'warning' |
 };
 
 export default function DiagnosticsPage() {
+  const { isLoading: isCheckingAccess, isAuthorized } = useAdminAccess();
   const [levelFilter, setLevelFilter] = React.useState<string>('');
   const [page, setPage] = React.useState(0);
   const perPage = 50;
@@ -59,6 +64,7 @@ export default function DiagnosticsPage() {
       const res = await api.get<DiagnosticListResponse>(`/api/diagnostics/logs?${params.toString()}`);
       return res.data;
     },
+    enabled: isAuthorized,
   });
 
   const handleLevelChange = (_: React.MouseEvent<HTMLElement>, value: string | null) => {
@@ -73,10 +79,49 @@ export default function DiagnosticsPage() {
   const logs: DiagnosticLog[] = data?.logs ?? [];
   const total = data?.total ?? 0;
 
+  const handleDownloadLogs = async () => {
+    try {
+      const params = new URLSearchParams();
+      if (levelFilter) params.set('level', levelFilter);
+      const response = await api.get(`/api/diagnostics/export?${params.toString()}`, {
+        responseType: 'blob',
+      });
+
+      const blob = new Blob([response.data], { type: 'application/json' });
+      const url = window.URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `diagnostic_logs${levelFilter ? `_${levelFilter}` : ''}.jsonl`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      // kept silent on purpose to avoid extra dependency on snackbar provider in admin pages
+    }
+  };
+
+  if (isCheckingAccess) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 200 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (!isAuthorized) {
+    return (
+      <Alert severity="error">
+        <AlertTitle>Brak dostępu</AlertTitle>
+        Ta sekcja jest dostępna wyłącznie dla administratora.
+      </Alert>
+    );
+  }
+
   return (
     <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-        <Typography variant="h4" fontWeight="bold">
+        <Typography variant="h4" fontWeight="bold" sx={{ fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
           Diagnostyka
         </Typography>
         <Tooltip title="Odśwież">
@@ -86,18 +131,22 @@ export default function DiagnosticsPage() {
         </Tooltip>
       </Box>
 
-      <Box sx={{ mb: 2 }}>
+      <Box sx={{ mb: { xs: 3, sm: 2 }, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 1.5, alignItems: { xs: 'stretch', sm: 'center' }, justifyContent: 'space-between' }}>
         <ToggleButtonGroup
           value={levelFilter}
           exclusive
           onChange={handleLevelChange}
           size="small"
+          sx={{ flexWrap: 'wrap' }}
         >
           <ToggleButton value="">Wszystkie</ToggleButton>
           <ToggleButton value="info">Info</ToggleButton>
           <ToggleButton value="warning">Ostrzeżenia</ToggleButton>
           <ToggleButton value="error">Błędy</ToggleButton>
         </ToggleButtonGroup>
+        <Button variant="outlined" startIcon={<DownloadIcon />} onClick={handleDownloadLogs}>
+          Pobierz logi
+        </Button>
       </Box>
 
       {isError && (
@@ -113,14 +162,14 @@ export default function DiagnosticsPage() {
           </Box>
         ) : (
           <>
-            <TableContainer sx={{ flexGrow: 1 }}>
-              <Table stickyHeader size="small">
+            <TableContainer sx={{ flexGrow: 1, overflowX: 'auto' }}>
+              <Table stickyHeader size="small" sx={{ minWidth: { xs: 480, sm: 'auto' } }}>
                 <TableHead>
                   <TableRow>
                     <TableCell width={140}>Data i czas</TableCell>
                     <TableCell width={130}>Poziom</TableCell>
                     <TableCell>Wiadomość</TableCell>
-                    <TableCell width={200}>Metadane</TableCell>
+                    <TableCell width={200} sx={{ display: { xs: 'none', md: 'table-cell' } }}>Metadane</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -134,7 +183,8 @@ export default function DiagnosticsPage() {
                     </TableRow>
                   ) : (
                     logs.map((log) => {
-                      const chip = LEVEL_CHIP[log.level] ?? LEVEL_CHIP.info;
+                      const levelKey = String(log.level || '').toLowerCase();
+                      const chip = LEVEL_CHIP[levelKey] ?? LEVEL_CHIP.info;
                       return (
                         <TableRow key={log.id} hover>
                           <TableCell sx={{ whiteSpace: 'nowrap', fontSize: '0.75rem', color: 'text.secondary' }}>
@@ -146,7 +196,7 @@ export default function DiagnosticsPage() {
                           <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.8rem', wordBreak: 'break-word' }}>
                             {log.message}
                           </TableCell>
-                          <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.75rem', color: 'text.secondary', wordBreak: 'break-word' }}>
+                          <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.75rem', color: 'text.secondary', wordBreak: 'break-word', display: { xs: 'none', md: 'table-cell' } }}>
                             {log.metadata_json ?? '—'}
                           </TableCell>
                         </TableRow>

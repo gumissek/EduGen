@@ -15,6 +15,7 @@ class Generation(Base):
     __tablename__ = "generations"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     subject_id: Mapped[str] = mapped_column(String(36), ForeignKey("subjects.id", ondelete="CASCADE"), nullable=False, index=True)
     content_type: Mapped[str] = mapped_column(String(50), nullable=False)
     education_level: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -34,6 +35,7 @@ class Generation(Base):
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Relationships
+    user = relationship("User", back_populates="generations")
     subject = relationship("Subject", back_populates="generations")
     prototype = relationship("Prototype", back_populates="generation", uselist=False, cascade="all, delete-orphan")
     documents = relationship("Document", back_populates="generation", cascade="all, delete-orphan")

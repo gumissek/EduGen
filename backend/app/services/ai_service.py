@@ -1,18 +1,21 @@
-"""AI service — prompt builder and OpenAI calls."""
+"""AI service — prompt builder and OpenRouter calls."""
 
 from __future__ import annotations
 
 import json
+import requests as http_requests
 from datetime import datetime, timezone
 
-from openai import OpenAI
 from sqlalchemy.orm import Session as DBSession
 
 from app.encryption import decrypt_api_key
-from app.models.settings import UserSettings
 from app.models.ai_request import AIRequest
 from app.models.generation import Generation
 from app.models.source_file import SourceFile
+
+OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
+OPENROUTER_REFERER = "https://edugen.local"
+OPENROUTER_TITLE = "EduGen Local"
 
 
 DIFFICULTY_LABELS = {
@@ -38,12 +41,7 @@ CONTENT_TYPE_LABELS = {
     "test": "sprawdzian",
     "quiz": "kartkówka",
     "exam": "test",
-    "lesson_materials": "materiały na zajęcia",
-    # legacy keys
-    "karta_pracy": "karta pracy",
-    "sprawdzian": "sprawdzian",
-    "kartkowka": "kartkówka",
-    "materialy": "materiały na zajęcia",
+    "lesson_materials": "Konspekt zajęć",
 }
 
 # Types that don't use the questions format (no Q&A, no variants)
@@ -218,7 +216,39 @@ def _build_free_form_prompt(
     return "\n\n".join(prompt_parts)
 
 
-def call_openai(
+def _call_openrouter(api_key: str, model: str, messages: list[dict], json_mode: bool = True) -> dict:
+    """Make a request to the OpenRouter API. Returns the parsed response."""
+    payload: dict = {
+        "model": model,
+        "messages": messages,
+    }
+    if json_mode:
+        payload["response_format"] = {"type": "json_object"}
+
+    resp = http_requests.post(
+        OPENROUTER_API_URL,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "HTTP-Referer": OPENROUTER_REFERER,
+            "X-OpenRouter-Title": OPENROUTER_TITLE,
+            "Content-Type": "application/json",
+        },
+        data=json.dumps(payload),
+        timeout=120,
+    )
+
+    if resp.status_code != 200:
+        error_detail = ""
+        try:
+            error_detail = resp.json().get("error", {}).get("message", resp.text[:500])
+        except Exception:
+            error_detail = resp.text[:500]
+        raise RuntimeError(f"OpenRouter API error ({resp.status_code}): {error_detail}")
+
+    return resp.json()
+
+
+def call_openrouter(
     db: DBSession,
     generation: Generation,
     system_prompt: str,
@@ -226,31 +256,26 @@ def call_openai(
     model: str,
     request_type: str = "generation",
 ) -> dict:
-    """Call OpenAI API and log the request."""
-    client = OpenAI(api_key=api_key)
-
+    """Call OpenRouter API and log the request."""
     messages = [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": "Wygeneruj materiał zgodnie z powyższymi wytycznymi."},
     ]
 
     try:
-        response = client.chat.completions.create(
-            model=model,
-            messages=messages,
-            response_format={"type": "json_object"},
-        )
+        response = _call_openrouter(api_key, model, messages)
 
-        content = response.choices[0].message.content or "{}"
-        usage = response.usage
+        content = response.get("choices", [{}])[0].get("message", {}).get("content", "{}")
+        usage = response.get("usage", {})
 
         # Log the request
         ai_request = AIRequest(
             generation_id=generation.id,
+            user_id=generation.user_id,
             model_name=model,
-            prompt_tokens=usage.prompt_tokens if usage else None,
-            completion_tokens=usage.completion_tokens if usage else None,
-            total_tokens=usage.total_tokens if usage else None,
+            prompt_tokens=usage.get("prompt_tokens"),
+            completion_tokens=usage.get("completion_tokens"),
+            total_tokens=usage.get("total_tokens"),
             request_type=request_type,
             request_payload=json.dumps({"messages": messages}, ensure_ascii=False)[:10000],
             response_payload=content[:10000],
@@ -264,6 +289,7 @@ def call_openai(
         # Log the failed request
         ai_request = AIRequest(
             generation_id=generation.id,
+            user_id=generation.user_id,
             model_name=model,
             request_type=request_type,
             request_payload=json.dumps({"messages": messages, "error": str(e)}, ensure_ascii=False)[:10000],
@@ -300,7 +326,7 @@ def _normalize_reprompt_response(data: dict) -> dict:
     return data
 
 
-def call_openai_reprompt_free_form(
+def call_openrouter_reprompt_free_form(
     db: DBSession,
     generation: Generation,
     current_content: str,
@@ -308,12 +334,10 @@ def call_openai_reprompt_free_form(
     api_key: str,
     model: str,
 ) -> str:
-    """Call OpenAI to modify free-form (worksheet/lesson_materials) content based on user feedback.
+    """Call OpenRouter to modify free-form (worksheet/lesson_materials) content based on user feedback.
 
     Returns the modified HTML content string.
     """
-    client = OpenAI(api_key=api_key)
-
     is_worksheet = generation.content_type == "worksheet"
     type_hint = "karta pracy (dla uczniów)" if is_worksheet else "materiał na zajęcia (dla nauczyciela)"
 
@@ -336,24 +360,21 @@ def call_openai_reprompt_free_form(
     ]
 
     try:
-        response = client.chat.completions.create(
-            model=model,
-            messages=messages,
-            response_format={"type": "json_object"},
-        )
+        response = _call_openrouter(api_key, model, messages)
 
-        content = response.choices[0].message.content or "{}"
-        usage = response.usage
+        content = response.get("choices", [{}])[0].get("message", {}).get("content", "{}")
+        usage = response.get("usage", {})
 
         parsed = json.loads(content)
         html_content = parsed.get("content_html", "")
 
         ai_request = AIRequest(
             generation_id=generation.id,
+            user_id=generation.user_id,
             model_name=model,
-            prompt_tokens=usage.prompt_tokens if usage else None,
-            completion_tokens=usage.completion_tokens if usage else None,
-            total_tokens=usage.total_tokens if usage else None,
+            prompt_tokens=usage.get("prompt_tokens"),
+            completion_tokens=usage.get("completion_tokens"),
+            total_tokens=usage.get("total_tokens"),
             request_type="reprompt_free_form",
             request_payload=json.dumps({"messages": messages}, ensure_ascii=False)[:10000],
             response_payload=content[:10000],
@@ -366,6 +387,7 @@ def call_openai_reprompt_free_form(
     except Exception as e:
         ai_request = AIRequest(
             generation_id=generation.id,
+            user_id=generation.user_id,
             model_name=model,
             request_type="reprompt_free_form",
             request_payload=json.dumps({"messages": messages, "error": str(e)}, ensure_ascii=False)[:10000],
@@ -375,7 +397,7 @@ def call_openai_reprompt_free_form(
         raise
 
 
-def call_openai_reprompt(
+def call_openrouter_reprompt(
     db: DBSession,
     generation: Generation,
     current_content: str,
@@ -384,8 +406,7 @@ def call_openai_reprompt(
     model: str,
     raw_questions_json: str | None = None,
 ) -> dict:
-    """Call OpenAI to modify existing content based on user feedback."""
-    client = OpenAI(api_key=api_key)
+    """Call OpenRouter to modify existing content based on user feedback."""
 
     # Prefer structured JSON over HTML for reprompting
     if raw_questions_json:
@@ -422,14 +443,10 @@ def call_openai_reprompt(
     ]
 
     try:
-        response = client.chat.completions.create(
-            model=model,
-            messages=messages,
-            response_format={"type": "json_object"},
-        )
+        response = _call_openrouter(api_key, model, messages)
 
-        content = response.choices[0].message.content or "{}"
-        usage = response.usage
+        content = response.get("choices", [{}])[0].get("message", {}).get("content", "{}")
+        usage = response.get("usage", {})
 
         # Parse and validate structure before persisting
         try:
@@ -441,6 +458,7 @@ def call_openai_reprompt(
             )
             ai_request_err = AIRequest(
                 generation_id=generation.id,
+                user_id=generation.user_id,
                 model_name=model,
                 request_type="reprompt",
                 request_payload=json.dumps({"messages": messages}, ensure_ascii=False)[:10000],
@@ -459,6 +477,7 @@ def call_openai_reprompt(
             _reprompt_logger.error("Reprompt response structure invalid: %s", struct_err)
             ai_request_err = AIRequest(
                 generation_id=generation.id,
+                user_id=generation.user_id,
                 model_name=model,
                 request_type="reprompt",
                 request_payload=json.dumps({"messages": messages}, ensure_ascii=False)[:10000],
@@ -470,10 +489,11 @@ def call_openai_reprompt(
 
         ai_request = AIRequest(
             generation_id=generation.id,
+            user_id=generation.user_id,
             model_name=model,
-            prompt_tokens=usage.prompt_tokens if usage else None,
-            completion_tokens=usage.completion_tokens if usage else None,
-            total_tokens=usage.total_tokens if usage else None,
+            prompt_tokens=usage.get("prompt_tokens"),
+            completion_tokens=usage.get("completion_tokens"),
+            total_tokens=usage.get("total_tokens"),
             request_type="reprompt",
             request_payload=json.dumps({"messages": messages}, ensure_ascii=False)[:10000],
             response_payload=content[:10000],
@@ -486,10 +506,11 @@ def call_openai_reprompt(
     except Exception as e:
         # Only log & persist if not already handled above
         if not isinstance(e, (ValueError, json.JSONDecodeError)):
-            _reprompt_logger.error("Reprompt OpenAI error: %s", e)
+            _reprompt_logger.error("Reprompt OpenRouter error: %s", e)
             try:
                 ai_request = AIRequest(
                     generation_id=generation.id,
+                    user_id=generation.user_id,
                     model_name=model,
                     request_type="reprompt",
                     request_payload=json.dumps({"messages": messages, "error": str(e)}, ensure_ascii=False)[:10000],

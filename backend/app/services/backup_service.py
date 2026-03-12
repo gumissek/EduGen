@@ -2,16 +2,17 @@
 
 from __future__ import annotations
 
-import os
-import shutil
+import json
 import zipfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from uuid import uuid4
 
+from sqlalchemy import delete, insert, select
 from sqlalchemy.orm import Session as DBSession
 
 from app.config import settings
+from app.database import Base
 from app.models.backup import Backup
 from app.models.diagnostic_log import DiagnosticLog
 
@@ -19,24 +20,86 @@ from app.models.diagnostic_log import DiagnosticLog
 BACKUP_RETENTION_DAYS = 7
 
 
+def _to_jsonable(value):
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    return str(value)
+
+
+def _build_backup_payload(db: DBSession) -> dict:
+    payload: dict = {
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "tables": [],
+    }
+
+    for table in Base.metadata.sorted_tables:
+        rows = db.execute(select(table)).mappings().all()
+        payload["tables"].append(
+            {
+                "name": table.name,
+                "rows": [
+                    {col: _to_jsonable(val) for col, val in row.items()}
+                    for row in rows
+                ],
+            }
+        )
+
+    return payload
+
+
+def _ensure_valid_backup_archive(backup_path: Path) -> None:
+    if not backup_path.exists():
+        raise FileNotFoundError("Backup file not found on disk")
+
+    with zipfile.ZipFile(str(backup_path), "r") as zf:
+        names = set(zf.namelist())
+        if "dump.json" not in names:
+            raise ValueError("Backup archive is invalid: missing dump.json")
+
+
+def _restore_from_payload(db: DBSession, payload: dict) -> None:
+    tables_payload = payload.get("tables")
+    if not isinstance(tables_payload, list):
+        raise ValueError("Invalid backup payload")
+
+    table_by_name = {table.name: table for table in Base.metadata.sorted_tables}
+
+    for table in reversed(Base.metadata.sorted_tables):
+        db.execute(delete(table))
+
+    for table_dump in tables_payload:
+        table_name = table_dump.get("name")
+        rows = table_dump.get("rows") or []
+        table = table_by_name.get(table_name)
+        if table is None:
+            continue
+        if rows:
+            db.execute(insert(table), rows)
+
+    db.commit()
+
+
+def validate_backup_archive(backup_path: Path) -> None:
+    """Validate backup archive format (zip with dump.json)."""
+    _ensure_valid_backup_archive(backup_path)
+
+
 def create_backup(db: DBSession) -> Backup:
-    """Create a backup of the SQLite database."""
+    """Create a full logical dump backup of the database."""
     data_dir = Path(settings.DATA_DIR)
     backups_dir = data_dir / "backups"
     backups_dir.mkdir(parents=True, exist_ok=True)
-
-    db_path = data_dir / "edugen.db"
-    if not db_path.exists():
-        raise FileNotFoundError("Database file not found")
 
     now = datetime.now(timezone.utc)
     timestamp = now.strftime("%Y%m%d_%H%M%S")
     backup_filename = f"edugen_backup_{timestamp}.zip"
     backup_path = backups_dir / backup_filename
 
-    # Create ZIP with the database
+    payload = _build_backup_payload(db)
+
+    # Create ZIP with logical dump
     with zipfile.ZipFile(str(backup_path), "w", zipfile.ZIP_DEFLATED) as zf:
-        zf.write(str(db_path), "edugen.db")
+        zf.writestr("dump.json", json.dumps(payload, ensure_ascii=False))
 
     size_bytes = backup_path.stat().st_size
     expires_at = now + timedelta(days=BACKUP_RETENTION_DAYS)
@@ -87,36 +150,24 @@ def cleanup_old_backups(db: DBSession) -> int:
 
 
 def restore_backup(db: DBSession, backup_id: str) -> bool:
-    """Restore database from a backup."""
+    """Restore database from a backup archive (logical dump)."""
     backup = db.query(Backup).filter(Backup.id == backup_id).first()
     if not backup:
         raise ValueError("Backup not found")
 
     backup_path = Path(backup.backup_path)
-    if not backup_path.exists():
-        raise FileNotFoundError("Backup file not found on disk")
+    _ensure_valid_backup_archive(backup_path)
 
-    data_dir = Path(settings.DATA_DIR)
-    db_path = data_dir / "edugen.db"
-
-    # Close current session
-    db.close()
-
-    # Extract backup
     with zipfile.ZipFile(str(backup_path), "r") as zf:
-        zf.extract("edugen.db", str(data_dir))
+        payload = json.loads(zf.read("dump.json").decode("utf-8"))
+
+    _restore_from_payload(db, payload)
 
     log_msg = f"Database restored from backup: {backup.backup_path}"
 
-    # Re-open session for logging
-    from app.database import SessionLocal
-    new_db = SessionLocal()
-    try:
-        log = DiagnosticLog(level="INFO", message=log_msg)
-        new_db.add(log)
-        new_db.commit()
-    finally:
-        new_db.close()
+    log = DiagnosticLog(level="INFO", message=log_msg)
+    db.add(log)
+    db.commit()
 
     return True
 

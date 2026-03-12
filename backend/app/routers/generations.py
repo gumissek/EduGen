@@ -28,6 +28,7 @@ def create_generation(
 ):
     """Create a new generation and start AI processing."""
     generation = Generation(
+        user_id=current_user.id,
         subject_id=body.subject_id,
         content_type=body.content_type,
         education_level=body.education_level,
@@ -46,12 +47,13 @@ def create_generation(
     db.add(generation)
     db.flush()  # Get the ID
 
-    # Link source files
+    # Link source files (only those belonging to the user)
     if body.source_file_ids:
         source_files = (
             db.query(SourceFile)
             .filter(
                 SourceFile.id.in_(body.source_file_ids),
+                SourceFile.user_id == current_user.id,
                 SourceFile.deleted_at.is_(None),
             )
             .all()
@@ -74,7 +76,10 @@ def get_generation(
     current_user: User = Depends(get_current_user),
 ):
     """Get generation status and details (used for polling)."""
-    generation = db.query(Generation).filter(Generation.id == generation_id).first()
+    generation = db.query(Generation).filter(
+        Generation.id == generation_id,
+        Generation.user_id == current_user.id,
+    ).first()
     if not generation:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Generation not found")
 
@@ -91,7 +96,7 @@ def list_generations(
     current_user: User = Depends(get_current_user),
 ):
     """List generations with optional filters and pagination."""
-    query = db.query(Generation)
+    query = db.query(Generation).filter(Generation.user_id == current_user.id)
 
     if subject_id:
         query = query.filter(Generation.subject_id == subject_id)

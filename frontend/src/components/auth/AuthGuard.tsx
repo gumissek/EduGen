@@ -7,14 +7,14 @@ import Box from '@mui/material/Box';
 import CircularProgress from '@mui/material/CircularProgress';
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, mustChangePassword } = useAuth();
+  const { isAuthenticated } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
-    // Only check auth state if we're not on the login page
-    if (pathname === '/login') {
+    // Skip check on public pages
+    if (pathname === '/login' || pathname === '/register') {
       setTimeout(() => setIsChecking(false), 0);
       return;
     }
@@ -22,20 +22,14 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     const checkAuth = async () => {
       const authed = isAuthenticated();
       if (!authed) {
-        // Use replace so the protected route is removed from history
         router.replace('/login');
-        return;
-      }
-      // Enforce password change before accessing any other page
-      if (mustChangePassword() && pathname !== '/change-password') {
-        router.replace('/change-password');
         return;
       }
       setIsChecking(false);
     };
 
     checkAuth();
-  }, [isAuthenticated, mustChangePassword, pathname, router]);
+  }, [isAuthenticated, pathname, router]);
 
   if (isChecking) {
     return (

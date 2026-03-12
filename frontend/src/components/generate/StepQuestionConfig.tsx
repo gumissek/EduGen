@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useFormContext, Controller } from 'react-hook-form';
-import Grid from '@mui/material/Grid';
+import Grid2 from '@mui/material/Grid2';
 import TextField from '@mui/material/TextField';
 import MenuItem from '@mui/material/MenuItem';
 import Box from '@mui/material/Box';
@@ -24,9 +24,9 @@ export default function StepQuestionConfig() {
   return (
     <Box>
       <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>Parametry pytań i zadań</Typography>
-      <Grid container spacing={4}>
+      <Grid2 container spacing={4}>
 
-        <Grid item xs={12} md={4}>
+        <Grid2 size={{xs:12, md:4}} >
           <TextField
             fullWidth
             type="number"
@@ -34,20 +34,29 @@ export default function StepQuestionConfig() {
             error={!!errors.total_questions}
             helperText={errors.total_questions?.message}
             {...register('total_questions', { valueAsNumber: true })}
-            InputProps={{ inputProps: { min: 1, max: 50 } }}
+            slotProps={{
+              htmlInput:{
+                min:1,
+                max:50
+              }
+            }}
           />
-        </Grid>
-        <Grid item xs={12} md={4}>
+        </Grid2>
+        <Grid2 size={{xs:12, md:4}} >
           <TextField
             fullWidth
             type="number"
             label="Zadania otwarte"
             error={!!errors.open_questions}
             {...register('open_questions', { valueAsNumber: true })}
-            InputProps={{ inputProps: { min: 0 } }}
+            slotProps={{
+              htmlInput:{
+                min:0
+              }
+            }}
           />
-        </Grid>
-        <Grid item xs={12} md={4}>
+        </Grid2>
+        <Grid2 size={{xs:12, md:4}} >
           <TextField
             fullWidth
             type="number"
@@ -55,11 +64,15 @@ export default function StepQuestionConfig() {
             error={!!errors.closed_questions}
             helperText={errors.closed_questions?.message}
             {...register('closed_questions', { valueAsNumber: true })}
-            InputProps={{ inputProps: { min: 0 } }}
+            slotProps={{
+              htmlInput:{
+                min:0
+              }
+            }}
           />
-        </Grid>
+        </Grid2>
 
-        <Grid item xs={12}>
+        <Grid2 size={{xs:12}}>
           <Controller
             name="task_types"
             control={control}
@@ -118,9 +131,9 @@ export default function StepQuestionConfig() {
               />
             )}
           />
-        </Grid>
+        </Grid2>
 
-        <Grid item xs={12} md={6}>
+        <Grid2 size={{xs:12, md:6}} >
           <TextField
             select
             fullWidth
@@ -136,9 +149,9 @@ export default function StepQuestionConfig() {
               </MenuItem>
             ))}
           </TextField>
-        </Grid>
+        </Grid2>
 
-        <Grid item xs={12} md={6}>
+        <Grid2 size={{xs:12, md:6}} >
           <TextField
              fullWidth
              type="number"
@@ -146,11 +159,11 @@ export default function StepQuestionConfig() {
              error={!!errors.variants_count}
              helperText={errors.variants_count?.message}
              {...register('variants_count', { valueAsNumber: true })}
-             InputProps={{ inputProps: { min: 1, max: 6 } }}
+             slotProps={{htmlInput:{min:1, max:6}}}
           />
-        </Grid>
+        </Grid2>
 
-        <Grid item xs={12}>
+        <Grid2 size={{xs:12}}>
           <TextField
             fullWidth
             multiline
@@ -161,8 +174,8 @@ export default function StepQuestionConfig() {
             helperText={errors.instructions?.message}
             {...register('instructions')}
           />
-        </Grid>
-      </Grid>
+        </Grid2>
+      </Grid2>
     </Box>
   );
 }

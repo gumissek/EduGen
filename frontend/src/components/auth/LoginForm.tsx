@@ -37,11 +37,24 @@ export default function LoginForm() {
         margin="normal"
         required
         fullWidth
+        id="email"
+        label="Adres e-mail"
+        type="email"
+        autoComplete="email"
+        autoFocus
+        error={!!errors.email}
+        helperText={errors.email?.message}
+        {...register('email')}
+        disabled={isLoading}
+      />
+      <TextField
+        margin="normal"
+        required
+        fullWidth
         id="password"
-        label="Hasło dostępu"
+        label="Hasło"
         type="password"
         autoComplete="current-password"
-        autoFocus
         error={!!errors.password}
         helperText={errors.password?.message}
         {...register('password')}

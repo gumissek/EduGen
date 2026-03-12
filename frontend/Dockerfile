@@ -1,13 +1,20 @@
 FROM node:20-alpine AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
-COPY package.json package-lock.json* ./
+COPY frontend/package.json frontend/package-lock.json* ./
 RUN npm install
 
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+
+COPY frontend/package.json frontend/package-lock.json* ./
+COPY frontend/next.config.ts frontend/tsconfig.json frontend/next-env.d.ts ./
+COPY frontend/public ./public
+COPY frontend/src ./src
+# .version lives in the repo root — copied here so next.config.ts finds it at /app/.version
+COPY .version ./
+
 ENV NEXT_TELEMETRY_DISABLED 1
 ARG BACKEND_URL=http://backend:8000
 ENV BACKEND_URL=$BACKEND_URL
@@ -24,6 +31,9 @@ RUN adduser --system --uid 1001 nextjs
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# create mount point for shared common files
+RUN mkdir -p /app/common_filles && chown nextjs:nodejs /app/common_filles
 
 USER nextjs
 

@@ -1,19 +1,32 @@
 @echo off
 setlocal EnableDelayedExpansion
 
-if exist "check_update.bat" (
-    call check_update.bat
-    if errorlevel 1 (
-        echo [UWAGA] Wystapil problem podczas sprawdzania aktualizacji. Kontynuuje uruchamianie aplikacji.
+:: Sprawdzenie aktualnej galezi Git
+set CURRENT_BRANCH=
+FOR /F "tokens=*" %%i IN ('git rev-parse --abbrev-ref HEAD 2^>nul') DO set CURRENT_BRANCH=%%i
+
+if /i "!CURRENT_BRANCH!"=="master" (
+    if exist "check_update.bat" (
+        call check_update.bat
+        if errorlevel 1 (
+            echo [UWAGA] Wystapil problem podczas sprawdzania aktualizacji. Kontynuuje uruchamianie aplikacji.
+            echo.
+        )
+    ) else (
+        echo [UWAGA] Brak pliku check_update.bat - pomijam sprawdzanie aktualizacji.
         echo.
     )
 ) else (
-    echo [UWAGA] Brak pliku check_update.bat - pomijam sprawdzanie aktualizacji.
+    if "!CURRENT_BRANCH!"=="" (
+        echo [UWAGA] Nie wykryto repozytorium Git ^(lub Git nie jest zainstalowany^). Pomijam sprawdzanie aktualizacji.
+    ) else (
+        echo [INFO] Aktualna galaz to '!CURRENT_BRANCH!' ^(nie 'master'^). Pomijam sprawdzanie aktualizacji.
+    )
     echo.
 )
 
 echo ============================================
-echo         EduGen - Uruchamianie aplikacji
+echo        EduGen - Uruchamianie aplikacji
 echo ============================================
 echo.
 
@@ -44,26 +57,30 @@ if %ERRORLEVEL% NEQ 0 (
 echo [OK] Docker Desktop jest zainstalowany i uruchomiony.
 echo.
 
-:: Sprawdz czy istnieje plik .env backendu
-if not exist "backend\.env" (
-    echo [UWAGA] Brak pliku konfiguracyjnego backend\.env
+:: Sprawdz czy istnieje plik .env (root — wymagany przez Docker Compose)
+if not exist ".env" (
+    echo [UWAGA] Brak pliku konfiguracyjnego .env
     echo.
-    if exist ".config_backend" (
-        echo Znaleziono plik .config_backend - kopiowanie do backend\.env...
-        copy ".config_backend" "backend\.env" >nul
-        echo [OK] Plik backend\.env zostal utworzony automatycznie z .config_backend.
-        echo [INFO] Uzupelnij backend\.env o wlasny klucz OPENAI_API_KEY przed generowaniem materialow.
+    if exist ".env.example" (
+        echo Znaleziono plik .env.example - kopiowanie do .env...
+        copy ".env.example" ".env" >nul
+        echo [OK] Plik .env zostal utworzony automatycznie z .env.example.
+        echo [WAZNE] Przed uruchomieniem uzupelnij .env o wlasne wartosci:
+        echo         - POSTGRES_PASSWORD
+        echo         - JWT_SECRET_KEY
         echo.
+        pause
+        exit /b 0
     ) else (
-        echo [BLAD] Brak pliku .config_backend w glownym katalogu projektu.
-        echo Skontaktuj sie z administratorem i umiec plik .env w folderze backend.
+        echo [BLAD] Brak pliku .env.example w glownym katalogu projektu.
+        echo Pobierz ponownie projekt lub utwórz plik .env recznie na podstawie dokumentacji.
         echo.
         pause
         exit /b 1
     )
 )
 
-echo [OK] Plik konfiguracyjny backend\.env istnieje.
+echo [OK] Plik konfiguracyjny .env istnieje.
 echo.
 echo Budowanie i uruchamianie aplikacji...
 echo (Pierwsze uruchomienie moze trwac kilka minut - trwa pobieranie obrazow)
@@ -88,6 +105,15 @@ echo.
 
 :: Uruchamianie kontenerow w trybie interaktywnym (CTRL+C zatrzyma kontenery)
 docker compose up --build
+
+if %ERRORLEVEL% NEQ 0 (
+    echo.
+    echo ============================================
+    echo  Aplikacja zostala zatrzymana pomyslnie.
+    echo ============================================
+    pause
+    exit /b 1
+)
 
 powershell -Command "Write-Host '' ; Write-Host '============================================' -ForegroundColor Yellow ; Write-Host '  Aplikacja zostala zatrzymana.' -ForegroundColor Yellow ; Write-Host '============================================' -ForegroundColor Yellow"
 

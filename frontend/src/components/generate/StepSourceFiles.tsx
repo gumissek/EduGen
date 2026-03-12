@@ -76,9 +76,9 @@ export default function StepSourceFiles() {
           const secondaryText = isProcessing
             ? 'Plik w trakcie przetwarzania przez AI...'
             : file.extraction_error === 'NO_API_KEY'
-              ? '⚠ Brak klucza API OpenAI – skonfiguruj go w Ustawieniach'
+              ? '⚠ Brak klucza API OpenRouter – skonfiguruj go w Ustawieniach'
               : file.extraction_error === 'RATE_LIMIT'
-                ? '⚠ Przekroczono limit API OpenAI – spróbuj ponownie później'
+                ? '⚠ Przekroczono limit API OpenRouter – spróbuj ponownie później'
                 : file.summary || (file.file_type === 'pdf' ? 'Brak podsumowania.' : '');
 
           return (

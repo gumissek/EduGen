@@ -1,7 +1,0 @@
-DATABASE_URL=sqlite:///./data/edugen.db
-# Default password (bcrypt hash of 'Start1234!')
-DEFAULT_PASSWORD_HASH=$2b$12$6F/0bbS5jodCCxt.GkxhFeU28l6Ox6cdqz8FCCVHE95jbTn1PGKJy
-DATA_DIR=./data
-SESSION_TIMEOUT_MINUTES=15
-MAX_FILE_SIZE_MB=10
-CORS_ORIGINS=["http://localhost:3000"]

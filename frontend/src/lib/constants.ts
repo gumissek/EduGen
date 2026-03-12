@@ -3,7 +3,7 @@ export const CONTENT_TYPES = [
   { value: 'test', label: 'Sprawdzian' },
   { value: 'quiz', label: 'Kartkówka' },
   { value: 'exam', label: 'Test' },
-  { value: 'lesson_materials', label: 'Materiały na zajęcia' },
+  { value: 'lesson_materials', label: 'Konspekt zajęć' },
 ] as const;
 
 export const EDUCATION_LEVELS = [

@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Box from '@mui/material/Box';
-import Grid from '@mui/material/Grid';
+import Grid2 from '@mui/material/Grid2';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
@@ -40,7 +40,7 @@ export default function SubjectsPage() {
     }
   }, [subjects, selectedSubjectId, urlSubjectId]);
 
-  const { files, uploadFile, deleteFile } = useFiles(selectedSubjectId);
+  const { files, uploadFile, deleteFile, downloadFile } = useFiles(selectedSubjectId);
 
   const handleUpload = React.useCallback(
     (formData: FormData, onProgress: (p: number) => void) =>
@@ -55,14 +55,14 @@ export default function SubjectsPage() {
 
   return (
     <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <Typography variant="h4" fontWeight="bold" gutterBottom>
+      <Typography variant="h4" fontWeight="bold" gutterBottom sx={{ fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
         Przedmioty i materiały źródłowe
       </Typography>
       
-      <Grid container spacing={3} sx={{ flexGrow: 1 }}>
+      <Grid2 container spacing={{ xs: 2, md: 3 }} sx={{ flexGrow: 1 }}>
         {/* Left column: Subjects */}
-        <Grid item xs={12} md={3}>
-          <Paper sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <Grid2 size={{xs:12, md:3}} >
+          <Paper sx={{ height: { xs: 'auto', md: '100%' }, display: 'flex', flexDirection: 'column' }}>
             <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Typography variant="h6">Przedmioty</Typography>
               <Button 
@@ -83,10 +83,10 @@ export default function SubjectsPage() {
               />
             </Box>
           </Paper>
-        </Grid>
+        </Grid2>
 
         {/* Right column: Files */}
-        <Grid item xs={12} md={9}>
+        <Grid2 size={{xs:12, md:9}} >
           <Paper sx={{ height: '100%', p: 3, display: 'flex', flexDirection: 'column' }}>
             {selectedSubjectId ? (
               <>
@@ -94,8 +94,8 @@ export default function SubjectsPage() {
                   <Typography variant="h6" gutterBottom>Dodaj pliki źródłowe</Typography>
                   {settings && !settings.has_api_key && (
                     <Alert severity="warning" sx={{ mb: 2 }}>
-                      <AlertTitle>Brak klucza API OpenAI</AlertTitle>
-                      Przetwarzanie plików graficznych (JPG, PNG) oraz skanów PDF wymaga skonfigurowanego klucza OpenAI API.
+                      <AlertTitle>Brak klucza API OpenRouter</AlertTitle>
+                      Przetwarzanie plików graficznych (JPG, PNG) oraz skanów PDF wymaga skonfigurowanego klucza OpenRouter API.
                       Pliki DOCX i tekstowe PDF działają bez klucza.{' '}
                       <MuiLink component={NextLink} href="/settings" underline="hover" fontWeight="bold">
                         Przejdź do Ustawień →
@@ -106,7 +106,7 @@ export default function SubjectsPage() {
                 </Box>
                 <Divider sx={{ mb: 3 }} />
                 <Typography variant="h6" gutterBottom>Wgrane pliki</Typography>
-                <FileList files={files} onDelete={deleteFile} />
+                <FileList files={files} onDelete={deleteFile} onDownload={downloadFile} />
               </>
             ) : (
               <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
@@ -114,8 +114,8 @@ export default function SubjectsPage() {
               </Box>
             )}
           </Paper>
-        </Grid>
-      </Grid>
+        </Grid2>
+      </Grid2>
 
       <SubjectDialog 
         open={isDialogOpen} 

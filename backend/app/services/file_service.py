@@ -6,6 +6,7 @@ import base64
 import hashlib
 import json
 import os
+import requests as http_requests
 from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
@@ -13,15 +14,19 @@ from uuid import uuid4
 import fitz  # PyMuPDF
 import magic
 from docx import Document as DocxDocument
-from openai import OpenAI, RateLimitError
 from sqlalchemy.orm import Session as DBSession
 
 from app.config import settings
 from app.encryption import decrypt_api_key
 from app.models.source_file import SourceFile
 from app.models.file_content_cache import FileContentCache
-from app.models.settings import UserSettings
+from app.models.user import User
+from app.models.secret_key import SecretKey
 from app.models.ai_request import AIRequest
+
+OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
+OPENROUTER_REFERER = "https://edugen.local"
+OPENROUTER_TITLE = "EduGen Local"
 
 
 ALLOWED_MIMES = {
@@ -130,56 +135,102 @@ def pdf_pages_to_images(file_path: str, max_pages: int = 5) -> list[bytes]:
 def ocr_image_with_vision(
     image_bytes: bytes,
     api_key: str,
-    model: str = "gpt-5-mini",
+    model: str = "openai/gpt-5-mini",
 ) -> str:
-    """Use OpenAI Vision to OCR an image."""
-    client = OpenAI(api_key=api_key)
+    """Use OpenRouter (Vision-capable model) to OCR an image."""
     b64 = base64.b64encode(image_bytes).decode()
 
-    response = client.chat.completions.create(
-        model=model,
-        messages=[
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": "Transcribe all textual, structural, and mathematical components from this image exactly. Output the text in the original language.",
-                    },
-                    {
-                        "type": "image_url",
-                        "image_url": {"url": f"data:image/png;base64,{b64}"},
-                    },
-                ],
-            }
-        ]
+    resp = http_requests.post(
+        OPENROUTER_API_URL,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "HTTP-Referer": OPENROUTER_REFERER,
+            "X-OpenRouter-Title": OPENROUTER_TITLE,
+            "Content-Type": "application/json",
+        },
+        json={
+            "model": model,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": "Transcribe all textual, structural, and mathematical components from this image exactly. Output the text in the original language.",
+                        },
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": f"data:image/png;base64,{b64}"},
+                        },
+                    ],
+                }
+            ],
+        },
+        timeout=120,
     )
-    return response.choices[0].message.content or ""
+
+    if resp.status_code != 200:
+        raise RuntimeError(f"OpenRouter OCR error ({resp.status_code}): {resp.text[:300]}")
+
+    return resp.json().get("choices", [{}])[0].get("message", {}).get("content", "")
 
 
-def generate_summary(text: str, api_key: str, model: str = "gpt-5-mini") -> str:
-    """Generate a 1-sentence summary of extracted text."""
-    client = OpenAI(api_key=api_key)
-    response = client.chat.completions.create(
-        model=model,
-        messages=[
-            {
-                "role": "system",
-                "content": "Provide a 1-sentence descriptive summary of this educational material in the same language as the material.",
-            },
-            {"role": "user", "content": text[:4000]},  # Limit context
-        ]
+def generate_summary(text: str, api_key: str, model: str = "openai/gpt-5-mini") -> str:
+    """Generate a 1-sentence summary of extracted text via OpenRouter."""
+    resp = http_requests.post(
+        OPENROUTER_API_URL,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "HTTP-Referer": OPENROUTER_REFERER,
+            "X-OpenRouter-Title": OPENROUTER_TITLE,
+            "Content-Type": "application/json",
+        },
+        json={
+            "model": model,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "Provide a 1-sentence descriptive summary of this educational material in the same language as the material.",
+                },
+                {"role": "user", "content": text[:4000]},
+            ],
+        },
+        timeout=60,
     )
-    return response.choices[0].message.content or ""
+
+    if resp.status_code != 200:
+        raise RuntimeError(f"OpenRouter summary error ({resp.status_code}): {resp.text[:300]}")
+
+    return resp.json().get("choices", [{}])[0].get("message", {}).get("content", "")
 
 
-def get_api_key_and_model(db: DBSession) -> tuple[str, str]:
-    """Retrieve and decrypt the API key and default model from settings."""
-    user_settings = db.query(UserSettings).first()
-    if not user_settings or not user_settings.openai_api_key_encrypted:
-        raise ValueError("OpenAI API key not configured")
-    api_key = decrypt_api_key(user_settings.openai_api_key_encrypted)
-    return api_key, user_settings.default_model
+def get_api_key_and_model(db: DBSession, user_id: str | None = None) -> tuple[str, str]:
+    """Retrieve and decrypt the API key and the user's preferred model.
+
+    Looks up the first active key from the secret_keys table.
+    The model preference is read from the users.default_model column.
+    """
+    api_key = None
+    model = "openai/gpt-5-mini"
+
+    if user_id:
+        secret_key = (
+            db.query(SecretKey)
+            .filter(SecretKey.user_id == user_id, SecretKey.is_active == True)
+            .first()
+        )
+        if secret_key:
+            api_key = decrypt_api_key(secret_key.secret_key_hash)
+
+        # Get model preference from the user record
+        user = db.query(User).filter(User.id == user_id).first()
+        if user and user.default_model:
+            model = user.default_model
+
+    if not api_key:
+        raise ValueError("API key not configured")
+
+    return api_key, model
 
 
 def process_file_extraction(db: DBSession, source_file_id: str) -> None:
@@ -206,10 +257,10 @@ def process_file_extraction(db: DBSession, source_file_id: str) -> None:
     # -------------------------------------------------------------------------
 
     try:
-        api_key, model = get_api_key_and_model(db)
+        api_key, model = get_api_key_and_model(db, user_id=source_file.user_id)
     except ValueError:
         api_key = None
-        model = "gpt-5-mini"
+        model = "openai/gpt-5-mini"
 
     file_path = source_file.original_path
     extracted_text = ""
@@ -274,9 +325,6 @@ def process_file_extraction(db: DBSession, source_file_id: str) -> None:
                 db.rollback()
         # ---------------------------------------------------------------------
 
-    except RateLimitError:
-        source_file.extracted_text = "[OCR_ERROR:RATE_LIMIT]"
-        db.commit()
     except Exception as e:
         # Log error but don't crash
         source_file.extracted_text = f"[Extraction error: {str(e)}]"

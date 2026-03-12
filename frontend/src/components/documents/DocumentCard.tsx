@@ -11,6 +11,7 @@ import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
 import DescriptionIcon from '@mui/icons-material/Description';
 import DeleteIcon from '@mui/icons-material/Delete';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { useRouter } from 'next/navigation';
 import { Document } from '@/schemas/document';
 import { CONTENT_TYPES } from '@/lib/constants';
@@ -19,9 +20,10 @@ import { format } from 'date-fns';
 interface DocumentCardProps {
   document: Document;
   onDelete: (id: string) => void;
+  onCopy?: (id: string) => void;
 }
 
-export default function DocumentCard({ document, onDelete }: DocumentCardProps) {
+export default function DocumentCard({ document, onDelete, onCopy }: DocumentCardProps) {
   const router = useRouter();
 
   const typeLabel = CONTENT_TYPES.find(c => c.value === document.content_type)?.label || 'Inne';
@@ -66,6 +68,11 @@ export default function DocumentCard({ document, onDelete }: DocumentCardProps) 
         </CardContent>
       </CardActionArea>
       <CardActions sx={{ justifyContent: 'flex-end', px: 2, pb: 2, pt: 0 }}>
+        {onCopy && (
+          <IconButton size="small" onClick={(e) => { e.stopPropagation(); onCopy(document.id); }} title="Utwórz kopię dokumentu" color="primary" sx={{ bgcolor: 'rgba(1, 72, 131, 0.08)', '&:hover': { bgcolor: 'rgba(1, 72, 131, 0.16)' }, transition: 'all 0.2s' }}>
+            <ContentCopyIcon fontSize="small" />
+          </IconButton>
+        )}
         <IconButton size="small" onClick={(e) => { e.stopPropagation(); onDelete(document.id); }} title="Usuń dokument" color="error" sx={{ bgcolor: 'rgba(229, 57, 53, 0.08)', '&:hover': { bgcolor: 'rgba(229, 57, 53, 0.16)' }, transition: 'all 0.2s' }}>
           <DeleteIcon fontSize="small" />
         </IconButton>

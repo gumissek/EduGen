@@ -52,7 +52,7 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
   const [content, setContent] = React.useState('');
   const [isEdited, setIsEdited] = React.useState(false);
 
-  // Fetch prototype data (contains the generated content)
+  // Fetch prototype data
   const { data: prototype, isLoading, isError } = useQuery<PrototypeData>({
     queryKey: ['prototype', id],
     queryFn: async () => {
@@ -63,7 +63,6 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
     retryDelay: 2000,
   });
 
-  // Set initial content once loaded (prefer edited_content over original)
   React.useEffect(() => {
     if (prototype && !isEdited) {
       const initialContent = prototype.edited_content || prototype.original_content;
@@ -71,7 +70,6 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
     }
   }, [prototype, isEdited]);
 
-  // Save manual edits mutation — PUT /api/prototypes/{generation_id}
   const saveMutation = useMutation({
     mutationFn: async (htmlContent: string) => {
       await api.put(`/api/prototypes/${id}`, { edited_content: htmlContent });
@@ -85,10 +83,10 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
     },
   });
 
-  // Reprompt mutation — POST /api/prototypes/{generation_id}/reprompt
   const repromptMutation = useMutation({
     mutationFn: async (prompt: string) => {
-      const res = await api.post(`/api/prototypes/${id}/reprompt`, { prompt });
+      // 150 s — matches the 90 s backend timeout + generous network margin
+      const res = await api.post(`/api/prototypes/${id}/reprompt`, { prompt }, { timeout: 150_000 });
       return res.data as PrototypeData;
     },
     onSuccess: (data: PrototypeData) => {
@@ -99,21 +97,46 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
       success('AI zaktualizowało treść');
     },
     onError: (err: unknown) => {
-      const axiosErr = err as { response?: { data?: { detail?: string } } };
-      const detail: string = axiosErr?.response?.data?.detail ?? '';
+      const axiosErr = err as {
+        response?: { status?: number; data?: { detail?: string } };
+        code?: string;
+        message?: string;
+      };
 
+      // ── Network / proxy errors (no HTTP response received) ──────────────────
+      if (!axiosErr.response) {
+        const code = axiosErr.code ?? '';
+        const msg  = (axiosErr.message ?? '').toLowerCase();
+        if (code === 'ECONNABORTED' || msg.includes('timeout')) {
+          error('Zapytanie do AI trwało zbyt długo i zostało anulowane. Spróbuj ponownie lub wybierz szybszy model AI w Ustawieniach.');
+        } else {
+          // ECONNRESET / socket hang up / network error
+          error('Połączenie z serwerem zostało przerwane. AI może nadal przetwarzać Twoje zapytanie — odśwież stronę za chwilę lub spróbuj ponownie.');
+        }
+        return;
+      }
+
+      const status = axiosErr.response.status ?? 0;
+      const detail: string = axiosErr.response.data?.detail ?? '';
+
+      // ── 504 Gateway Timeout (backend hard limit hit) ─────────────────────────
+      if (status === 504) {
+        error(detail || 'Zapytanie do AI przekroczyło limit czasu serwera. Spróbuj ponownie lub wybierz szybszy model AI.');
+        return;
+      }
+
+      // ── Application-level errors from the detail field ───────────────────────
       if (
         detail.includes('nieprawidłowy JSON') ||
         detail.includes('JSONDecodeError') ||
         detail.includes('nie zawiera klucza') ||
         detail.includes('nie jest listą')
       ) {
-        // OpenAI returned malformed / unexpected JSON — safe to retry
         error('AI zwróciło niepoprawną odpowiedź (błąd formatu JSON). Spróbuj wysłać poprawkę ponownie – zwykle wystarczy powtórzyć zapytanie.');
       } else if (detail.includes('API key') || detail.includes('api_key') || detail.includes('Incorrect API key')) {
-        error('Brak lub nieprawidłowy klucz API OpenAI. Sprawdź konfigurację w Ustawieniach.');
+        error('Brak lub nieprawidłowy klucz API OpenRouter. Sprawdź konfigurację w Ustawieniach.');
       } else if (detail.includes('Rate limit') || detail.includes('rate_limit') || detail.includes('429')) {
-        error('Przekroczono limit zapytań OpenAI (Rate Limit). Poczekaj chwilę i spróbuj ponownie.');
+        error('Przekroczono limit zapytań OpenRouter (Rate Limit). Poczekaj chwilę i spróbuj ponownie.');
       } else if (detail) {
         error(`Błąd aktualizacji AI: ${detail}`);
       } else {
@@ -122,12 +145,9 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
     },
   });
 
-  // Finalize mutation — POST /api/documents/{generation_id}/finalize
   const finalizeMutation = useMutation({
     mutationFn: async () => {
-      // Save pending edits first
       await saveMutation.mutateAsync(content);
-      // Create final document — use generation_id from prototype, not prototype id
       const generationId = prototype!.generation_id;
       const res = await api.post(`/api/documents/${generationId}/finalize`);
       return res.data as DocumentData;
@@ -167,19 +187,21 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
   }
 
   return (
-    <Box sx={{ height: 'calc(100vh - 140px)', display: 'flex', flexDirection: 'column' }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h5" fontWeight="bold">
+    <Box sx={{ minHeight: 'calc(100vh - 140px)', display: 'flex', flexDirection: 'column' }}>
+      
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2, mb: 2 }}>
+        <Typography variant="h5" fontWeight="bold" sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
           Edytor materiału
         </Typography>
-        <Box sx={{ display: 'flex', gap: 2 }}>
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', width: { xs: '100%', sm: 'auto' } }}>
           <Button 
             variant="outlined" 
             startIcon={<SaveIcon />}
             onClick={handleSave}
             disabled={saveMutation.isPending}
+            sx={{ flex: { xs: 1, sm: 'none' } }}
           >
-            {saveMutation.isPending ? 'Zapisywanie...' : 'Zapisz postęp'}
+            {saveMutation.isPending ? 'Zapisywanie...' : 'Zapisz wersję roboczą'}
           </Button>
           <Button 
             variant="contained" 
@@ -187,22 +209,43 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
             startIcon={finalizeMutation.isPending ? <CircularProgress size={18} color="inherit" /> : <CheckIcon />}
             onClick={() => finalizeMutation.mutate()}
             disabled={finalizeMutation.isPending || saveMutation.isPending}
+            sx={{ flex: { xs: 1, sm: 'none' } }}
           >
             {finalizeMutation.isPending ? 'Finalizowanie...' : 'Finalizuj i Dodaj do Bazy'}
           </Button>
         </Box>
       </Box>
 
-      <Box sx={{ flexGrow: 1, position: 'relative', pb: 10 }}>
-        <TipTapEditor 
-          initialContent={content} 
-          onChange={handleEditorChange} 
-        />
+      {/* Kontener dla edytora i sticky inputu */}
+      <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', position: 'relative' }}>
         
-        <RepromptInput 
-          onSend={async (p) => { await repromptMutation.mutateAsync(p); }} 
-          isLoading={repromptMutation.isPending} 
-        />
+        {/* Kontener edytora */}
+        <Box sx={{ flexGrow: 1, pb: 4 }}>
+          <TipTapEditor 
+            initialContent={content} 
+            onChange={handleEditorChange} 
+          />
+        </Box>
+        
+        {/* Sticky wrapper kontrolujący pozycję Inputu */}
+        <Box 
+          sx={{ 
+            position: 'sticky', 
+            bottom: { xs: 16, md: 24 }, 
+            zIndex: 50, // Podbity z-index, aby przysłaniał test za nim podczas scrolla
+            display: 'flex',
+            justifyContent: 'center',
+            width: '100%',
+            px: { xs: 2, md: 0 }, // Zabezpieczenie na mobile, żeby input nie przyklejał się do krawędzi ekranu
+            mt: 2
+          }}
+        >
+          <RepromptInput 
+            onSend={async (p) => { await repromptMutation.mutateAsync(p); }} 
+            isLoading={repromptMutation.isPending} 
+          />
+        </Box>
+
       </Box>
     </Box>
   );

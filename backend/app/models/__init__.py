@@ -1,8 +1,7 @@
 """ORM models package."""
 
 from app.models.user import User
-from app.models.session import Session
-from app.models.settings import UserSettings
+from app.models.secret_key import SecretKey
 from app.models.subject import Subject
 from app.models.source_file import SourceFile
 from app.models.file_content_cache import FileContentCache
@@ -13,11 +12,11 @@ from app.models.document import Document
 from app.models.ai_request import AIRequest
 from app.models.backup import Backup
 from app.models.diagnostic_log import DiagnosticLog
+from app.models.user_ai_model import UserAIModel
 
 __all__ = [
     "User",
-    "Session",
-    "UserSettings",
+    "SecretKey",
     "Subject",
     "SourceFile",
     "FileContentCache",
@@ -28,4 +27,5 @@ __all__ = [
     "AIRequest",
     "Backup",
     "DiagnosticLog",
+    "UserAIModel",
 ]

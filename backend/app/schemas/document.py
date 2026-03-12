@@ -155,3 +155,8 @@ class BulkDownloadRequest(BaseModel):
         if not v:
             raise ValueError('Lista dokumentów nie może być pusta')
         return v
+
+
+class MoveToDraftResponse(BaseModel):
+    generation_id: str
+    message: str

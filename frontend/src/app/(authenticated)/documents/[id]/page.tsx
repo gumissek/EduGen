@@ -9,9 +9,11 @@ import SaveIcon from '@mui/icons-material/Save';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import DescriptionIcon from '@mui/icons-material/Description';
 import KeyboardArrowLeftIcon from '@mui/icons-material/KeyboardArrowLeft';
+import EditNoteIcon from '@mui/icons-material/EditNote';
 import { useRouter } from 'next/navigation';
 import { useDocumentDetails } from '@/hooks/useDocuments';
 import dynamic from 'next/dynamic';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 
 const TipTapEditor = dynamic(() => import('@/components/editor/TipTapEditor'), {
   ssr: false,
@@ -33,11 +35,14 @@ export default function DocumentDetailsPage({ params }: { params: Promise<{ id: 
     exportPDF, 
     isExportingPDF, 
     exportWord, 
-    isExportingWord 
+    isExportingWord,
+    moveToDraft,
+    isMovingToDraft,
   } = useDocumentDetails(id);
 
   const [content, setContent] = React.useState('');
   const [isEdited, setIsEdited] = React.useState(false);
+  const [isMoveDialogOpen, setIsMoveDialogOpen] = React.useState(false);
 
   React.useEffect(() => {
     if (document?.content && !isEdited) {
@@ -50,33 +55,52 @@ export default function DocumentDetailsPage({ params }: { params: Promise<{ id: 
     setIsEdited(false);
   };
 
+  const handleMoveToDraft = async () => {
+    const result = await moveToDraft();
+    setIsMoveDialogOpen(false);
+    router.push(`/generate/${result.generation_id}/editor`);
+  };
+
   if (isLoading) return <CircularProgress />;
   if (!document) return <Typography>Nie znaleziono materiału.</Typography>;
 
   return (
     <Box sx={{ height: 'calc(100vh - 140px)', display: 'flex', flexDirection: 'column' }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-        <Button 
-          startIcon={<KeyboardArrowLeftIcon />} 
-          onClick={() => router.push('/dashboard')}
-          sx={{ mr: 2, color: 'text.secondary' }}
-        >
-          Wróć
-        </Button>
-        <Typography variant="h5" fontWeight="bold" sx={{ flexGrow: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {document.title}
-        </Typography>
+      {/* Top bar – stacks on mobile */}
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'flex-start', sm: 'center' }, gap: 1, mb: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }}>
+          <Button 
+            startIcon={<KeyboardArrowLeftIcon />} 
+            onClick={() => router.push('/dashboard')}
+            sx={{ mr: 1, color: 'text.secondary', flexShrink: 0 }}
+          >
+            Wróć
+          </Button>
+          <Typography variant="h5" fontWeight="bold" sx={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: { xs: '1.1rem', sm: '1.5rem' } }}>
+            {document.title}
+          </Typography>
+        </Box>
 
-        <Box sx={{ display: 'flex', gap: 1.5 }}>
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', width: { xs: '100%', sm: 'auto' } }}>
           <Button 
             variant="contained" 
             color="primary"
             startIcon={<SaveIcon />}
             onClick={handleSave}
             disabled={!isEdited || isUpdating}
-            sx={{ borderRadius: 2, px: 3, fontWeight: 600 }}
+            sx={{ borderRadius: 2, px: 3, fontWeight: 600, flex: { xs: 1, sm: 'none' } }}
           >
             Zapisz
+          </Button>
+          <Button
+            variant="outlined"
+            color="secondary"
+            startIcon={<EditNoteIcon />}
+            onClick={() => setIsMoveDialogOpen(true)}
+            disabled={isMovingToDraft}
+            sx={{ borderRadius: 2 }}
+          >
+            Edytuj i przenieś na wersję roboczą
           </Button>
           <Button 
             variant="outlined" 
@@ -110,6 +134,17 @@ export default function DocumentDetailsPage({ params }: { params: Promise<{ id: 
           }} 
         />
       </Box>
+
+      <ConfirmDialog
+        open={isMoveDialogOpen}
+        title="Przenieś do wersji roboczej"
+        message="Czy na pewno chcesz zamienić ten dokument w wersję roboczą w celu edycji?"
+        confirmLabel="Tak, przenieś"
+        severity="warning"
+        isLoading={isMovingToDraft}
+        onConfirm={handleMoveToDraft}
+        onCancel={() => setIsMoveDialogOpen(false)}
+      />
     </Box>
   );
 }

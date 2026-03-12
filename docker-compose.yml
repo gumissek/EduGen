@@ -1,22 +1,54 @@
-version: "3.8"
-
 services:
+  postgres:
+    image: postgres:16
+    container_name: edugen-postgres
+    restart: unless-stopped
+    stop_grace_period: 5s # natychmiastowe ubijanie kontenera
+    env_file:
+      - .env                          # dostarcza POSTGRES_PASSWORD
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - edugen_postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - backend_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: edugen-backend
+    stop_grace_period: 2s # natychmiastowe ubijanie kontenera
     ports:
       - "127.0.0.1:8000:8000"
     volumes:
       - edugen_data:/app/data
-      - ./common_filles:/app/common_filles
-    env_file:
-      - ./backend/.env
+      - ./common_filles:/app/common_filles:ro
     environment:
       - UV_PROJECT_ENVIRONMENT=/app/.venv
-    command: ["uv", "run", "sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2"]
+      - DATABASE_URL=postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:${POSTGRES_PORT}/${POSTGRES_DB}
+      - DATA_DIR=${DATA_DIR}
+      - MAX_FILE_SIZE_MB=${MAX_FILE_SIZE_MB}
+      - CORS_ORIGINS=${CORS_ORIGINS}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - JWT_ALGORITHM=${JWT_ALGORITHM}
+      - JWT_EXPIRATION_MINUTES=${JWT_EXPIRATION_MINUTES}
+    command: ["uv", "run", "sh", "-c", "python app/init_app.py && uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2"]
+    depends_on:
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
+    networks:
+      - backend_network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
       interval: 30s
@@ -26,20 +58,32 @@ services:
 
   frontend:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: frontend/Dockerfile
       args:
-        - BACKEND_URL=http://backend:8000
+        BACKEND_URL: http://backend:8000
     container_name: edugen-frontend
+    stop_grace_period: 2s # natychmiastowe ubijanie kontenera
     ports:
       - "127.0.0.1:3000:3000"
+    volumes:
+      - ./common_filles:/app/common_filles:ro
     environment:
       - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
     depends_on:
       backend:
         condition: service_healthy
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
+    networks:
+      - backend_network
 
 volumes:
   edugen_data:
-    driver: local
+  edugen_postgres_data:
+
+networks:
+  backend_network:
+    driver: bridge

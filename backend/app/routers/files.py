@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks, status
+from fastapi.responses import FileResponse as FastAPIFileResponse
 from sqlalchemy.orm import Session as DBSession
 
 from app.database import get_db
@@ -53,7 +55,7 @@ async def upload_file(
     current_user: User = Depends(get_current_user),
 ):
     """Upload a source file (PDF, DOCX, JPG, PNG)."""
-    # Validate subject exists
+    # Validate subject exists and belongs to user
     subject = db.query(Subject).filter(Subject.id == subject_id).first()
     if not subject:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subject not found")
@@ -82,6 +84,7 @@ async def upload_file(
     # Create DB record
     source_file = SourceFile(
         id=file_uuid,
+        user_id=current_user.id,
         subject_id=subject_id,
         filename=file.filename or f"{file_uuid}.{ext}",
         original_path=file_path,
@@ -106,7 +109,10 @@ def list_files(
     current_user: User = Depends(get_current_user),
 ):
     """List source files, optionally filtered by subject."""
-    query = db.query(SourceFile).filter(SourceFile.deleted_at.is_(None))
+    query = db.query(SourceFile).filter(
+        SourceFile.user_id == current_user.id,
+        SourceFile.deleted_at.is_(None),
+    )
     if subject_id:
         query = query.filter(SourceFile.subject_id == subject_id)
 
@@ -117,6 +123,32 @@ def list_files(
     )
 
 
+@router.get("/{file_id}/download")
+def download_file(
+    file_id: str,
+    db: DBSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Download a source file uploaded by the current user."""
+    source_file = db.query(SourceFile).filter(
+        SourceFile.id == file_id,
+        SourceFile.user_id == current_user.id,
+        SourceFile.deleted_at.is_(None),
+    ).first()
+    if not source_file:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
+
+    file_path = Path(source_file.original_path)
+    if not file_path.exists():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found on disk")
+
+    return FastAPIFileResponse(
+        path=str(file_path),
+        filename=source_file.filename,
+        media_type="application/octet-stream",
+    )
+
+
 @router.delete("/{file_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_file(
     file_id: str,
@@ -124,7 +156,10 @@ def delete_file(
     current_user: User = Depends(get_current_user),
 ):
     """Soft-delete a source file."""
-    source_file = db.query(SourceFile).filter(SourceFile.id == file_id).first()
+    source_file = db.query(SourceFile).filter(
+        SourceFile.id == file_id,
+        SourceFile.user_id == current_user.id,
+    ).first()
     if not source_file:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
 

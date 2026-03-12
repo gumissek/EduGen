@@ -14,6 +14,7 @@ import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import DescriptionIcon from '@mui/icons-material/Description';
 import ImageIcon from '@mui/icons-material/Image';
 import DeleteIcon from '@mui/icons-material/Delete';
+import DownloadIcon from '@mui/icons-material/Download';
 import CircularProgress from '@mui/material/CircularProgress';
 import NextLink from 'next/link';
 import { SourceFile } from '@/types';
@@ -22,6 +23,7 @@ import { format } from 'date-fns';
 interface FileCardProps {
   file: SourceFile;
   onDelete: (id: string) => void;
+  onDownload: (file: SourceFile) => void;
 }
 
 const getFileIcon = (mimeType: string) => {
@@ -43,7 +45,7 @@ function FileStatusSection({ file }: { file: SourceFile }) {
   if (file.extraction_error === 'NO_API_KEY') {
     return (
       <Alert severity="warning" sx={{ mt: 2, fontSize: '0.75rem', py: 0.5 }}>
-        Brak klucza API OpenAI. Skonfiguruj go w{' '}
+        Brak klucza API OpenRouter. Skonfiguruj go w{' '}
         <Link component={NextLink} href="/settings" underline="hover">
           Ustawieniach
         </Link>
@@ -55,7 +57,7 @@ function FileStatusSection({ file }: { file: SourceFile }) {
   if (file.extraction_error === 'RATE_LIMIT') {
     return (
       <Alert severity="error" sx={{ mt: 2, fontSize: '0.75rem', py: 0.5 }}>
-        Przekroczono limit zapytań API OpenAI (Rate Limit). Usuń plik i spróbuj ponownie za chwilę.
+        Przekroczono limit zapytań API OpenRouter (Rate Limit). Usuń plik i spróbuj ponownie za chwilę.
       </Alert>
     );
   }
@@ -112,7 +114,7 @@ function FileStatusSection({ file }: { file: SourceFile }) {
   );
 }
 
-export default function FileCard({ file, onDelete }: FileCardProps) {
+export default function FileCard({ file, onDelete, onDownload }: FileCardProps) {
   return (
     <Card variant="outlined" sx={{ 
       display: 'flex', 
@@ -144,6 +146,9 @@ export default function FileCard({ file, onDelete }: FileCardProps) {
         <FileStatusSection file={file} />
       </CardContent>
       <CardActions sx={{ justifyContent: 'flex-end', px: 2, pb: 2 }}>
+        <IconButton size="small" onClick={() => onDownload(file)} color="primary" title="Pobierz plik">
+          <DownloadIcon fontSize="small" />
+        </IconButton>
         <IconButton size="small" onClick={() => onDelete(file.id)} color="error" title="Usuń plik">
           <DeleteIcon fontSize="small" />
         </IconButton>

@@ -2,30 +2,60 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-
-from fastapi import APIRouter, Depends, HTTPException, Response, Cookie, Header, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session as DBSession
-from typing import Optional
 
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models.user import User
+from app.models.secret_key import SecretKey
 from app.schemas.auth import (
+    RegisterRequest,
     LoginRequest,
     LoginResponse,
+    UserResponse,
     LogoutResponse,
-    ChangePasswordRequest,
-    ChangePasswordResponse,
 )
 from app.services.auth_service import (
     authenticate_user,
-    create_session,
-    invalidate_session,
-    hash_password,
+    register_user,
+    create_access_token,
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+def register(
+    body: RegisterRequest,
+    db: DBSession = Depends(get_db),
+):
+    """Register a new user account."""
+    # Check if email is already taken
+    existing = db.query(User).filter(User.email == body.email).first()
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Użytkownik z tym adresem e-mail już istnieje",
+        )
+
+    user = register_user(
+        db,
+        email=body.email,
+        password=body.password,
+        first_name=body.first_name,
+        last_name=body.last_name,
+    )
+
+    return UserResponse(
+        id=user.id,
+        email=user.email,
+        first_name=user.first_name,
+        last_name=user.last_name,
+        is_active=user.is_active,
+        is_superuser=user.is_superuser,
+        created_at=user.created_at,
+    )
 
 
 @router.post("/login", response_model=LoginResponse)
@@ -34,63 +64,54 @@ def login(
     response: Response,
     db: DBSession = Depends(get_db),
 ):
-    """Authenticate with password and create a session."""
-    user = authenticate_user(db, body.password)
+    """Authenticate with email + password and return a JWT token."""
+    user = authenticate_user(db, body.email, body.password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid password",
+            detail="Nieprawidłowy adres e-mail lub hasło",
         )
 
-    session = create_session(db, user)
+    access_token = create_access_token(user.id, user.email)
 
-    # Set HttpOnly cookie
+    # Set cookie for the frontend
     response.set_cookie(
-        key="session_token",
-        value=session.token,
-        httponly=True,
+        key="edugen-auth",
+        value=access_token,
+        httponly=False,  # Needs to be readable by Next.js middleware
         samesite="lax",
-        secure=False,  # localhost
-        max_age=900,  # 15 min
+        secure=False,  # Set to True in production with HTTPS
+        max_age=60 * 60 * 24 * 7,  # 7 days (JWT has its own expiry)
     )
 
-    return LoginResponse(
-        token=session.token,
-        expires_at=session.expires_at,
-        must_change_password=user.must_change_password,
-    )
+    return LoginResponse(access_token=access_token)
 
 
-@router.post("/change-password", response_model=ChangePasswordResponse)
-def change_password(
-    body: ChangePasswordRequest,
+@router.get("/me", response_model=UserResponse)
+def get_me(
     db: DBSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Change the current user's password. Clears the must_change_password flag."""
-    current_user.password_hash = hash_password(body.new_password)
-    current_user.must_change_password = False
-    current_user.updated_at = datetime.now(timezone.utc).isoformat()
-    db.commit()
-    return ChangePasswordResponse()
+    """Get the currently authenticated user's profile."""
+    has_keys = db.query(SecretKey).filter(SecretKey.user_id == current_user.id).count() > 0
+    return UserResponse(
+        id=current_user.id,
+        email=current_user.email,
+        first_name=current_user.first_name,
+        last_name=current_user.last_name,
+        is_active=current_user.is_active,
+        is_superuser=current_user.is_superuser,
+        created_at=current_user.created_at,
+        api_quota=current_user.api_quota,
+        api_quota_reset=current_user.api_quota_reset,
+        has_secret_keys=has_keys,
+    )
 
 
 @router.post("/logout", response_model=LogoutResponse)
 def logout(
     response: Response,
-    db: DBSession = Depends(get_db),
-    session_token: Optional[str] = Cookie(None, alias="session_token"),
-    authorization: Optional[str] = Header(None),
 ):
-    """Invalidate the current session."""
-    token: str | None = None
-    if session_token:
-        token = session_token
-    elif authorization and authorization.startswith("Bearer "):
-        token = authorization[7:]
-
-    if token:
-        invalidate_session(db, token)
-
-    response.delete_cookie("session_token")
+    """Clear the auth cookie (JWT is stateless, no server-side invalidation)."""
+    response.delete_cookie("edugen-auth")
     return LogoutResponse()

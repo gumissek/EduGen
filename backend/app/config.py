@@ -16,12 +16,15 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    DATABASE_URL: str = "sqlite:///./data/edugen.db"
-    DEFAULT_PASSWORD_HASH: str = ""
-    DATA_DIR: str = "./data"
-    SESSION_TIMEOUT_MINUTES: int = 15
-    MAX_FILE_SIZE_MB: int = 10
-    CORS_ORIGINS: str = '["http://localhost:3000"]'
+    DATABASE_URL: str
+    DATA_DIR: str
+    MAX_FILE_SIZE_MB: int
+    CORS_ORIGINS: str
+
+    # JWT configuration
+    JWT_SECRET_KEY: str
+    JWT_ALGORITHM: str
+    JWT_EXPIRATION_MINUTES: int
 
     @property
     def cors_origins_list(self) -> List[str]:

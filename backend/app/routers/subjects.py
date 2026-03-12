@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import or_
 from sqlalchemy.orm import Session as DBSession
 
 from app.database import get_db
@@ -21,8 +22,13 @@ def list_subjects(
     db: DBSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """List all subjects (predefined + custom)."""
-    subjects = db.query(Subject).order_by(Subject.is_custom, Subject.name).all()
+    """List all subjects (predefined + user's custom ones)."""
+    subjects = (
+        db.query(Subject)
+        .filter(or_(Subject.user_id == current_user.id, Subject.user_id.is_(None)))
+        .order_by(Subject.is_custom, Subject.name)
+        .all()
+    )
     return [SubjectResponse.model_validate(s) for s in subjects]
 
 
@@ -33,15 +39,22 @@ def create_subject(
     current_user: User = Depends(get_current_user),
 ):
     """Create a new custom subject."""
-    # Check for duplicate name
-    existing = db.query(Subject).filter(Subject.name == body.name).first()
+    # Check for duplicate name within user's scope
+    existing = (
+        db.query(Subject)
+        .filter(
+            Subject.name == body.name,
+            or_(Subject.user_id == current_user.id, Subject.user_id.is_(None)),
+        )
+        .first()
+    )
     if existing:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Subject with this name already exists",
         )
 
-    subject = Subject(name=body.name, is_custom=1)
+    subject = Subject(name=body.name, is_custom=1, user_id=current_user.id)
     db.add(subject)
     db.commit()
     db.refresh(subject)
@@ -54,8 +67,12 @@ def delete_subject(
     db: DBSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Delete a custom subject (only custom ones can be deleted)."""
-    subject = db.query(Subject).filter(Subject.id == subject_id).first()
+    """Delete a custom subject (only custom ones owned by the user can be deleted)."""
+    subject = (
+        db.query(Subject)
+        .filter(Subject.id == subject_id, Subject.user_id == current_user.id)
+        .first()
+    )
     if not subject:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subject not found")
 

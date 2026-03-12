@@ -19,10 +19,13 @@ if exist ".version" (
 echo Pobieranie informacji o repozytorium...
 set REMOTE_VERSION=
 set TEMP_VERSION=%TEMP%\edugen_remote_version.txt
-powershell -NoProfile -ExecutionPolicy Bypass -Command "try { $resp = Invoke-WebRequest -Uri '%REMOTE_VERSION_URL%' -UseBasicParsing -TimeoutSec 10; if ($resp.StatusCode -ge 200 -and $resp.StatusCode -lt 300) { [IO.File]::WriteAllText('%TEMP_VERSION%', $resp.Content) } else { exit 1 } } catch { exit 1 }" >nul 2>&1
+
+:: [ZMIANA 1] Uzycie systemowego curl zamiast ciezkiego powershella
+curl.exe -s -f -o "%TEMP_VERSION%" "%REMOTE_VERSION_URL%"
 if %ERRORLEVEL% NEQ 0 (
-    echo [UWAGA] Nie mozna pobrac pliku .version z: %REPO_URL% ^(%MASTER_BRANCH%^).
+    echo [UWAGA] Nie mozna pobrac pliku .version z: %REPO_URL% ^(%MASTER_BRANCH%^). Sprawdz polaczenie z internetem.
     echo.
+    goto koniec
     exit /b 0
 )
 
@@ -32,9 +35,10 @@ if exist "%TEMP_VERSION%" (
 )
 
 if "%REMOTE_VERSION%"=="" (
-    echo [UWAGA] Nie mozna odczytac zdalnej wersji z pliku .version.
+    echo [UWAGA] Nie mozna odczytac zdalnej wersji z pobranego pliku.
     echo.
     exit /b 0
+    goto koniec
 )
 
 echo Lokalna wersja:  %LOCAL_VERSION%
@@ -57,39 +61,58 @@ set /p UPDATE="Czy chcesz pobrac i zainstalowac nowa wersje? (T/N): "
 
 if /i "%UPDATE%"=="T" (
     where git >nul 2>&1
-    if %ERRORLEVEL% NEQ 0 (
+    if !ERRORLEVEL! NEQ 0 (
         echo [UWAGA] Git nie jest zainstalowany. Nie moge wykonac automatycznej aktualizacji.
         echo.
         exit /b 0
+        goto koniec
     )
 
     git rev-parse --git-dir >nul 2>&1
-    if %ERRORLEVEL% NEQ 0 (
+    if !ERRORLEVEL! NEQ 0 (
         echo [UWAGA] Katalog nie jest repozytorium git - wykonaj aktualizacje recznie.
         echo.
         exit /b 0
+        goto koniec
     )
 
     set CURRENT_BRANCH=
     FOR /F "tokens=*" %%i IN ('git rev-parse --abbrev-ref HEAD 2^>nul') DO set CURRENT_BRANCH=%%i
-    if /i not "%CURRENT_BRANCH%"=="%MASTER_BRANCH%" (
-        echo [UWAGA] Jestes na galezi '%CURRENT_BRANCH%'.
-        echo        Automatyczna aktualizacja obsluguje tylko galaz '%MASTER_BRANCH%'.
+    if /i not "!CURRENT_BRANCH!"=="%MASTER_BRANCH%" (
+        echo [UWAGA] Jestes na galezi '!CURRENT_BRANCH!'.
+        echo         Automatyczna aktualizacja obsluguje tylko galaz '%MASTER_BRANCH%'.
         echo.
         exit /b 0
+        goto koniec
     )
 
-    echo Pobieranie aktualizacji z %REPO_URL% ^(%MASTER_BRANCH%^)...
-    git pull %REPO_URL% %MASTER_BRANCH%
-    if %ERRORLEVEL% EQU 0 (
+    :: [ZMIANA 2] Sprawdzenie czy sa niezatwierdzone zmiany przed wykonaniem pull
+    for /f %%i in ('git status --porcelain') do set HAS_CHANGES=1
+    if defined HAS_CHANGES (
+        echo [BLAD] Wykryto lokalne zmiany w plikach projektu. 
+        echo [BLAD] Automatyczna aktualizacja zostala przerwana, aby nie nadpisac Twojej pracy.
         echo.
-        echo [OK] Aktualizacja zakonczona. Uruchom aplikacje ponownie aby zastosowac zmiany.
+        exit /b 0
+        goto koniec
+    )
+
+    :: [ZMIANA 3] Uzycie standardowego 'origin master' zamiast bezposredniego linku
+    echo Pobieranie aktualizacji z galezi %MASTER_BRANCH%...
+    git pull origin %MASTER_BRANCH%
+    
+    if !ERRORLEVEL! EQU 0 (
+        echo.
+        echo [OK] Aktualizacja pobrana! Zmiany w plikach skryptow mogly zostac nadpisane.
+        echo Zamknij to okno i uruchom aplikacje ponownie.
+        pause
+        exit
     ) else (
         echo.
-        echo [UWAGA] Nie udalo sie wykonac automatycznej aktualizacji.
+        echo [BLAD] Nie udalo sie wykonac automatycznej aktualizacji (Sprawdz logi gita powyzej).
     )
 ) else (
     echo [UWAGA] Pominieto aktualizacje.
 )
+:koniec
 echo.
 exit /b 0

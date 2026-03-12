@@ -24,7 +24,7 @@ frontend/.pnp/
 frontend/.pnp.js
 
 # =========================
-# Zmienne �rodowiskowe
+# Zmienne srodowiskowe
 # =========================
 backend/.env
 frontend/.env

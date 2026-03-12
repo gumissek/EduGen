@@ -1,13 +1,26 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [ -f "check_update.sh" ]; then
-    bash check_update.sh || {
-        echo "[UWAGA] Wystapil problem podczas sprawdzania aktualizacji. Kontynuuje uruchamianie aplikacji."
+# ── Sprawdzenie aktualnej gałęzi Git ─────────────────────────────────────────
+# Używamy || echo "", aby zapobiec przerwaniu skryptu przez 'set -e', gdy nie ma repozytorium
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+
+if [ "$CURRENT_BRANCH" = "master" ]; then
+    if [ -f "check_update.sh" ]; then
+        bash check_update.sh || {
+            echo "[UWAGA] Wystapil problem podczas sprawdzania aktualizacji. Kontynuuje uruchamianie aplikacji."
+            echo ""
+        }
+    else
+        echo "[UWAGA] Brak pliku check_update.sh - pomijam sprawdzanie aktualizacji."
         echo ""
-    }
+    fi
 else
-    echo "[UWAGA] Brak pliku check_update.sh - pomijam sprawdzanie aktualizacji."
+    if [ -z "$CURRENT_BRANCH" ]; then
+        echo "[UWAGA] Nie wykryto repozytorium Git (lub Git nie jest zainstalowany). Pomijam sprawdzanie aktualizacji."
+    else
+        echo "[INFO] Aktualna galaz to '$CURRENT_BRANCH' (nie 'master'). Pomijam sprawdzanie aktualizacji."
+    fi
     echo ""
 fi
 
@@ -66,25 +79,27 @@ fi
 echo "[OK] Docker Desktop jest zainstalowany i uruchomiony."
 echo ""
 
-# Sprawdz czy istnieje plik .env backendu
-if [ ! -f "backend/.env" ]; then
-    echo "[UWAGA] Brak pliku konfiguracyjnego backend/.env"
+# Sprawdz czy istnieje plik .env w glownym katalogu projektu
+if [ ! -f ".env" ]; then
+    echo "[UWAGA] Brak pliku konfiguracyjnego .env"
     echo ""
-    if [ -f ".config_backend" ]; then
-        echo "Znaleziono plik .config_backend - kopiowanie do backend/.env..."
-        cp ".config_backend" "backend/.env"
-        echo "[OK] Plik backend/.env zostal utworzony automatycznie z .config_backend."
-        echo "[INFO] Uzupelnij backend/.env o wlasny klucz OPENAI_API_KEY przed generowaniem materialow."
+    if [ -f ".env.example" ]; then
+        echo "Znaleziono plik .env.example - kopiowanie do .env..."
+        cp ".env.example" ".env"
+        echo "[OK] Plik .env zostal utworzony automatycznie z .env.example."
+        echo "[WAZNE] Przed uruchomieniem uzupelnij .env o wlasne wartosci:"
+        echo "        - POSTGRES_PASSWORD"
+        echo "        - JWT_SECRET_KEY"
         echo ""
     else
-        echo "[BLAD] Brak pliku .config_backend w glownym katalogu projektu."
-        echo "Skontaktuj sie z administratorem i umiec plik .env w folderze backend."
+        echo "[BLAD] Brak pliku .env.example w glownym katalogu projektu."
+        echo "Pobierz ponownie projekt lub utworz plik .env recznie na podstawie dokumentacji."
         echo ""
         exit 1
     fi
 fi
 
-echo "[OK] Plik konfiguracyjny backend/.env istnieje."
+echo "[OK] Plik konfiguracyjny .env istnieje."
 echo ""
 echo "Budowanie i uruchamianie aplikacji..."
 echo "(Pierwsze uruchomienie moze trwac kilka minut - trwa pobieranie obrazow)"

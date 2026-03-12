@@ -37,7 +37,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       if (typeof window !== 'undefined') {
         // Clear the auth cookie so middleware redirects to login
-        document.cookie = `${AUTH_COOKIE}=; path=/; SameSite=Strict; max-age=0`;
+        document.cookie = `${AUTH_COOKIE}=; path=/; SameSite=Lax; max-age=0`;
         if (window.location.pathname !== '/login') {
           window.location.href = '/login';
         }
