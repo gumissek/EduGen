@@ -171,74 +171,136 @@ export default function ModelSelector() {
           </Typography>
         </Paper>
       ) : (
-        <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 3 }}>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell padding="checkbox" />
-                <TableCell>Provider</TableCell>
-                <TableCell>Nazwa modelu</TableCell>
-                <TableCell>Opis</TableCell>
-                <TableCell>Cena</TableCell>
-                <TableCell align="right">Akcje</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {models.map((model) => {
-                const key = `${model.provider}/${model.model_name}`;
-                const isSelected = key === selectedKey;
-                return (
-                  <TableRow
-                    key={model.id}
-                    hover
-                    selected={isSelected}
-                    onClick={() => handleSelectModel(key)}
-                    sx={{ cursor: 'pointer' }}
-                  >
-                    <TableCell padding="checkbox">
+        <>
+          {/* Desktop table – hidden on xs */}
+          <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 3, display: { xs: 'none', sm: 'block' } }}>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell padding="checkbox" />
+                  <TableCell>Provider</TableCell>
+                  <TableCell>Nazwa modelu</TableCell>
+                  <TableCell>Opis</TableCell>
+                  <TableCell>Cena</TableCell>
+                  <TableCell align="right">Akcje</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {models.map((model) => {
+                  const key = `${model.provider}/${model.model_name}`;
+                  const isSelected = key === selectedKey;
+                  return (
+                    <TableRow
+                      key={model.id}
+                      hover
+                      selected={isSelected}
+                      onClick={() => handleSelectModel(key)}
+                      sx={{ cursor: 'pointer' }}
+                    >
+                      <TableCell padding="checkbox">
+                        <Radio
+                          checked={isSelected}
+                          onChange={() => handleSelectModel(key)}
+                          disabled={isUpdating}
+                          size="small"
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          {isSelected && <CheckCircleIcon fontSize="small" color="success" />}
+                          <Chip label={model.provider} size="small" variant="outlined" />
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" fontWeight={600}>
+                          {model.model_name}
+                        </Typography>
+                      </TableCell>
+                      <TableCell sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
+                        {model.description ?? '—'}
+                      </TableCell>
+                      <TableCell sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
+                        {model.price_description ?? '—'}
+                      </TableCell>
+                      <TableCell align="right" onClick={(e) => e.stopPropagation()}>
+                        <Tooltip title="Usuń model">
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => setDeleteId(model.id)}
+                            disabled={isDeleting}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </TableContainer>
+
+          {/* Mobile card list – visible only on xs */}
+          <Box sx={{ display: { xs: 'flex', sm: 'none' }, flexDirection: 'column', gap: 1.5 }}>
+            {models.map((model) => {
+              const key = `${model.provider}/${model.model_name}`;
+              const isSelected = key === selectedKey;
+              return (
+                <Paper
+                  key={model.id}
+                  variant="outlined"
+                  onClick={() => handleSelectModel(key)}
+                  sx={{
+                    p: 2, borderRadius: 3, cursor: 'pointer',
+                    borderColor: isSelected ? 'primary.main' : 'divider',
+                    borderWidth: isSelected ? 2 : 1,
+                    bgcolor: isSelected ? 'primary.50' : 'transparent',
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <Radio
                         checked={isSelected}
                         onChange={() => handleSelectModel(key)}
                         disabled={isUpdating}
                         size="small"
                         onClick={(e) => e.stopPropagation()}
+                        sx={{ p: 0 }}
                       />
-                    </TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        {isSelected && <CheckCircleIcon fontSize="small" color="success" />}
-                        <Chip label={model.provider} size="small" variant="outlined" />
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2" fontWeight={600}>
-                        {model.model_name}
-                      </Typography>
-                    </TableCell>
-                    <TableCell sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
-                      {model.description ?? '—'}
-                    </TableCell>
-                    <TableCell sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
-                      {model.price_description ?? '—'}
-                    </TableCell>
-                    <TableCell align="right" onClick={(e) => e.stopPropagation()}>
-                      <Tooltip title="Usuń model">
-                        <IconButton
-                          size="small"
-                          color="error"
-                          onClick={() => setDeleteId(model.id)}
-                          disabled={isDeleting}
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                      {isSelected && <CheckCircleIcon fontSize="small" color="success" />}
+                      <Typography variant="body2" fontWeight={700}>{model.model_name}</Typography>
+                    </Box>
+                    <Chip label={model.provider} size="small" variant="outlined" />
+                  </Box>
+                  {model.description && (
+                    <Typography variant="caption" color="text.secondary" display="block" sx={{ ml: 3.5 }}>
+                      {model.description}
+                    </Typography>
+                  )}
+                  {model.price_description && (
+                    <Typography variant="caption" color="text.secondary" display="block" sx={{ ml: 3.5 }}>
+                      Cena: {model.price_description}
+                    </Typography>
+                  )}
+                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }} onClick={(e) => e.stopPropagation()}>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      color="error"
+                      startIcon={<DeleteIcon />}
+                      onClick={() => setDeleteId(model.id)}
+                      disabled={isDeleting}
+                    >
+                      Usuń
+                    </Button>
+                  </Box>
+                </Paper>
+              );
+            })}
+          </Box>
+        </>
       )}
 
       {/* Warning when no model is actively selected */}

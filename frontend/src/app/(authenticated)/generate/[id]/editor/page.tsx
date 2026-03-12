@@ -189,16 +189,17 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
   return (
     <Box sx={{ minHeight: 'calc(100vh - 140px)', display: 'flex', flexDirection: 'column' }}>
       
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h5" fontWeight="bold">
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2, mb: 2 }}>
+        <Typography variant="h5" fontWeight="bold" sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
           Edytor materiału
         </Typography>
-        <Box sx={{ display: 'flex', gap: 2 }}>
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', width: { xs: '100%', sm: 'auto' } }}>
           <Button 
             variant="outlined" 
             startIcon={<SaveIcon />}
             onClick={handleSave}
             disabled={saveMutation.isPending}
+            sx={{ flex: { xs: 1, sm: 'none' } }}
           >
             {saveMutation.isPending ? 'Zapisywanie...' : 'Zapisz postęp'}
           </Button>
@@ -208,6 +209,7 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
             startIcon={finalizeMutation.isPending ? <CircularProgress size={18} color="inherit" /> : <CheckIcon />}
             onClick={() => finalizeMutation.mutate()}
             disabled={finalizeMutation.isPending || saveMutation.isPending}
+            sx={{ flex: { xs: 1, sm: 'none' } }}
           >
             {finalizeMutation.isPending ? 'Finalizowanie...' : 'Finalizuj i Dodaj do Bazy'}
           </Button>

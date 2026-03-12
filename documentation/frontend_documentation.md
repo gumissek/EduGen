@@ -50,7 +50,8 @@ Główny proces biznesowy to generowanie dokumentów. Elementy go wspierające:
 - `StepQuestionConfig.tsx` — definicja liczby pytań, stopnia trudności oraz wybór typów zadań.
 - `StepSourceFiles.tsx` — wybór i dodawanie własnych plików z bazą wiedzy.
 - `StepReview.tsx` — weryfikacja danych przed uruchomieniem procesu na backendzie.
-- `GenerationStatusView.tsx` — obsługa statusów zadania (reaguje na statusy `processing`, `draft`, `pending`).
+- `GenerationStatusView.tsx` — obsługa statusów zadania (reaguje na statusy `processing`, `draft`, `pending`, `ready`, `error`). W przypadku błędu klasyfikuje komunikat z `error_message` na kategorie (brak klucza API, limit kredytów, rate limit, timeout, błąd sieci) wyświetlając precyzyjne wskazówki dla użytkownika. Automatyczny powrót do `/generate` po 5 sekundach (odliczanie widoczne w UI), z przywróceniem kroku kreatora do StepReview (krok 4) via `localStorage`.
+- `GenerationWizard.tsx` — przechowuje aktywny krok w `localStorage` (`edugen-generation-step`) obok danych formularza (`edugen-generation-draft`). Dzięki temu powrót po błędzie generowania przywraca użytkownika do ostatniego kroku (StepReview), a nie do kroku 0. Po udanej generacji obydwa klucze są czyszczone.
 
 ### `editor/`
 - Edytor dokumentów oparty na silniku **Tiptap** dający interfejs modyfikacji wygenerowanej treści.
@@ -63,8 +64,8 @@ Główny proces biznesowy to generowanie dokumentów. Elementy go wspierające:
 
 ### Inne
 - `documents/`, `subjects/`, `settings/` — komponenty odpowiadające logice poszczególnych domen.
-  - **`settings/ApiKeyForm.tsx`** — CRUD kluczy API (tabela secret_keys). Dodawanie, usuwanie, walidacja klucza via OpenRouter.
-  - **`settings/ModelSelector.tsx`** — wybór domyślnego modelu AI (tabela `user_ai_models`). Wyświetla alertem ostrzeżenie jeśli żaden model nie jest wybrany. Po usunięciu aktualnie wybranego modelu automatycznie przełącza na pierwszy z pozostałych (lub czyści wybór jeśli lista jest pusta). Dialog dodawania z linkiem do openrouter.ai/models.
+  - **`settings/ApiKeyForm.tsx`** — CRUD kluczy API (tabela secret_keys). Dodawanie, usuwanie, walidacja klucza via OpenRouter. Na ekranach mobilnych (xs) zamiast tabeli wyświetla karty z kluczowymi informacjami i przyciskami akcji.
+  - **`settings/ModelSelector.tsx`** — wybór domyślnego modelu AI (tabela `user_ai_models`). Wyświetla alertem ostrzeżenie jeśli żaden model nie jest wybrany. Po usunięciu aktualnie wybranego modelu automatycznie przełącza na pierwszy z pozostałych (lub czyści wybór jeśli lista jest pusta). Dialog dodawania z linkiem do openrouter.ai/models. Na ekranach mobilnych (xs) zamiast tabeli wyświetla interaktywne karty z przyciskiem radio.
 - `ui/` — fundamentalne reużywalne fragmenty interfejsu (własne wrappery dla przycisków, powiadomienia Snackbar itp).
 
 ---
@@ -147,6 +148,14 @@ Walidacja formularzy realizowana przez **Zod** we współpracy z **React Hook Fo
 - `src/theme/theme.ts` — deklaracja głównych kolorów, cieni, kształtów i typografii MUI.
 - `src/theme/ThemeRegistry.tsx` i `ColorModeContext.tsx` — integracja z SSR Next.JS.
 - `src/app/globals.css` — reset CSS i globalne style.
+
+### Responsywność mobilna
+Aplikacja korzysta z systemu breakpoints MUI (`xs / sm / md / lg`). Zasady stosowane globalnie:
+- **Tabele** (ApiKeyForm, ModelSelector, Diagnostics) — na `xs` ukrywane na rzecz kart lub listy z redukcją kolumn (`display: { xs: 'none', sm: 'block' }`).
+- **Nagłówki stron** (h4) — mniejszy `fontSize` na `xs` (`1.5rem` zamiast `2.125rem`).
+- **Przyciski akcji** w nagłówkach (dashboard, editor, documents) — zamiast `flex-row` zastosowano `flexDirection: { xs: 'column', sm: 'row' }` i `width: { xs: '100%', sm: 'auto' }`.
+- **Diagnostics** — `TableContainer` z `overflowX: 'auto'` i kolumna Metadane ukryta na `xs`/`sm` (`display: { xs: 'none', md: 'table-cell' }`).
+- **Sidebar** — na `xs`/`sm` tymczasowy `Drawer` (overlay), stały tylko od `md`.
 
 ---
 

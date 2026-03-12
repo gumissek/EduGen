@@ -12,9 +12,9 @@ import StorageIcon from '@mui/icons-material/Storage';
 
 export default function SettingsPage() {
   return (
-    <Box sx={{ maxWidth: 900, mx: 'auto', p: { xs: 0, sm: 2 } }}>
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" fontWeight="800" gutterBottom>
+    <Box sx={{ maxWidth: 900, mx: 'auto', p: { xs: 2, sm: 2 } }}>
+      <Box sx={{ mb: { xs: 3, sm: 4 } }}>
+        <Typography variant="h4" fontWeight="800" gutterBottom sx={{ fontSize: { xs: '1.6rem', sm: '2.125rem' } }}>
           Ustawienia aplikacji
         </Typography>
         <Typography variant="body1" color="text.secondary">

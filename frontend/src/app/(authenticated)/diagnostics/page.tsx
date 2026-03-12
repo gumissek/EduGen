@@ -76,7 +76,7 @@ export default function DiagnosticsPage() {
   return (
     <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-        <Typography variant="h4" fontWeight="bold">
+        <Typography variant="h4" fontWeight="bold" sx={{ fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
           Diagnostyka
         </Typography>
         <Tooltip title="Odśwież">
@@ -86,12 +86,13 @@ export default function DiagnosticsPage() {
         </Tooltip>
       </Box>
 
-      <Box sx={{ mb: 2 }}>
+      <Box sx={{ mb: { xs: 3, sm: 2 } }}>
         <ToggleButtonGroup
           value={levelFilter}
           exclusive
           onChange={handleLevelChange}
           size="small"
+          sx={{ flexWrap: 'wrap' }}
         >
           <ToggleButton value="">Wszystkie</ToggleButton>
           <ToggleButton value="info">Info</ToggleButton>
@@ -113,14 +114,14 @@ export default function DiagnosticsPage() {
           </Box>
         ) : (
           <>
-            <TableContainer sx={{ flexGrow: 1 }}>
-              <Table stickyHeader size="small">
+            <TableContainer sx={{ flexGrow: 1, overflowX: 'auto' }}>
+              <Table stickyHeader size="small" sx={{ minWidth: { xs: 480, sm: 'auto' } }}>
                 <TableHead>
                   <TableRow>
                     <TableCell width={140}>Data i czas</TableCell>
                     <TableCell width={130}>Poziom</TableCell>
                     <TableCell>Wiadomość</TableCell>
-                    <TableCell width={200}>Metadane</TableCell>
+                    <TableCell width={200} sx={{ display: { xs: 'none', md: 'table-cell' } }}>Metadane</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -146,7 +147,7 @@ export default function DiagnosticsPage() {
                           <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.8rem', wordBreak: 'break-word' }}>
                             {log.message}
                           </TableCell>
-                          <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.75rem', color: 'text.secondary', wordBreak: 'break-word' }}>
+                          <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.75rem', color: 'text.secondary', wordBreak: 'break-word', display: { xs: 'none', md: 'table-cell' } }}>
                             {log.metadata_json ?? '—'}
                           </TableCell>
                         </TableRow>

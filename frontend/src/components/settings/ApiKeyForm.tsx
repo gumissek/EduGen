@@ -101,53 +101,55 @@ export default function ApiKeyForm() {
           </Typography>
         </Paper>
       ) : (
-        <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 3 }}>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Nazwa</TableCell>
-                <TableCell>Platforma</TableCell>
-                <TableCell>Data dodania</TableCell>
-                <TableCell>Ostatnie użycie</TableCell>
-                <TableCell align="right">Akcje</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {secretKeys.map((key) => (
-                <TableRow key={key.id} hover>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      {key.is_active && <CheckCircleIcon fontSize="small" color="success" />}
-                      <Typography variant="body2" fontWeight={600}>{key.key_name}</Typography>
-                    </Box>
-                  </TableCell>
-                  <TableCell>
-                    <Chip label={key.platform} size="small" variant="outlined" />
-                  </TableCell>
-                  <TableCell sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
-                    {format(new Date(key.created_at), 'dd.MM.yyyy HH:mm')}
-                  </TableCell>
-                  <TableCell sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
-                    {key.last_used_at ? format(new Date(key.last_used_at), 'dd.MM.yyyy HH:mm') : '—'}
-                  </TableCell>
-                  <TableCell align="right">
-                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
-                      <Tooltip title="Waliduj klucz">
-                        <IconButton
-                          size="small"
-                          color="primary"
-                          onClick={() => handleValidate(key.id)}
-                          disabled={isValidating}
-                        >
-                          <VerifiedIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Usuń klucz">
-                        <IconButton
-                          size="small"
-                          color="error"
-                          onClick={() => setDeleteConfirmId(key.id)}
-                          disabled={isDeleting}
+        <>
+          {/* Desktop table – hidden on xs */}
+          <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 3, display: { xs: 'none', sm: 'block' } }}>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Nazwa</TableCell>
+                  <TableCell>Platforma</TableCell>
+                  <TableCell>Data dodania</TableCell>
+                  <TableCell>Ostatnie użycie</TableCell>
+                  <TableCell align="right">Akcje</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {secretKeys.map((key) => (
+                  <TableRow key={key.id} hover>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        {key.is_active && <CheckCircleIcon fontSize="small" color="success" />}
+                        <Typography variant="body2" fontWeight={600}>{key.key_name}</Typography>
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Chip label={key.platform} size="small" variant="outlined" />
+                    </TableCell>
+                    <TableCell sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
+                      {format(new Date(key.created_at), 'dd.MM.yyyy HH:mm')}
+                    </TableCell>
+                    <TableCell sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
+                      {key.last_used_at ? format(new Date(key.last_used_at), 'dd.MM.yyyy HH:mm') : '—'}
+                    </TableCell>
+                    <TableCell align="right">
+                      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
+                        <Tooltip title="Waliduj klucz">
+                          <IconButton
+                            size="small"
+                            color="primary"
+                            onClick={() => handleValidate(key.id)}
+                            disabled={isValidating}
+                          >
+                            <VerifiedIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Usuń klucz">
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => setDeleteConfirmId(key.id)}
+                            disabled={isDeleting}
                         >
                           <DeleteIcon fontSize="small" />
                         </IconButton>
@@ -158,7 +160,53 @@ export default function ApiKeyForm() {
               ))}
             </TableBody>
           </Table>
-        </TableContainer>
+          </TableContainer>
+
+          {/* Mobile card list – visible only on xs */}
+          <Box sx={{ display: { xs: 'flex', sm: 'none' }, flexDirection: 'column', gap: 1.5 }}>
+            {secretKeys.map((key) => (
+              <Paper key={key.id} variant="outlined" sx={{ p: 2, borderRadius: 3 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    {key.is_active && <CheckCircleIcon fontSize="small" color="success" />}
+                    <Typography variant="body2" fontWeight={700}>{key.key_name}</Typography>
+                  </Box>
+                  <Chip label={key.platform} size="small" variant="outlined" />
+                </Box>
+                <Typography variant="caption" color="text.secondary" display="block">
+                  Dodano: {format(new Date(key.created_at), 'dd.MM.yyyy HH:mm')}
+                </Typography>
+                {key.last_used_at && (
+                  <Typography variant="caption" color="text.secondary" display="block">
+                    Ostatnie użycie: {format(new Date(key.last_used_at), 'dd.MM.yyyy HH:mm')}
+                  </Typography>
+                )}
+                <Box sx={{ display: 'flex', gap: 1, mt: 1.5 }}>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    color="primary"
+                    startIcon={<VerifiedIcon />}
+                    onClick={() => handleValidate(key.id)}
+                    disabled={isValidating}
+                  >
+                    Waliduj
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    color="error"
+                    startIcon={<DeleteIcon />}
+                    onClick={() => setDeleteConfirmId(key.id)}
+                    disabled={isDeleting}
+                  >
+                    Usuń
+                  </Button>
+                </Box>
+              </Paper>
+            ))}
+          </Box>
+        </>
       )}
 
       {/* Add Key Dialog */}

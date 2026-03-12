@@ -54,7 +54,7 @@ const defaultValues: Partial<GenerationParamsForm> = {
 };
 
 export default function GenerationWizard() {
-  const [activeStep, setActiveStep] = React.useState(0);
+  const [activeStep, setActiveStep, removeStep] = useLocalStorage<number>('edugen-generation-step', 0);
   const [confirmOpen, setConfirmOpen] = React.useState(false);
   const [draft, setDraft, removeDraft] = useLocalStorage<Partial<GenerationParamsForm>>('edugen-generation-draft', defaultValues);
   const { subjects, isLoading: subjectsLoading } = useSubjects();
@@ -143,6 +143,7 @@ export default function GenerationWizard() {
     }
     await createGeneration(payload);
     removeDraft();
+    removeStep();
   });
 
   // No subjects yet – show blocking alert

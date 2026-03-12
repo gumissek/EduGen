@@ -44,7 +44,7 @@ class User(Base):
     failed_login_attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     # AI model preference
-    default_model: Mapped[str] = mapped_column(String(100), nullable=False, default="openai/gpt-5-mini")
+    default_model: Mapped[str] = mapped_column(String(100), nullable=False, default="google/gemini-3.1-flash-lite-preview")
 
     # Relationships
     secret_keys = relationship("SecretKey", back_populates="user", cascade="all, delete-orphan")

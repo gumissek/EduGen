@@ -55,14 +55,14 @@ export default function SubjectsPage() {
 
   return (
     <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <Typography variant="h4" fontWeight="bold" gutterBottom>
+      <Typography variant="h4" fontWeight="bold" gutterBottom sx={{ fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
         Przedmioty i materiały źródłowe
       </Typography>
       
-      <Grid container spacing={3} sx={{ flexGrow: 1 }}>
+      <Grid container spacing={{ xs: 2, md: 3 }} sx={{ flexGrow: 1 }}>
         {/* Left column: Subjects */}
         <Grid item xs={12} md={3}>
-          <Paper sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+          <Paper sx={{ height: { xs: 'auto', md: '100%' }, display: 'flex', flexDirection: 'column' }}>
             <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Typography variant="h6">Przedmioty</Typography>
               <Button 

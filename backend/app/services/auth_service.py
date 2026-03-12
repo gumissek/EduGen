@@ -97,6 +97,28 @@ def register_user(
     default_models = [
         UserAIModel(
             user_id=user.id,
+            provider="google",
+            model_name="gemini-3.1-flash-lite-preview",
+            description="Dobry uniwersalny model do tekstu - szybki",
+            price_description="Tani",
+            is_available=True,
+            created_at=now_iso,
+            changed_at=None,
+            request_made=0,
+        ),
+        UserAIModel(
+            user_id=user.id,
+            provider="nvidia",
+            model_name="nemotron-3-nano-30b-a3b:free",
+            description="Model od Nvidii, dobry do tekstu",
+            price_description="Darmowy",
+            is_available=True,
+            created_at=now_iso,
+            changed_at=None,
+            request_made=0,
+        ),
+        UserAIModel(
+            user_id=user.id,
             provider="openai",
             model_name="gpt-5.1",
             description="Dobry uniwersalny model",

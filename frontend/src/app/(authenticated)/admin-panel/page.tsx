@@ -79,7 +79,7 @@ export default function AdminPanelPage() {
 
   return (
     <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <Typography variant="h4" fontWeight="bold" sx={{ mb: 1 }}>
+      <Typography variant="h4" fontWeight="bold" sx={{ mb: 1, fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
         Panel administracyjny
       </Typography>
       <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>

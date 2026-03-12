@@ -55,26 +55,29 @@ export default function DocumentDetailsPage({ params }: { params: Promise<{ id: 
 
   return (
     <Box sx={{ height: 'calc(100vh - 140px)', display: 'flex', flexDirection: 'column' }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-        <Button 
-          startIcon={<KeyboardArrowLeftIcon />} 
-          onClick={() => router.push('/dashboard')}
-          sx={{ mr: 2, color: 'text.secondary' }}
-        >
-          Wróć
-        </Button>
-        <Typography variant="h5" fontWeight="bold" sx={{ flexGrow: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {document.title}
-        </Typography>
+      {/* Top bar – stacks on mobile */}
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'flex-start', sm: 'center' }, gap: 1, mb: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }}>
+          <Button 
+            startIcon={<KeyboardArrowLeftIcon />} 
+            onClick={() => router.push('/dashboard')}
+            sx={{ mr: 1, color: 'text.secondary', flexShrink: 0 }}
+          >
+            Wróć
+          </Button>
+          <Typography variant="h5" fontWeight="bold" sx={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: { xs: '1.1rem', sm: '1.5rem' } }}>
+            {document.title}
+          </Typography>
+        </Box>
 
-        <Box sx={{ display: 'flex', gap: 1.5 }}>
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', width: { xs: '100%', sm: 'auto' } }}>
           <Button 
             variant="contained" 
             color="primary"
             startIcon={<SaveIcon />}
             onClick={handleSave}
             disabled={!isEdited || isUpdating}
-            sx={{ borderRadius: 2, px: 3, fontWeight: 600 }}
+            sx={{ borderRadius: 2, px: 3, fontWeight: 600, flex: { xs: 1, sm: 'none' } }}
           >
             Zapisz
           </Button>
