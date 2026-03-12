@@ -13,8 +13,9 @@ import BugReportIcon from '@mui/icons-material/BugReport';
 import PeopleIcon from '@mui/icons-material/People';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import SecurityIcon from '@mui/icons-material/Security';
+import StorageIcon from '@mui/icons-material/Storage';
 import { useRouter } from 'next/navigation';
-import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { useAdminAccess } from '@/hooks/useAdminAccess';
 
 interface AdminTile {
   title: string;
@@ -36,8 +37,15 @@ const adminTiles: AdminTile[] = [
     title: 'Zarządzanie użytkownikami',
     description: 'Przegląd i zarządzanie kontami użytkowników.',
     icon: <PeopleIcon sx={{ fontSize: 48, color: 'info.main' }} />,
-    path: null,
-    enabled: false,
+    path: '/admin-panel/users',
+    enabled: true,
+  },
+  {
+    title: 'Kopie bazy danych',
+    description: 'Pełny zrzut bazy: utwórz, pobierz, uploaduj i przywróć.',
+    icon: <StorageIcon sx={{ fontSize: 48, color: 'primary.main' }} />,
+    path: '/admin-panel/database',
+    enabled: true,
   },
   {
     title: 'Statystyki',
@@ -57,7 +65,7 @@ const adminTiles: AdminTile[] = [
 
 export default function AdminPanelPage() {
   const router = useRouter();
-  const { user, isLoading } = useCurrentUser();
+  const { isLoading, isAuthorized } = useAdminAccess();
 
   if (isLoading) {
     return (
@@ -67,7 +75,7 @@ export default function AdminPanelPage() {
     );
   }
 
-  if (!user?.is_superuser) {
+  if (!isAuthorized) {
     return (
       <Box sx={{ p: 4 }}>
         <Alert severity="error">

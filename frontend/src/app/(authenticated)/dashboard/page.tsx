@@ -197,6 +197,17 @@ export default function DashboardPage() {
     }
   };
 
+  const copyDocumentMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await api.post(`/api/documents/${id}/copy`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['documents'] });
+      success('Utworzono kopię dokumentu');
+    },
+    onError: () => error('Błąd podczas kopiowania dokumentu'),
+  });
+
   const deleteDraftMutation = useMutation({
     mutationFn: async (generationId: string) => {
       await api.delete(`/api/prototypes/${generationId}`);
@@ -214,6 +225,17 @@ export default function DashboardPage() {
       setDeleteDraftGenerationId(null);
     }
   };
+
+  const copyDraftMutation = useMutation({
+    mutationFn: async (generationId: string) => {
+      await api.post(`/api/prototypes/${generationId}/copy`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['prototypes', 'all-drafts'] });
+      success('Utworzono kopię wersji roboczej');
+    },
+    onError: () => error('Błąd podczas kopiowania wersji roboczej'),
+  });
 
   const copySubjectFiles = async (subjectId: string, subjectName: string) => {
     try {
@@ -522,7 +544,7 @@ export default function DashboardPage() {
                     Baza wiedzy
                   </Typography>
                   <Box sx={{ display: 'flex', gap: 1 }}>
-                    <Tooltip title="Kopiuj listę plików źródłowych">
+                    {/* <Tooltip title="Kopiuj listę plików źródłowych">
                       <IconButton
                         size="small"
                         color="info"
@@ -531,7 +553,7 @@ export default function DashboardPage() {
                       >
                         <ContentCopyIcon fontSize="small" />
                       </IconButton>
-                    </Tooltip>
+                    </Tooltip> */}
                     <Tooltip title="Zarządzaj plikami źródłowymi">
                       <IconButton
                         size="small"
@@ -559,7 +581,7 @@ export default function DashboardPage() {
             <Grid2 container spacing={3}>
               {visibleDocs.map((doc) => (
                 <Grid2 size={{xs:12, sm:6, md:4, lg:3}} key={doc.id}>
-                  <DocumentCard document={doc} onDelete={setDeleteId} />
+                  <DocumentCard document={doc} onDelete={setDeleteId} onCopy={(id) => copyDocumentMutation.mutate(id)} />
                 </Grid2>
               ))}
             </Grid2>
@@ -643,6 +665,18 @@ export default function DashboardPage() {
                       </CardContent>
                     </CardActionArea>
                     <CardActions sx={{ justifyContent: 'flex-end', px: 2, pb: 2, pt: 0 }}>
+                      <IconButton
+                        size="small"
+                        color="primary"
+                        title="Utwórz kopię wersji roboczej"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          copyDraftMutation.mutate(draft.generation_id);
+                        }}
+                        sx={{ bgcolor: 'rgba(1, 72, 131, 0.08)', '&:hover': { bgcolor: 'rgba(1, 72, 131, 0.16)' } }}
+                      >
+                        <ContentCopyIcon fontSize="small" />
+                      </IconButton>
                       <IconButton
                         size="small"
                         color="error"

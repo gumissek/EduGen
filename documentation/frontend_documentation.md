@@ -26,14 +26,20 @@ Aplikacja korzysta z Next.js App Router. Wszystkie pliki `page.tsx` w folderach 
 - `/settings` — powiązane z konfiguracją użytkownika (klucze API OpenRouter, wybór modelu)
 - `/diagnostics` — diagnostyka działania (dostępna z panelu admina)
 - `/admin-panel` — panel administracyjny (wyłącznie dla superuserów) z kafelkami do sekcji zarządzania
+  - `/admin-panel/users` — pełne zarządzanie użytkownikami (lista, edycja, usuwanie, reset hasła)
+  - `/admin-panel/database` — pełny backup bazy (utworzenie zrzutu, pobranie, upload, restore)
 
 #### Aktualny podział na `/dashboard`
 - Widok materiałów ma 2 sekcje:
   - **Gotowe materiały** — dokumenty sfinalizowane (jak wcześniej) z drill-down: typ treści → poziom edukacji → klasa → przedmiot → lista materiałów.
+    - Karty gotowych materiałów mają akcję kopiowania (`POST /api/documents/{document_id}/copy`).
   - **Wersje robocze** — zapisane prototypy (bez aktywnego dokumentu końcowego) z identycznym drill-down i przejściem do edytora `/generate/[id]/editor`.
   - Karty wersji roboczych mają akcję usuwania z modalem potwierdzenia (`DELETE /api/prototypes/{generation_id}`).
+  - Karty wersji roboczych mają akcję kopiowania (`POST /api/prototypes/{generation_id}/copy`).
 
 ### Ścieżki publiczne (w `src/app/`)
+- `/` — publiczna strona wejściowa (opis aplikacji, placeholdery: tekst/obrazy/wideo, linki do `/login`, `/register`, `/about` i disabled odnośniki na przyszłość)
+- `/about` — publiczna strona „O nas” z mock danymi
 - `/login` — ekran logowania (email + hasło)
 - `/register` — ekran rejestracji nowego konta (email, imię, nazwisko, hasło, potwierdzenie hasła)
 
@@ -75,6 +81,7 @@ Główny proces biznesowy to generowanie dokumentów. Elementy go wspierające:
   - **`subjects/FileList.tsx` + `subjects/FileCard.tsx`** — dodana opcja pobierania wgranego pliku źródłowego (`GET /api/files/{file_id}/download`).
   - **`settings/ApiKeyForm.tsx`** — CRUD kluczy API (tabela secret_keys). Dodawanie, usuwanie, walidacja klucza via OpenRouter. Na ekranach mobilnych (xs) zamiast tabeli wyświetla karty z kluczowymi informacjami i przyciskami akcji.
   - **`settings/ModelSelector.tsx`** — wybór domyślnego modelu AI (tabela `user_ai_models`). Wyświetla alertem ostrzeżenie jeśli żaden model nie jest wybrany. Po usunięciu aktualnie wybranego modelu automatycznie przełącza na pierwszy z pozostałych (lub czyści wybór jeśli lista jest pusta). Dialog dodawania z linkiem do openrouter.ai/models. Na ekranach mobilnych (xs) zamiast tabeli wyświetla interaktywne karty z przyciskiem radio.
+  - Backupy zostały przeniesione z ustawień użytkownika do sekcji admin (`/admin-panel/database`).
 - `ui/` — fundamentalne reużywalne fragmenty interfejsu (własne wrappery dla przycisków, powiadomienia Snackbar itp).
 
 ---

@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import and_
+from sqlalchemy import insert, select
 from sqlalchemy.orm import Session as DBSession
 
 logger = logging.getLogger(__name__)
@@ -23,6 +24,7 @@ from app.models.prototype import Prototype
 from app.models.document import Document
 from app.models.subject import Subject
 from app.models.secret_key import SecretKey
+from app.models.generation_source_file import generation_source_files
 from app.schemas.prototype import (
     PrototypeResponse,
     PrototypeUpdate,
@@ -34,6 +36,13 @@ from app.services.ai_service import call_openrouter_reprompt, call_openrouter_re
 from app.services.generation_service import _render_content_html, _build_answer_key
 
 router = APIRouter(prefix="/prototypes", tags=["prototypes"])
+
+
+def _append_copy_suffix(value: str) -> str:
+    text = (value or "").strip()
+    if not text:
+        return "copy"
+    return f"{text} copy"
 
 
 @router.get("", response_model=PrototypeListResponse)
@@ -273,3 +282,94 @@ async def reprompt(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Reprompt failed ({type(e).__name__}): {str(e)}",
         )
+
+
+@router.post("/{generation_id}/copy", response_model=PrototypeListItemResponse, status_code=status.HTTP_201_CREATED)
+def copy_prototype_draft(
+    generation_id: str,
+    db: DBSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Duplicate a draft (generation + prototype + generation_source_files)."""
+    generation = _get_user_generation(db, generation_id, current_user.id)
+    prototype = _get_user_prototype(db, generation_id, current_user.id)
+
+    has_active_document = db.query(Document).filter(
+        Document.generation_id == generation.id,
+        Document.deleted_at.is_(None),
+    ).first()
+    if has_active_document:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot copy finalized material as draft",
+        )
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    copied_generation = Generation(
+        user_id=generation.user_id,
+        subject_id=generation.subject_id,
+        content_type=generation.content_type,
+        education_level=generation.education_level,
+        class_level=generation.class_level,
+        language_level=generation.language_level,
+        topic=_append_copy_suffix(generation.topic),
+        instructions=generation.instructions,
+        difficulty=generation.difficulty,
+        total_questions=generation.total_questions,
+        open_questions=generation.open_questions,
+        closed_questions=generation.closed_questions,
+        variants_count=generation.variants_count,
+        task_types=generation.task_types,
+        created_at=now_iso,
+        updated_at=now_iso,
+        status="ready",
+        error_message=None,
+    )
+    db.add(copied_generation)
+    db.flush()
+
+    source_rows = db.execute(
+        select(generation_source_files.c.source_file_id).where(
+            generation_source_files.c.generation_id == generation.id
+        )
+    ).all()
+    if source_rows:
+        db.execute(
+            insert(generation_source_files),
+            [
+                {
+                    "generation_id": copied_generation.id,
+                    "source_file_id": row.source_file_id,
+                }
+                for row in source_rows
+            ],
+        )
+
+    copied_prototype = Prototype(
+        user_id=prototype.user_id,
+        generation_id=copied_generation.id,
+        original_content=prototype.original_content,
+        edited_content=prototype.edited_content,
+        answer_key=prototype.answer_key,
+        raw_questions_json=prototype.raw_questions_json,
+        created_at=now_iso,
+        updated_at=now_iso,
+    )
+    db.add(copied_prototype)
+    db.commit()
+
+    subject = db.query(Subject).filter(Subject.id == copied_generation.subject_id).first()
+
+    return PrototypeListItemResponse(
+        id=copied_prototype.id,
+        generation_id=copied_generation.id,
+        subject_id=(copied_generation.subject_id or ""),
+        subject_name=(subject.name if subject else ""),
+        title=(copied_generation.topic or "Wersja robocza"),
+        content_type=(copied_generation.content_type or ""),
+        education_level=(copied_generation.education_level or ""),
+        class_level=str(copied_generation.class_level).strip() if copied_generation.class_level else "",
+        created_at=copied_prototype.created_at,
+        updated_at=copied_prototype.updated_at,
+    )

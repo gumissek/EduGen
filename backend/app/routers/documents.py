@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import shutil
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -12,6 +13,7 @@ import fitz  # PyMuPDF
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import FileResponse as FastAPIFileResponse, StreamingResponse
 from sqlalchemy.orm import Session as DBSession
+from sqlalchemy import insert, select
 
 from app.database import get_db
 from app.dependencies import get_current_user
@@ -20,6 +22,7 @@ from app.models.document import Document
 from app.models.generation import Generation
 from app.models.prototype import Prototype
 from app.models.subject import Subject
+from app.models.generation_source_file import generation_source_files
 from app.schemas.document import (
     DocumentResponse,
     DocumentDetailResponse,
@@ -32,6 +35,13 @@ from app.schemas.document import (
 from app.services.docx_service import generate_docx
 
 router = APIRouter(prefix="/documents", tags=["documents"])
+
+
+def _append_copy_suffix(value: str) -> str:
+    text = (value or "").strip()
+    if not text:
+        return "copy"
+    return f"{text} copy"
 
 
 def _build_detail(document: Document, db: DBSession) -> DocumentDetailResponse:
@@ -375,3 +385,111 @@ def move_document_to_draft(
         generation_id=generation.id,
         message="Document moved to draft mode",
     )
+
+
+@router.post("/{document_id}/copy", response_model=DocumentDetailResponse, status_code=status.HTTP_201_CREATED)
+def copy_document(
+    document_id: str,
+    db: DBSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Create a deep copy of a finalized document (+generation/prototype/source links)."""
+    document = db.query(Document).filter(
+        Document.id == document_id,
+        Document.user_id == current_user.id,
+        Document.deleted_at.is_(None),
+    ).first()
+    if not document:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
+
+    generation = db.query(Generation).filter(
+        Generation.id == document.generation_id,
+        Generation.user_id == current_user.id,
+    ).first()
+    if not generation:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Generation not found")
+
+    prototype = db.query(Prototype).filter(Prototype.generation_id == generation.id).first()
+    if not prototype:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Prototype not found")
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    copied_generation = Generation(
+        user_id=generation.user_id,
+        subject_id=generation.subject_id,
+        content_type=generation.content_type,
+        education_level=generation.education_level,
+        class_level=generation.class_level,
+        language_level=generation.language_level,
+        topic=_append_copy_suffix(generation.topic),
+        instructions=generation.instructions,
+        difficulty=generation.difficulty,
+        total_questions=generation.total_questions,
+        open_questions=generation.open_questions,
+        closed_questions=generation.closed_questions,
+        variants_count=generation.variants_count,
+        task_types=generation.task_types,
+        created_at=now_iso,
+        updated_at=now_iso,
+        status=generation.status,
+        error_message=None,
+    )
+    db.add(copied_generation)
+    db.flush()
+
+    source_rows = db.execute(
+        select(generation_source_files.c.source_file_id).where(
+            generation_source_files.c.generation_id == generation.id
+        )
+    ).all()
+    if source_rows:
+        db.execute(
+            insert(generation_source_files),
+            [
+                {
+                    "generation_id": copied_generation.id,
+                    "source_file_id": row.source_file_id,
+                }
+                for row in source_rows
+            ],
+        )
+
+    copied_prototype = Prototype(
+        user_id=prototype.user_id,
+        generation_id=copied_generation.id,
+        original_content=prototype.original_content,
+        edited_content=prototype.edited_content,
+        answer_key=prototype.answer_key,
+        raw_questions_json=prototype.raw_questions_json,
+        created_at=now_iso,
+        updated_at=now_iso,
+    )
+    db.add(copied_prototype)
+
+    src_path = Path(document.file_path)
+    if not src_path.exists():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found on disk")
+
+    copied_filename = _append_copy_suffix(document.filename)
+    if "." in document.filename:
+        stem, ext = document.filename.rsplit(".", 1)
+        copied_filename = f"{_append_copy_suffix(stem)}.{ext}"
+
+    copied_file_path = src_path.with_name(f"{src_path.stem}_copy_{int(datetime.now().timestamp())}{src_path.suffix}")
+    shutil.copy2(src_path, copied_file_path)
+
+    copied_document = Document(
+        user_id=document.user_id,
+        generation_id=copied_generation.id,
+        filename=copied_filename,
+        file_path=str(copied_file_path),
+        variants_count=document.variants_count,
+        created_at=now_iso,
+        deleted_at=None,
+    )
+    db.add(copied_document)
+    db.commit()
+    db.refresh(copied_document)
+
+    return _build_detail(copied_document, db)

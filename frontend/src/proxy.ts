@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 // Public routes that don't require authentication
-const PUBLIC_ROUTES = ['/login', '/register'];
+const PUBLIC_ROUTES = ['/', '/about', '/login', '/register'];
 
 // Routes that should redirect authenticated users to dashboard
 const AUTH_ONLY_ROUTES = ['/login'];
@@ -14,7 +14,7 @@ export function proxy(request: NextRequest) {
   const authCookie = request.cookies.get('edugen-auth');
   const isAuthenticated = !!authCookie?.value;
 
-  const isPublicRoute = PUBLIC_ROUTES.some((route) => pathname.startsWith(route));
+  const isPublicRoute = PUBLIC_ROUTES.some((route) => (route === '/' ? pathname === '/' : pathname.startsWith(route)));
 
   // If not authenticated and trying to access a protected route → redirect to /login
   if (!isAuthenticated && !isPublicRoute) {

@@ -32,6 +32,7 @@ To centrum zarządzania całą aplikacją, definiujące aplikację FastAPI oraz 
 **Middleware i routery:**
 - Załączony `CORSMiddleware`, pobierający listę adresów z `config.py`.
 - Rejestrowane routery API dla kluczowych modułów: `auth`, `settings`, `subjects`, `files`, `generations`, `prototypes`, `documents`, `backups`, `diagnostics`, `levels`, `task_types`.
+- Rejestrowane routery API dla kluczowych modułów: `auth`, `settings`, `subjects`, `files`, `generations`, `prototypes`, `documents`, `backups`, `diagnostics`, `levels`, `task_types`, `admin`.
 - **Global exception handler** — przechwytuje wyjątki (kod 500) i automatycznie zapisuje szczegóły błędu (z tracebackiem i url) do własnej struktury `DiagnosticLog`.
 
 ---
@@ -146,15 +147,38 @@ Architektura grupuje endpointy na określone sfery:
 | `/api/documents` | Finalizowane pliki DOCX. Filtrowane po `user_id`. Bulk download z izolacją. |
 | `/api/backups` | Zarządzanie kopiami zapasowymi. |
 | `/api/diagnostics` | Dashboard logów błędów i zapytań AI. |
+| `/api/admin` | Endpointy administracyjne (superuser-only): weryfikacja dostępu, zarządzanie użytkownikami. |
+
+### Uprawnienia administracyjne (backend-first)
+
+- Routery administracyjne korzystają z dependency `get_current_superuser`.
+- Dostęp do danych diagnostycznych i backupów został ograniczony do superusera:
+	- `GET /api/diagnostics/logs`
+	- `GET /api/diagnostics/export`
+	- `GET /api/backups`
+	- `POST /api/backups`
+	- `POST /api/backups/restore`
+	- `GET /api/backups/{backup_id}/download`
+	- `POST /api/backups/upload`
+
+### Admin API — użytkownicy
+
+- `GET /api/admin/me` — backendowa weryfikacja uprawnień superuser.
+- `GET /api/admin/users` — lista użytkowników (paginacja).
+- `PUT /api/admin/users/{user_id}` — edycja danych użytkownika.
+- `DELETE /api/admin/users/{user_id}` — usunięcie użytkownika.
+- `POST /api/admin/users/{user_id}/reset-password` — reset hasła użytkownika.
 
 ### Dodatkowe endpointy workflow (wersje robocze i pliki)
 
 - **Pliki źródłowe:**
 	- `GET /api/files/{file_id}/download` — pobieranie wcześniej wgranego pliku źródłowego (`SourceFile.original_path`) z walidacją właściciela i `deleted_at IS NULL`.
+	- `POST /api/documents/{document_id}/copy` — duplikacja materiału końcowego (deep copy: generation/prototype/document + powiązania source files), nowa nazwa z sufiksem `copy` i nowa data utworzenia.
 
 - **Prototypy / wersje robocze:**
 	- `GET /api/prototypes` — lista wersji roboczych do edycji (prototypy użytkownika, dla których nie istnieje aktywny dokument końcowy).
 	- `DELETE /api/prototypes/{generation_id}` — usuwanie wersji roboczej (kasowanie `generation` z kaskadą do `prototype`), z blokadą gdy istnieje aktywny dokument końcowy.
+	- `POST /api/prototypes/{generation_id}/copy` — duplikacja wersji roboczej (generation + prototype + powiązania source files), nowy temat z sufiksem `copy` i nowe znaczniki czasu.
 	- Odpowiedź zawiera metadane do drill-down: `content_type`, `education_level`, `class_level`, `subject_id`, `subject_name`, `title`, `updated_at`.
 
 - **Dokumenty końcowe → wersje robocze:**

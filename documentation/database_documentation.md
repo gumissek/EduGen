@@ -310,3 +310,9 @@ CREATE INDEX ix_diagnostic_logs_created_at ON diagnostic_logs(created_at);
 - Preferencja modelu AI zapisana bezpośrednio w tabeli `users` (kolumna `default_model`).
 - Migracje schematu zarządzane przez **Alembic** (skonsolidowana migracja: `001`).
 - Tabela `settings` (legacy) została usunięta — cala funkcjonalność przeniesiona do `users` i `secret_keys`.
+
+## 5. Aktualizacja (admin i backupy)
+
+- Wprowadzone funkcje administracyjne (zarządzanie użytkownikami, reset haseł, backup download/upload/restore) działają na istniejącym schemacie — **bez dodawania nowych tabel i kolumn**.
+- Kopie zapasowe przechowywane w `backups` zawierają pełny logiczny zrzut tabel aplikacji.
+- Operacje diagnostyczne i backupowe są ograniczone do kont z `users.is_superuser = TRUE` na poziomie backendu.
