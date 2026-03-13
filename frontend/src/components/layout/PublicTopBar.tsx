@@ -19,6 +19,13 @@ import { useColorMode } from '@/theme/ColorModeContext';
 export default function PublicTopBar() {
   const pathname = usePathname();
   const { mode, toggleColorMode } = useColorMode();
+  const [isMounted, setIsMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  const resolvedMode = isMounted ? mode : 'light';
 
   return (
     <AppBar
@@ -29,7 +36,7 @@ export default function PublicTopBar() {
         borderBottom: '1px solid',
         borderColor: 'divider',
         backdropFilter: 'blur(14px)',
-        bgcolor: mode === 'dark' ? 'rgba(15,23,42,0.8)' : 'rgba(255,255,255,0.8)',
+        bgcolor: resolvedMode === 'dark' ? 'rgba(15,23,42,0.8)' : 'rgba(255,255,255,0.8)',
       }}
     >
       <Toolbar sx={{ minHeight: { xs: 64, sm: 70 }, px: { xs: 2, sm: 3 } }}>
@@ -53,18 +60,45 @@ export default function PublicTopBar() {
           </Button>
         </Stack>
 
-        <Tooltip title={mode === 'dark' ? 'Tryb jasny' : 'Tryb ciemny'}>
-          <IconButton onClick={toggleColorMode} color="inherit" sx={{ mr: { xs: 0.5, sm: 1 } }}>
-            {mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
+        <Tooltip title={resolvedMode === 'dark' ? 'Tryb jasny' : 'Tryb ciemny'}>
+          <IconButton
+            onClick={toggleColorMode}
+            color="inherit"
+            aria-label={resolvedMode === 'dark' ? 'Przełącz na tryb jasny' : 'Przełącz na tryb ciemny'}
+            sx={{ mr: { xs: 0.5, sm: 1 } }}
+          >
+            {resolvedMode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
           </IconButton>
         </Tooltip>
 
-        <Stack direction="row" spacing={1}>
-          <Button component={NextLink} href="/login" variant={pathname === '/login' ? 'contained' : 'text'}>
-            Zaloguj się
+        <Stack direction="row" spacing={{ xs: 0.5, sm: 1 }}>
+          <Button
+            component={NextLink}
+            href="/login"
+            variant={pathname === '/login' ? 'contained' : 'text'}
+            size="small"
+            sx={{ px: { xs: 1.25, sm: 2 }, minWidth: { xs: 0, sm: 'auto' }, whiteSpace: 'nowrap' }}
+          >
+            <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+              Zaloguj się
+            </Box>
+            <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
+              Login
+            </Box>
           </Button>
-          <Button component={NextLink} href="/register" variant={pathname === '/register' ? 'contained' : 'outlined'}>
-            Załóż konto
+          <Button
+            component={NextLink}
+            href="/register"
+            variant={pathname === '/register' ? 'contained' : 'outlined'}
+            size="small"
+            sx={{ px: { xs: 1.25, sm: 2 }, minWidth: { xs: 0, sm: 'auto' }, whiteSpace: 'nowrap' }}
+          >
+            <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+              Załóż konto
+            </Box>
+            <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
+              Konto
+            </Box>
           </Button>
         </Stack>
       </Toolbar>

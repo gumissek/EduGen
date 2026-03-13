@@ -19,20 +19,22 @@ const AUTHENTICATED_PREFIXES = [
 
 export default function PublicChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isAuthenticatedRoute = AUTHENTICATED_PREFIXES.some((prefix) => pathname.startsWith(prefix));
-
-  if (isAuthenticatedRoute) {
-    return <>{children}</>;
-  }
+  const normalizedPathname = pathname ?? '';
+  const isAuthenticatedRoute = AUTHENTICATED_PREFIXES.some((prefix) => normalizedPathname.startsWith(prefix));
+  const showPublicChrome = !isAuthenticatedRoute;
 
   return (
     <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>
-      <PublicTopBar />
-      <Toolbar sx={{ minHeight: { xs: 64, sm: 70 } }} />
+      <Box hidden={!showPublicChrome} aria-hidden={!showPublicChrome}>
+        <PublicTopBar />
+      </Box>
+      <Toolbar hidden={!showPublicChrome} sx={{ minHeight: { xs: 64, sm: 70 } }} />
       <Box component="main" sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
         {children}
       </Box>
-      <AppFooter compact />
+      <Box hidden={!showPublicChrome} aria-hidden={!showPublicChrome}>
+        <AppFooter compact />
+      </Box>
     </Box>
   );
 }

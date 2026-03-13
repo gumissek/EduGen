@@ -47,6 +47,7 @@ export default function TipTapEditor({ initialContent, onChange, readOnly = fals
       Placeholder.configure({ placeholder: 'Utworzony materiał pojawi się tutaj...' }),
     ],
     content: initialContent,
+    immediatelyRender: false,
     editable: !readOnly,
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());

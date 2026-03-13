@@ -68,6 +68,7 @@ Główny proces biznesowy to generowanie dokumentów. Elementy go wspierające:
 
 ### `editor/`
 - Edytor dokumentów oparty na silniku **Tiptap** dający interfejs modyfikacji wygenerowanej treści.
+- `TipTapEditor.tsx` ustawia `immediatelyRender: false`, aby uniknąć ostrzeżeń SSR/hydration podczas inicjalizacji edytora w Next.js.
 - **`RepromptInput.tsx`** — pasek prompt przyklejony na stałe do dołu ekranu (`position: fixed`). Na desktopie uwzględnia szerokość Sidebara (260 px) poprzez `left: calc(50% + 130px)` i `width: calc(100% - 292px)`, dzięki czemu jest wyśrodkowany w obszarze treści, a nie w całym viewporcie.
 - Edytor prototypu (`/generate/[id]/editor`) zapisuje zmiany przyciskiem **„Zapisz wersję roboczą”** do tabeli `prototypes` (`PUT /api/prototypes/{generation_id}`), dzięki czemu materiał można później kontynuować i finalizować.
 
@@ -80,6 +81,8 @@ Główny proces biznesowy to generowanie dokumentów. Elementy go wspierające:
 - **`PublicTopBar.tsx`** — topbar dla niezalogowanych z nawigacją (`Start`, `O nas`), akcjami `Login`/`Register` oraz przełącznikiem motywu.
 - **`PublicChrome.tsx`** — warstwa layoutu dla publicznych tras; odpowiada za stały publiczny topbar i stopkę.
 - **`AppFooter.tsx`** — stopka dla strefy publicznej; zawiera logo (`/logo.png`) i kontakt.
+- `PublicChrome.tsx` utrzymuje stabilny markup SSR/CSR (topbar, toolbar i stopka są stale montowane, a na trasach zalogowanych ukrywane przez `hidden`), co ogranicza błędy hydracji.
+- `PublicTopBar.tsx` stosuje bezpieczny dla hydracji render zależny od motywu (`resolvedMode` po montażu) oraz krótsze etykiety CTA na `xs` (`Login`, `Konto`) dla lepszej użyteczności mobilnej.
 
 ### Inne
 - `documents/`, `subjects/`, `settings/` — komponenty odpowiadające logice poszczególnych domen.
