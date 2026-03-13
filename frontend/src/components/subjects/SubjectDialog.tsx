@@ -61,6 +61,7 @@ export default function SubjectDialog({ open, onClose, onSubmit, isLoading }: Su
             autoFocus
             margin="normal"
             label="Nazwa przedmiotu"
+            placeholder='Np. Język Angielski, Matematyka, Fizyka...'
             fullWidth
             error={!!errors.name}
             helperText={errors.name?.message}

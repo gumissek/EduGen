@@ -12,6 +12,7 @@ import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 import LogoutIcon from '@mui/icons-material/Logout';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
@@ -40,6 +41,7 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
   if (pathname.includes('/settings')) title = 'Ustawienia';
   if (pathname.includes('/diagnostics')) title = 'Diagnostyka';
   if (pathname.includes('/admin-panel')) title = 'Panel administracyjny';
+  if (pathname.includes('/profile')) title = 'Mój profil';
 
   const handleLogout = () => {
     logout();
@@ -112,6 +114,22 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
               />
             </Tooltip>
           )}
+
+          {/* Profile button */}
+          <Tooltip title="Mój profil">
+            <IconButton
+              color="inherit"
+              onClick={() => router.push('/profile')}
+              sx={{
+                bgcolor: 'action.hover',
+                flexShrink: 0,
+                '&:hover': { bgcolor: 'action.selected', transform: 'scale(1.05)' },
+                transition: 'all 0.2s',
+              }}
+            >
+              <AccountCircleIcon />
+            </IconButton>
+          </Tooltip>
 
           {/* Admin panel button — superuser only */}
           {user?.is_superuser && (

@@ -44,3 +44,28 @@ class UserResponse(BaseModel):
 
 class LogoutResponse(BaseModel):
     detail: str = "Wylogowano pomyślnie"
+
+
+class UpdateProfileRequest(BaseModel):
+    email: EmailStr | None = None
+    first_name: str | None = None
+    last_name: str | None = None
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+    @field_validator("new_password")
+    @classmethod
+    def password_strength(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("Hasło musi mieć co najmniej 8 znaków")
+        return v
+
+
+class UserStatsResponse(BaseModel):
+    documents_count: int
+    ai_requests_count: int
+    generations_count: int
+    failed_generations_count: int
