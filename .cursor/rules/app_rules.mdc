@@ -1,6 +1,5 @@
 ---
 description: AI rules for EduGen, a web application that supports educators with AI to create and edit documents for educational purposes.
-globs:
 alwaysApply: true
 ---
 
@@ -8,7 +7,7 @@ alwaysApply: true
 
 EduGen is a web application that supports educators with AI to create and edit documents for educational purposes.
 
-## Documentation 
+## Documentation
 
 Frontend documentation: `documentation\frontend_documentation.md`
 Backend documentation: `documentation\backend_documentation.md`
@@ -68,7 +67,6 @@ Modules documentation: `documentation\modules\<module_name>_module_documentation
 - Implement parameterized tests for testing multiple inputs
 - Use monkeypatch for mocking dependencies
 
-
 ### Guidelines for E2E
 
 #### PLAYWRIGHT
@@ -102,7 +100,6 @@ Modules documentation: `documentation\modules\<module_name>_module_documentation
 - Leverage parallel routes for complex layouts and parallel data fetching
 - Implement intercepting routes for modal patterns and nested UIs
 
-
 ### Guidelines for STYLING
 
 #### STYLED_COMPONENTS
@@ -117,7 +114,6 @@ Modules documentation: `documentation\modules\<module_name>_module_documentation
 - Implement the css prop for one-off styling needs
 - Use the & character for nesting selectors
 - Leverage the keyframes helper for animations
-
 
 ### Guidelines for ACCESSIBILITY
 
@@ -146,4 +142,3 @@ Modules documentation: `documentation\modules\<module_name>_module_documentation
 - Implement alternatives to complex gestures that require fine motor control
 - Ensure content is accessible when device orientation is locked for users with fixed devices
 - Provide alternatives to motion-based interactions for users with vestibular disorders
-
