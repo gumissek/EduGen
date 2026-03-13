@@ -219,49 +219,60 @@ export default function ApiKeyForm() {
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Dodaj nowy klucz API</DialogTitle>
         <DialogContent>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Klucz zostanie zaszyfrowany i bezpiecznie przechowany. Możesz uzyskać klucz na{' '}
-            <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700 }}>
-              openrouter.ai/keys
-            </a>
-          </Typography>
-          <TextField
-            fullWidth
-            label="Nazwa klucza (etykieta)"
-            value={keyName}
-            onChange={(e) => setKeyName(e.target.value)}
-            placeholder="np. Mój klucz OpenRouter"
-            margin="normal"
-          />
-          <TextField
-            fullWidth
-            label="Klucz API"
-            type={showPassword ? 'text' : 'password'}
-            value={secretKeyValue}
-            onChange={(e) => setSecretKeyValue(e.target.value)}
-            placeholder="sk-or-..."
-            margin="normal"
-            slotProps={{
-              input: {
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      onClick={() => setShowPassword((s) => !s)}
-                      edge="end"
-                    >
-                      {showPassword ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }
-            }}
-          />
+          <Box
+            component="form"
+            id="add-key-form"
+            onSubmit={(e) => { e.preventDefault(); handleAdd(); }}
+          >
+            <input type="text" name="username" autoComplete="username" value="" readOnly style={{ display: 'none' }} />
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Klucz zostanie zaszyfrowany i bezpiecznie przechowany. Możesz uzyskać klucz na{' '}
+              <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700 }}>
+                openrouter.ai/keys
+              </a>
+            </Typography>
+            <TextField
+              fullWidth
+              label="Nazwa klucza (etykieta)"
+              value={keyName}
+              onChange={(e) => setKeyName(e.target.value)}
+              placeholder="np. Mój klucz OpenRouter"
+              margin="normal"
+              autoFocus
+              autoComplete="off"
+            />
+            <TextField
+              fullWidth
+              label="Klucz API"
+              type={showPassword ? 'text' : 'password'}
+              value={secretKeyValue}
+              onChange={(e) => setSecretKeyValue(e.target.value)}
+              placeholder="sk-or-..."
+              margin="normal"
+              autoComplete="new-password"
+              slotProps={{
+                input: {
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={() => setShowPassword((s) => !s)}
+                        edge="end"
+                      >
+                        {showPassword ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }
+              }}
+            />
+          </Box>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setDialogOpen(false)}>Anuluj</Button>
           <Button
+            type="submit"
+            form="add-key-form"
             variant="contained"
-            onClick={handleAdd}
             disabled={!keyName.trim() || !secretKeyValue.trim() || isCreating}
             startIcon={isCreating ? <CircularProgress size={18} /> : undefined}
           >
