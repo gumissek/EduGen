@@ -138,7 +138,7 @@ export default function ModelSelector() {
   return (
     <Box>
       {/* Header row */}
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2, gap: 1, flexWrap: 'wrap' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Typography variant="subtitle1" fontWeight="bold">
             Twoje modele AI
@@ -155,7 +155,7 @@ export default function ModelSelector() {
           startIcon={<AddIcon />}
           size="small"
           onClick={handleOpenAdd}
-          sx={{ fontWeight: 600 }}
+          sx={{ fontWeight: 600, flexShrink: 0 }}
         >
           Dodaj model
         </Button>
@@ -259,20 +259,22 @@ export default function ModelSelector() {
                     bgcolor: isSelected ? 'primary.50' : 'transparent',
                   }}
                 >
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 0.5, gap: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
                       <Radio
                         checked={isSelected}
                         onChange={() => handleSelectModel(key)}
                         disabled={isUpdating}
                         size="small"
                         onClick={(e) => e.stopPropagation()}
-                        sx={{ p: 0 }}
+                        sx={{ p: 0, flexShrink: 0 }}
                       />
-                      {isSelected && <CheckCircleIcon fontSize="small" color="success" />}
-                      <Typography variant="body2" fontWeight={700}>{model.model_name}</Typography>
+                      {isSelected && <CheckCircleIcon fontSize="small" color="success" sx={{ flexShrink: 0 }} />}
+                      <Typography variant="body2" fontWeight={700} sx={{ wordBreak: 'break-all' }}>
+                        {model.model_name}
+                      </Typography>
                     </Box>
-                    <Chip label={model.provider} size="small" variant="outlined" />
+                    <Chip label={model.provider} size="small" variant="outlined" sx={{ flexShrink: 0 }} />
                   </Box>
                   {model.description && (
                     <Typography variant="caption" color="text.secondary" display="block" sx={{ ml: 3.5 }}>
@@ -284,14 +286,16 @@ export default function ModelSelector() {
                       Cena: {model.price_description}
                     </Typography>
                   )}
-                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }} onClick={(e) => e.stopPropagation()}>
+                  <Box sx={{ mt: 2 }} onClick={(e) => e.stopPropagation()}>
                     <Button
-                      size="small"
+                      size="medium"
                       variant="outlined"
                       color="error"
                       startIcon={<DeleteIcon />}
                       onClick={() => setDeleteId(model.id)}
                       disabled={isDeleting}
+                      fullWidth
+                      sx={{ minHeight: 44 }}
                     >
                       Usuń
                     </Button>

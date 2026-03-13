@@ -6,6 +6,9 @@ from typing import Optional
 
 from pydantic import BaseModel, field_validator
 
+ALLOWED_PLATFORMS = {"openrouter"}
+_MAX_SECRET_KEY_LEN = 512  # well above any real OpenRouter key length
+
 
 class SecretKeyCreate(BaseModel):
     platform: str  # e.g. 'openrouter'
@@ -18,6 +21,8 @@ class SecretKeyCreate(BaseModel):
         v = v.strip().lower()
         if not v:
             raise ValueError("Platforma jest wymagana")
+        if v not in ALLOWED_PLATFORMS:
+            raise ValueError(f"Nieobsługiwana platforma. Dozwolone: {', '.join(sorted(ALLOWED_PLATFORMS))}")
         return v
 
     @field_validator("key_name")
@@ -36,6 +41,8 @@ class SecretKeyCreate(BaseModel):
         v = v.strip()
         if not v:
             raise ValueError("Klucz API jest wymagany")
+        if len(v) > _MAX_SECRET_KEY_LEN:
+            raise ValueError(f"Klucz API nie może przekraczać {_MAX_SECRET_KEY_LEN} znaków")
         return v
 
 
