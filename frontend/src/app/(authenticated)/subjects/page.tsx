@@ -21,7 +21,7 @@ import { useFiles } from '@/hooks/useFiles';
 import { useSettings } from '@/hooks/useSettings';
 import { useSearchParams } from 'next/navigation';
 
-export default function SubjectsPage() {
+function SubjectsContent() {
   const { subjects, createSubject, deleteSubject, isCreating } = useSubjects();
   const { settings } = useSettings();
   const searchParams = useSearchParams();
@@ -124,5 +124,12 @@ export default function SubjectsPage() {
         isLoading={isCreating} 
       />
     </Box>
+  );
+}
+export default function SubjectsPage() {
+  return (
+    <React.Suspense fallback={null}>
+      <SubjectsContent />
+    </React.Suspense>
   );
 }

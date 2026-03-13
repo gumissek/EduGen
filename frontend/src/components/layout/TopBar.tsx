@@ -78,7 +78,7 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
         >
           <MenuIcon />
         </IconButton>
-        <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 700, letterSpacing: '-0.01em', mr: 2 }}>
+        <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 700, letterSpacing: '-0.01em', mr: 2, display: { xs: 'none', sm: 'block' } }}>
           {title}
         </Typography>
 

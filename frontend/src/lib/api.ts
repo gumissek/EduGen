@@ -1,5 +1,7 @@
 import axios from 'axios';
 
+import { logger } from '@/lib/logger';
+
 const AUTH_COOKIE = 'edugen-auth';
 
 /** Read the JWT token from the auth cookie (client-side only). */
@@ -39,9 +41,14 @@ api.interceptors.response.use(
         // Clear the auth cookie so middleware redirects to login
         document.cookie = `${AUTH_COOKIE}=; path=/; SameSite=Lax; max-age=0`;
         if (window.location.pathname !== '/login') {
+          logger.warn('[api] 401 Unauthorized — redirecting to /login.');
           window.location.href = '/login';
         }
       }
+    } else {
+      const status = error.response?.status ?? 'network';
+      const url = error.config?.url ?? '';
+      logger.error(`[api] Request failed — status=${status} url=${url}`, error);
     }
     return Promise.reject(error);
   }

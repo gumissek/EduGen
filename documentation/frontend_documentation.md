@@ -7,12 +7,96 @@ Podczas wprowadzania zmian w części frontendowej projektu, zawsze przestrzegaj
 ```
 frontend/
 ├── src/
+│   ├── proxy.ts
 │   ├── app/
-│   │   ├── (authenticated)/
-│   │   │   ├── dashboard/
-│   │   │   ├── documents/
-...
-
+│   │   ├── layout.tsx              # Root layout (providers, globals.css)
+│   │   ├── page.tsx                # Strona publiczna /
+│   │   ├── globals.css
+│   │   ├── AppProviders.tsx        # QueryClient, ThemeRegistry, ColorMode
+│   │   ├── not-found.tsx
+│   │   ├── about/                  # /about
+│   │   ├── login/                  # /login
+│   │   ├── register/               # /register
+│   │   ├── verify-email-change/    # /verify-email-change?token=...
+│   │   ├── email-change-succeeded/ # /email-change-succeeded
+│   │   └── (authenticated)/        # Trasy chronione layoutem uwierzytelnionym
+│   │       ├── layout.tsx
+│   │       ├── dashboard/
+│   │       ├── documents/
+│   │       ├── generate/
+│   │       ├── subjects/
+│   │       ├── settings/
+│   │       ├── profile/
+│   │       ├── diagnostics/
+│   │       └── admin-panel/
+│   │           ├── page.tsx
+│   │           ├── users/
+│   │           └── database/
+│   ├── components/
+│   │   ├── auth/
+│   │   │   ├── LoginForm.tsx
+│   │   │   ├── RegisterForm.tsx
+│   │   │   └── AuthGuard.tsx
+│   │   ├── generate/
+│   │   │   ├── GenerationWizard.tsx
+│   │   │   ├── StepContentType.tsx
+│   │   │   ├── StepSubjectConfig.tsx
+│   │   │   ├── StepQuestionConfig.tsx
+│   │   │   ├── StepSourceFiles.tsx
+│   │   │   ├── StepReview.tsx
+│   │   │   └── GenerationStatusView.tsx
+│   │   ├── editor/
+│   │   │   ├── TipTapEditor.tsx
+│   │   │   └── RepromptInput.tsx
+│   │   ├── layout/
+│   │   │   ├── Sidebar.tsx
+│   │   │   ├── TopBar.tsx
+│   │   │   ├── PublicTopBar.tsx
+│   │   │   ├── PublicChrome.tsx
+│   │   │   └── AppFooter.tsx
+│   │   ├── documents/
+│   │   ├── subjects/
+│   │   │   ├── FileList.tsx
+│   │   │   └── FileCard.tsx
+│   │   ├── settings/
+│   │   │   ├── ApiKeyForm.tsx
+│   │   │   └── ModelSelector.tsx
+│   │   └── ui/                     # Reużywalne wrappery UI (przyciski, Snackbar itp.)
+│   ├── hooks/
+│   │   ├── useAuth.ts
+│   │   ├── useCurrentUser.ts
+│   │   ├── useDocuments.ts
+│   │   ├── useFiles.ts
+│   │   ├── useGenerations.ts
+│   │   ├── useLevels.ts
+│   │   ├── useSecretKeys.ts
+│   │   ├── useSubjects.ts
+│   │   └── useTaskTypes.ts
+│   ├── lib/
+│   │   ├── api.ts                  # Axios instance z interceptorami JWT
+│   │   ├── constants.ts
+│   │   ├── logger.ts               # Logger z znacznikami czasu ISO-8601
+│   │   └── queryClient.ts          # React Query client
+│   ├── schemas/
+│   │   ├── auth.ts
+│   │   ├── document.ts
+│   │   ├── file.ts
+│   │   ├── generation.ts
+│   │   ├── settings.ts
+│   │   └── subject.ts
+│   ├── theme/
+│   │   ├── theme.ts
+│   │   ├── ThemeRegistry.tsx
+│   │   └── ColorModeContext.tsx
+│   └── types/
+│       └── index.ts
+├── public/
+├── next.config.ts
+├── tsconfig.json
+├── package.json
+├── eslint.config.mjs
+└── Dockerfile
+```
 
 ---
 
@@ -22,6 +106,7 @@ Frontend aplikacji EduGen składa się z trzech głównych warstw w katalogu `sr
 - **App Router (`app/`)** — konfiguracja ścieżek, podział na strefę uwierzytelnioną i publiczną, główne widoki (strony).
 - **Komponenty (`components/`)** — podzielone domenowo na bloki funkcjonalne (auth, generowanie, edytor, layout). Korzystają z biblioteki Material UI (MUI).
 - **Logika i Stan (`hooks/`, `lib/`, `schemas/`)** — zarządzanie stanem powtórnie używalnym (React Query), walidacja formularzy (Zod) oraz połączenie z API (Axios).
+- **Logowanie** — Centralny moduł `src/lib/logger.ts` dodaje znaczniki czasu ISO-8601 do wszystkich logów. Format: `2024-01-15T12:30:45.123Z [INFO ] treść`.
 
 ---
 
@@ -82,8 +167,8 @@ Główny proces biznesowy to generowanie dokumentów. Elementy go wspierające:
 ### `editor/`
 - Edytor dokumentów oparty na silniku **Tiptap** dający interfejs modyfikacji wygenerowanej treści.
 - `TipTapEditor.tsx` ustawia `immediatelyRender: false`, aby uniknąć ostrzeżeń SSR/hydration podczas inicjalizacji edytora w Next.js.
-- **Drag-and-drop reorder (US-011):** `TipTapEditor.tsx` integruje `@tiptap/extension-drag-handle-react`. W trybie edycji po lewej stronie każdego bloku pojawia się uchwyt (`DragIndicatorIcon`) widoczny po najechaniu kursorem. Po zakończeniu przeciągania bloku (`onElementDragStart` + `onUpdate`) wywoływana jest funkcja `renumberQuestions`, która przeszukuje DOM edytora i automatycznie przenumerowuje wszystkie bloki zaczynające się od wzorca `N. ` (pytania). Operacja drag-and-drop jest odwracalna przez Ctrl+Z dzięki wbudowanej historii TipTap (StarterKit).
-- **`RepromptInput.tsx`** — pasek prompt przyklejony na stałe do dołu ekranu (`position: fixed`). Na desktopie uwzględnia szerokość Sidebara (260 px) poprzez `left: calc(50% + 130px)` i `width: calc(100% - 292px)`, dzięki czemu jest wyśrodkowany w obszarze treści, a nie w całym viewporcie.
+- **Drag-and-drop reorder (US-011):** `TipTapEditor.tsx` integruje `@tiptap/extension-drag-handle-react`. W trybie edycji po lewej stronie każdego bloku pojawia się uchwyt (`DragIndicatorIcon`) widoczny po najechaniu kursorem. Po zakończeniu przeciągania bloku (`onElementDragStart` + `onUpdate`) wywoływana jest funkcja `renumberQuestions`, która przeszukuje DOM edytora i automatycznie przenumerowuje wszystkie bloki zaczynające się od wzorca `N. ` (pytania). Operacja drag-and-drop jest odwracalna przez Ctrl+Z dzięki wbudowanej historii TipTap (StarterKit).- **Bubble menu — wzajemne wykluczanie tabeli i komentarzy:** `TableBubbleMenu` wyświetla się wyłącznie gdy kursor/zaznaczenie znajduje się wewnątrz komórki tabeli (`editor.isActive("tableCell")` / `"tableHeader"` lub `CellSelection`). `CommentBubbleMenu` stosuje podwójną ochronę — najpierw sprawdza `editor.isActive("tableCell"/"tableHeader")`, a następnie wykonuje ręczne przejście po drzewie węzłów (`$from.node(d)`) — i nigdy nie pojawia się, gdy kursor jest wewnątrz tabeli.
+- **Usuwanie komentarzy:** Przycisk „Usuń komentarz" w `CommentBubbleMenu` korzysta z `extendMarkRange("comment")` przed `unsetMark("comment")`, dzięki czemu komentarz jest usuwany poprawnie nawet gdy kursor jest ustawiony wewnątrz komentarza bez zaznaczenia tekstu.- **`RepromptInput.tsx`** — pasek prompt przyklejony na stałe do dołu ekranu (`position: fixed`). Na desktopie uwzględnia szerokość Sidebara (260 px) poprzez `left: calc(50% + 130px)` i `width: calc(100% - 292px)`, dzięki czemu jest wyśrodkowany w obszarze treści, a nie w całym viewporcie.
 - Edytor prototypu (`/generate/[id]/editor`) zapisuje zmiany przyciskiem **„Zapisz wersję roboczą”** do tabeli `prototypes` (`PUT /api/prototypes/{generation_id}`), dzięki czemu materiał można później kontynuować i finalizować.
 
 ### `layout/`
@@ -124,7 +209,14 @@ Frontend korzysta z bezstanowej autoryzacji JWT:
 ### `src/lib/api.ts`
 - Żądania wysyłane są na ścieżkę bazową `/api`, którą deweloperskie proxy lub Next.js rewrites w `next.config.ts` przekierowują do backendu pod adresem konfigurowanym przez zmienną `BACKEND_URL`.
 - Interceptory requestów pobierają automatycznie JWT token ze specjalnego cookie (`edugen-auth`) i zasilają nagłówek `Authorization: Bearer <token>`.
-- Interceptory response wymuszają powrót do widoku logowania w przypadku błędu `401 Unauthorized` (usuwając cookie i przekierowując do `/login`).
+- Interceptory response wymuszają powrót do widoku logowania w przypadku błędu `401 Unauthorized` (usuwając cookie i przekierowując do `/login`). Błędy logowane są przez `logger` z poziomu `WARN`/`ERROR`.
+
+### `src/lib/logger.ts`
+Centralny moduł logowania dla całego frontendu:
+- Eksportuje obiekt `logger` z metodami: `debug()`, `info()`, `warn()`, `error()`.
+- Każda wiadomość poprzedzona jest znacznikiem czasu ISO-8601 i oznaczeniem poziomu, np. `2024-01-15T12:30:45.123Z [INFO ] …`.
+- Działa zarówno po stronie przeglądarki (client components), jak i Node.js (server/SSR).
+- Używany przez: interceptory `api.ts` do logowania błędów HTTP.
 
 Za pobieranie, cache'owanie i mutację danych odpowiedzialny jest pakiet **TanStack React Query** (konfiguracja: `src/lib/queryClient.ts`).
 

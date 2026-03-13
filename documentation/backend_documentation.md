@@ -7,14 +7,65 @@ Podczas wprowadzania zmian w projekcie, zawsze przestrzegaj poniższej struktury
 ```
 backend/
 ├── app/
-│   ├── main.py
-│   ├── config.py
-│   ├── database.py
-...
+│   ├── main.py               # Punkt wejścia FastAPI, lifespan, middleware, routery
+│   ├── config.py             # Konfiguracja z pydantic-settings (.env)
+│   ├── database.py           # Silnik SQLAlchemy, get_db() dependency
+│   ├── dependencies.py       # get_current_user(), get_current_superuser()
+│   ├── encryption.py         # Szyfrowanie kluczy API (cryptography)
+│   ├── init_app.py           # Skrypt inicjalizacyjny: migracje, katalogi
+│   ├── logging_config.py     # Centralna konfiguracja logowania z znacznikami czasu
+│   ├── models/
+│   │   ├── __init__.py
+│   │   ├── user.py
+│   │   ├── secret_key.py
+│   │   ├── generation.py
+│   │   ├── prototype.py
+│   │   ├── source_file.py
+│   │   ├── document.py
+│   │   ├── ai_request.py
+│   │   ├── subject.py
+│   │   ├── diagnostic_log.py
+│   │   ├── backup.py
+│   │   ├── file_content_cache.py
+│   │   ├── generation_source_file.py
+│   │   └── verification_token.py
+│   ├── routers/
+│   │   ├── admin.py
+│   │   ├── auth.py
+│   │   ├── backups.py
+│   │   ├── diagnostics.py
+│   │   ├── documents.py
+│   │   ├── files.py
+│   │   ├── generations.py
+│   │   ├── levels.py
+│   │   ├── prototypes.py
+│   │   ├── secret_keys.py
+│   │   ├── settings.py
+│   │   ├── subjects.py
+│   │   ├── task_types.py
+│   │   └── user_ai_models.py
+│   ├── schemas/              # Pydantic modele request/response
+│   └── services/
+│       ├── ai_service.py
+│       ├── auth_service.py
+│       ├── backup_service.py
+│       ├── diagnostic_service.py
+│       ├── docx_service.py
+│       ├── email_service.py
+│       ├── file_service.py
+│       ├── generation_service.py
+│       └── verification_service.py
+├── alembic/
+│   ├── env.py
+│   ├── script.py.mako
+│   └── versions/
+│       ├── 001_initial_schema.py
+│       └── 002_add_verification_tokens.py
+├── alembic.ini
+├── Dockerfile
+└── pyproject.toml
+```
 
-
-
----
 
 ## 1. Architektura ogólna
 
@@ -25,6 +76,7 @@ Projekt EduGen opiera się na nowoczesnym, modularnym backendzie. Składa się o
 - **Integracja AI** — Komunikacja z modelami AI poprzez OpenRouter API (`https://openrouter.ai/api/v1/chat/completions`) w celu generowania dedykowanych treści edukacyjnych. Wykorzystywana jest biblioteka `requests` zamiast dedykowanego SDK.
 - **Menedżer pakietów** — Skonfigurowany za pomocą `pyproject.toml` (wymaga Pythona >= 3.12).
 - **Zadania w tle (Background Tasks)** — `apscheduler` dla codziennych kopii zapasowych oraz tła dla asynchronicznego generowania materiałów edukacyjnych.
+- **Logowanie** — Centralnie skonfigurowany Python `logging` ze znacznikami czasu (`app/logging_config.py`). Format: `YYYY-MM-DD HH:MM:SS [LEVEL   ] moduł: treść`.
 
 ### Główne katalogi w `backend/`:
 - `app/` — Główny kod źródłowy aplikacji (FastAPI, w tym endpointy, serwisy, modele, obiekty przesyłu).
@@ -38,18 +90,26 @@ Projekt EduGen opiera się na nowoczesnym, modularnym backendzie. Składa się o
 To centrum zarządzania całą aplikacją, definiujące aplikację FastAPI oraz uruchamiające się procesy.
 
 **Lifespan & Mechanizmy Startowe:**
+- `configure_logging()` — pierwsza instrukcja przy starcie; konfiguruje logger zgodnie z `app/logging_config.py`.
 - `_ensure_directories()` — automatyczne tworzenie folderów (`data/`, `data/subjects/`, `data/documents/`, `data/backups/`).
 - `_start_backup_scheduler()` — inicjuje background scheduler (APScheduler) wykonujący dzienny dump bazy (`daily_backup`).
 
 **Middleware i routery:**
 - Załączony `CORSMiddleware`, pobierający listę adresów z `config.py`.
-- Rejestrowane routery API dla kluczowych modułów: `auth`, `settings`, `subjects`, `files`, `generations`, `prototypes`, `documents`, `backups`, `diagnostics`, `levels`, `task_types`.
 - Rejestrowane routery API dla kluczowych modułów: `auth`, `settings`, `subjects`, `files`, `generations`, `prototypes`, `documents`, `backups`, `diagnostics`, `levels`, `task_types`, `admin`.
 - **Global exception handler** — przechwytuje wyjątki (kod 500) i automatycznie zapisuje szczegóły błędu (z tracebackiem i url) do własnej struktury `DiagnosticLog`.
 
 ---
 
 ## 3. Backend – Pliki konfiguracyjne i baza
+
+### `backend/app/logging_config.py`
+Centralna konfiguracja Pythonowego `logging` dla całej aplikacji:
+- `configure_logging(level)` — konfiguruje root logger poprzez `logging.config.dictConfig`. Bezpieczna do wielokrotnego wywołania (działa idempotentnie).
+- Format wyjścia: `YYYY-MM-DD HH:MM:SS [LEVEL   ] nazwa.modułu: treść wiadomości`
+- Handler: `StreamHandler → stdout` (kompatybilny z Docker/kontenerami).
+- Wyciszeni zewnętrzni: `uvicorn.access` (WARNING), `apscheduler` (WARNING), `sqlalchemy.engine` (WARNING).
+- Używana przez: `main.py` (startup), `init_app.py` (skrypt inicjalizacyjny).
 
 ### `backend/app/config.py`
 Moduł zarządzania zmiennymi środowiskowymi przez `pydantic-settings`:

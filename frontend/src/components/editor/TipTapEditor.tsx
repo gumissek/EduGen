@@ -10,12 +10,14 @@ import { TableRow } from "@tiptap/extension-table-row";
 import { TableCell } from "@tiptap/extension-table-cell";
 import { TableHeader } from "@tiptap/extension-table-header";
 import { CellSelection } from "@tiptap/pm/tables";
+import { Mark, mergeAttributes } from "@tiptap/core";
 import Underline from "@tiptap/extension-underline";
 import TextAlign from "@tiptap/extension-text-align";
 import Placeholder from "@tiptap/extension-placeholder";
 import DragHandle from "@tiptap/extension-drag-handle-react";
 import Box from "@mui/material/Box";
 import Paper from "@mui/material/Paper";
+import TextField from "@mui/material/TextField";
 import IconButton from "@mui/material/IconButton";
 import Divider from "@mui/material/Divider";
 import Tooltip from "@mui/material/Tooltip";
@@ -45,6 +47,32 @@ import CallSplitIcon from "@mui/icons-material/CallSplit";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import UndoIcon from "@mui/icons-material/Undo";
 import RedoIcon from "@mui/icons-material/Redo";
+import CheckIcon from "@mui/icons-material/Check";
+import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
+
+// ─── Comment Mark Extension ─────────────────────────────────────────────────
+
+const CommentMark = Mark.create({
+  name: "comment",
+  addAttributes() {
+    return {
+      comment: { default: "" },
+    };
+  },
+  parseHTML() {
+    return [{ tag: "mark.tiptap-comment" }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    return [
+      "mark",
+      mergeAttributes(HTMLAttributes, {
+        class: "tiptap-comment",
+        "data-comment": HTMLAttributes.comment,
+      }),
+      0,
+    ];
+  },
+});
 
 // ─── Table Bubble Menu ────────────────────────────────────────────────────────
 
@@ -103,14 +131,18 @@ function TableBubbleMenu({ editor }: { editor: Editor }) {
 
   return (
     <BubbleMenu
+      pluginKey="tableBubbleMenu"
       editor={editor}
-      shouldShow={({ editor }) => {
-        const sel = editor.state.selection;
-        return (
-          sel instanceof CellSelection ||
-          editor.isActive("tableCell") ||
-          editor.isActive("tableHeader")
-        );
+      shouldShow={({ editor, state }) => {
+        if (state.selection instanceof CellSelection) return true;
+        // Check both ends of selection for table context
+        for (const pos of [state.selection.$from, state.selection.$to]) {
+          for (let d = pos.depth; d > 0; d--) {
+            const name = pos.node(d).type.name;
+            if (name === "tableCell" || name === "tableHeader") return true;
+          }
+        }
+        return false;
       }}
       options={{ placement: "top", offset: 10, flip: true, shift: true }}
       appendTo={() => document.body}
@@ -325,6 +357,190 @@ function TableBubbleMenu({ editor }: { editor: Editor }) {
   );
 }
 
+// ─── Comment Bubble Menu ────────────────────────────────────────────────────
+
+function CommentBubbleMenu({ editor }: { editor: Editor }) {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === "dark";
+  const [inputValue, setInputValue] = React.useState("");
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
+  const { isInComment, selectionEmpty, activeComment } = useEditorState({
+    editor,
+    selector: (ctx) => {
+      const { selection } = ctx.editor.state;
+      const inComment = ctx.editor.isActive("comment");
+      return {
+        isInComment: inComment,
+        selectionEmpty: selection.empty,
+        activeComment: inComment
+          ? ((ctx.editor.getAttributes("comment").comment as string) ?? "")
+          : "",
+      };
+    },
+  });
+
+  const showAddMode = !selectionEmpty && !isInComment;
+
+  const prevShowAddModeRef = React.useRef(false);
+  React.useEffect(() => {
+    if (showAddMode && !prevShowAddModeRef.current) {
+      setInputValue("");
+      setTimeout(() => inputRef.current?.focus(), 30);
+    }
+    prevShowAddModeRef.current = showAddMode;
+  }, [showAddMode]);
+
+  const handleConfirm = () => {
+    const text = inputValue.trim();
+    if (!text) return;
+    editor.chain().focus().setMark("comment", { comment: text }).run();
+    setInputValue("");
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleConfirm();
+    }
+    if (e.key === "Escape") {
+      editor.commands.blur();
+    }
+  };
+
+  const bubbleSx = {
+    display: "flex",
+    alignItems: "center",
+    gap: 0.75,
+    px: 1.25,
+    py: 0.75,
+    borderRadius: "12px",
+    border: "1px solid",
+    borderColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)",
+    bgcolor: isDark ? "rgba(15,15,15,0.97)" : "rgba(255,255,255,0.97)",
+    backdropFilter: "blur(16px)",
+    boxShadow: isDark
+      ? "0 8px 32px rgba(0,0,0,0.6)"
+      : "0 8px 32px rgba(0,0,0,0.14)",
+  };
+
+  return (
+    <BubbleMenu
+      pluginKey="commentBubbleMenu"
+      editor={editor}
+      shouldShow={({ state }) => {
+        // Never show comment menu inside a table
+        if (state.selection instanceof CellSelection) return false;
+        for (const pos of [state.selection.$from, state.selection.$to]) {
+          for (let d = pos.depth; d > 0; d--) {
+            const name = pos.node(d).type.name;
+            if (name === "tableCell" || name === "tableHeader") return false;
+          }
+        }
+        // Show when cursor is inside a comment (viewing/deleting)
+        if (state.selection.empty) {
+          const marks = state.selection.$from.marks();
+          if (marks.some((m) => m.type.name === "comment")) return true;
+          return false;
+        }
+        // Show when there is a text selection (adding a new comment)
+        return true;
+      }}
+      options={{ placement: "top", offset: 10, flip: true, shift: true }}
+      appendTo={() => document.body}
+    >
+      <Paper elevation={6} sx={bubbleSx}>
+        {showAddMode ? (
+          <>
+            <ChatBubbleOutlineIcon
+              sx={{ fontSize: 16, color: "warning.main", flexShrink: 0 }}
+            />
+            <TextField
+              inputRef={inputRef}
+              size="small"
+              placeholder="Dodaj komentarz…"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              variant="standard"
+              sx={{
+                width: 220,
+                "& .MuiInput-root": {
+                  color: isDark ? "grey.100" : "grey.900",
+                },
+                "& .MuiInput-underline:before": {
+                  borderBottomColor: isDark
+                    ? "rgba(255,255,255,0.2)"
+                    : "rgba(0,0,0,0.2)",
+                },
+              }}
+              slotProps={{ input: { style: { fontSize: "0.875rem" } } }}
+            />
+            <Tooltip title="Zatwierdź (Enter)">
+              <span>
+                <IconButton
+                  size="small"
+                  onClick={handleConfirm}
+                  disabled={!inputValue.trim()}
+                  sx={{
+                    color: "success.main",
+                    width: 28,
+                    height: 28,
+                    "&.Mui-disabled": { opacity: 0.3 },
+                  }}
+                >
+                  <CheckIcon fontSize="small" />
+                </IconButton>
+              </span>
+            </Tooltip>
+          </>
+        ) : isInComment ? (
+          <>
+            <ChatBubbleOutlineIcon
+              sx={{ fontSize: 16, color: "warning.main", flexShrink: 0 }}
+            />
+            <Typography
+              sx={{
+                fontSize: "0.875rem",
+                maxWidth: 260,
+                color: isDark ? "grey.100" : "grey.900",
+                wordBreak: "break-word",
+              }}
+            >
+              {activeComment}
+            </Typography>
+            <Tooltip title="Usuń komentarz">
+              <IconButton
+                size="small"
+                onClick={() =>
+                  editor
+                    .chain()
+                    .focus()
+                    .extendMarkRange("comment")
+                    .unsetMark("comment")
+                    .run()
+                }
+                sx={{
+                  color: "error.main",
+                  width: 28,
+                  height: 28,
+                  "&:hover": {
+                    bgcolor: isDark
+                      ? "rgba(239,68,68,0.18)"
+                      : "rgba(239,68,68,0.08)",
+                  },
+                }}
+              >
+                <DeleteOutlineIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          </>
+        ) : null}
+      </Paper>
+    </BubbleMenu>
+  );
+}
+
 // ─── Table Grid Picker ────────────────────────────────────────────────────────
 
 const GRID_MAX = 8;
@@ -346,7 +562,7 @@ function TablePicker({ onSelect }: TablePickerProps) {
 
   return (
     <>
-      <Tooltip title="Wstaw tabelę">
+      <Tooltip title="Wstaw tabelę \n ">
         <IconButton
           size="small"
           onClick={(e) => setAnchorEl(e.currentTarget)}
@@ -590,6 +806,14 @@ function EditorGlobalStyles() {
         ".tiptap-editor.resize-cursor, .tiptap-editor.resize-cursor table": {
           cursor: "col-resize",
         },
+        ".tiptap-editor mark.tiptap-comment": {
+          background: "#fef08a",
+          color: "inherit",
+          borderRadius: "3px",
+          padding: "0 2px",
+          borderBottom: "2px solid #eab308",
+          cursor: "pointer",
+        },
       }}
     />
   );
@@ -664,6 +888,7 @@ export default function TipTapEditor({
     extensions: [
       StarterKit,
       Underline,
+      CommentMark,
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       Table.configure({ resizable: true }),
       TableRow,
@@ -909,6 +1134,7 @@ export default function TipTapEditor({
               </DragHandle>
 
               <TableBubbleMenu editor={editor} />
+              <CommentBubbleMenu editor={editor} />
             </>
           )}
 

@@ -12,8 +12,13 @@ COPY frontend/package.json frontend/package-lock.json* ./
 COPY frontend/next.config.ts frontend/tsconfig.json frontend/next-env.d.ts ./
 COPY frontend/public ./public
 COPY frontend/src ./src
-# .version lives in the repo root — copied here so next.config.ts finds it at /app/.version
+# .version lives in the repo root — generate .env.local from it for Next.js build
 COPY .version ./
+RUN APP_NAME=$(grep '^APP_NAME=' .version | cut -d= -f2) && \
+    VERSION=$(grep '^VERSION=' .version | cut -d= -f2) && \
+    RELEASE_DATE=$(grep '^RELEASE_DATE=' .version | cut -d= -f2) && \
+    printf 'NEXT_PUBLIC_APP_NAME=%s\nNEXT_PUBLIC_APP_VERSION=%s\nNEXT_PUBLIC_APP_RELEASE_DATE=%s\n' \
+      "${APP_NAME:-EduGen}" "${VERSION:-1.0.0}" "${RELEASE_DATE:-}" > .env.local
 
 ENV NEXT_TELEMETRY_DISABLED 1
 ARG BACKEND_URL=http://backend:8000

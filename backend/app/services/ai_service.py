@@ -300,8 +300,8 @@ def call_openrouter(
 
 
 import json as _json
-import logging as _logging
-_reprompt_logger = _logging.getLogger(__name__)
+import logging
+_reprompt_logger = logging.getLogger(__name__)
 
 
 def _normalize_reprompt_response(data: dict) -> dict:

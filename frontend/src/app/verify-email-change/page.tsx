@@ -11,7 +11,7 @@ import LoginIcon from '@mui/icons-material/Login';
 import { useRouter, useSearchParams } from 'next/navigation';
 import api from '@/lib/api';
 
-export default function VerifyEmailChangePage() {
+function VerifyEmailChangeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
@@ -99,5 +99,13 @@ export default function VerifyEmailChangePage() {
         )}
       </Paper>
     </Box>
+  );
+}
+
+export default function VerifyEmailChangePage() {
+  return (
+    <React.Suspense fallback={null}>
+      <VerifyEmailChangeContent />
+    </React.Suspense>
   );
 }

@@ -115,7 +115,7 @@ export default function ProfilePage() {
     },
     staleTime: Infinity,
     refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
+    refetchOnReconnect: false, // odświezanie statystyk tylko ręcznie, po zmianach w profilu (np. email) lub po odświeżeniu strony
   });
 
   const refreshStats = React.useCallback(() => {
@@ -132,7 +132,6 @@ export default function ProfilePage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user-me'] });
-      refreshStats();
       success('Dane profilu zostały zaktualizowane');
     },
     onError: (err: unknown) => {
@@ -407,7 +406,8 @@ export default function ProfilePage() {
           </Typography>
         </Box>
         <Divider sx={{ mb: { xs: 2, sm: 3 } }} />
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Box component="form" onSubmit={(e) => { e.preventDefault(); handlePasswordChange(); }} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <input type="text" name="username" autoComplete="username" value={user?.email ?? ''} readOnly style={{ display: 'none' }} />
           <TextField
             label="Obecne hasło"
             type="password"
@@ -448,10 +448,10 @@ export default function ProfilePage() {
           )}
           <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
             <Button
+              type="submit"
               variant="outlined"
               color="warning"
               startIcon={passwordRequestMutation.isPending ? <CircularProgress size={18} color="inherit" /> : <LockIcon />}
-              onClick={handlePasswordChange}
               disabled={passwordRequestMutation.isPending || !currentPassword || !newPassword || !confirmPassword || passwordCodeModalOpen}
             >
               Zmień hasło
@@ -472,7 +472,6 @@ export default function ProfilePage() {
                   setVerificationCode(val);
                 }}
                 fullWidth
-                autoFocus
                 inputProps={{ maxLength: 6, inputMode: 'numeric', pattern: '[0-9]*' }}
                 placeholder="000000"
               />
@@ -544,7 +543,12 @@ export default function ProfilePage() {
               </Box>
             </>
           ) : (
-            <>
+            <Box
+              component="form"
+              id="email-change-form"
+              onSubmit={(e) => { e.preventDefault(); handleEmailChangeConfirm(); }}
+            >
+              <input type="text" name="username" autoComplete="username" value={user?.email ?? ''} readOnly style={{ display: 'none' }} />
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                 Aby zmienić adres e-mail na <strong>{email}</strong>, podaj swoje obecne hasło.
                 Na nowy adres zostanie wysłany link weryfikacyjny ważny 24 godziny.
@@ -567,7 +571,7 @@ export default function ProfilePage() {
                   {emailModalError}
                 </Alert>
               )}
-            </>
+            </Box>
           )}
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
@@ -576,8 +580,9 @@ export default function ProfilePage() {
           </Button>
           {!emailLocalLink && (
             <Button
+              type="submit"
+              form="email-change-form"
               variant="contained"
-              onClick={handleEmailChangeConfirm}
               disabled={emailChangeMutation.isPending || !emailModalPassword}
               startIcon={emailChangeMutation.isPending ? <CircularProgress size={18} color="inherit" /> : <EmailIcon />}
             >
