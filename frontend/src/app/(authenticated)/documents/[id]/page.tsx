@@ -100,7 +100,7 @@ export default function DocumentDetailsPage({ params }: { params: Promise<{ id: 
             disabled={isMovingToDraft}
             sx={{ borderRadius: 2 }}
           >
-            Edytuj i przenieś na wersję roboczą
+            Edytuj z AI i przenieś na wersję roboczą
           </Button>
           <Button 
             variant="outlined" 
