@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import mimetypes
 import os
 import requests as http_requests
 from datetime import datetime, timezone
@@ -12,7 +13,10 @@ from pathlib import Path
 from uuid import uuid4
 
 import fitz  # PyMuPDF
-import magic
+try:
+    import magic  # type: ignore
+except ImportError:
+    magic = None
 from docx import Document as DocxDocument
 from sqlalchemy.orm import Session as DBSession
 
@@ -44,9 +48,31 @@ MIME_TO_TYPE = {
 }
 
 
-def detect_mime(file_bytes: bytes) -> str:
-    """Detect MIME type of uploaded file."""
-    return magic.from_buffer(file_bytes, mime=True)
+def detect_mime(file_bytes: bytes, filename: str) -> str:
+    """Detect MIME type of uploaded file.
+
+    Uses libmagic when available. On systems without libmagic (common on Windows),
+    falls back to signature and filename-based detection.
+    """
+    if magic is not None:
+        return magic.from_buffer(file_bytes, mime=True)
+
+    lower_name = filename.lower()
+
+    if file_bytes.startswith(b"%PDF-"):
+        return "application/pdf"
+    if file_bytes.startswith(b"\xFF\xD8\xFF"):
+        return "image/jpeg"
+    if file_bytes.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    if file_bytes.startswith(b"PK") and lower_name.endswith(".docx"):
+        return "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+
+    guessed_mime, _ = mimetypes.guess_type(lower_name)
+    if guessed_mime:
+        return guessed_mime
+
+    return "application/octet-stream"
 
 
 def compute_file_hash(file_bytes: bytes) -> str:
@@ -59,7 +85,7 @@ def validate_file(file_bytes: bytes, filename: str) -> tuple[str, str]:
     if len(file_bytes) > settings.max_file_size_bytes:
         raise ValueError(f"File exceeds maximum size of {settings.MAX_FILE_SIZE_MB}MB")
 
-    mime_type = detect_mime(file_bytes)
+    mime_type = detect_mime(file_bytes, filename)
     if mime_type not in ALLOWED_MIMES:
         raise ValueError(f"File type '{mime_type}' is not supported. Allowed: PDF, DOCX, JPG, PNG")
 

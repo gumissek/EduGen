@@ -76,6 +76,14 @@ The startup scripts handle Docker checks, automatic `.env` creation from `.confi
 
 **Option 2: Local Development (Manual)**
 
+For Windows development mode, you can also use the automation script from the repository root:
+
+```bat
+dev_windows.bat
+```
+
+This script prepares backend/frontend dependencies, starts PostgreSQL (when Docker is available), and opens separate terminal windows for backend and frontend dev servers.
+
 **Backend:**
 Ensure Python 3.12+ and `uv` are installed.
 ```bash

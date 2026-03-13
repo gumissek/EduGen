@@ -126,7 +126,7 @@ Orkiestracja procesu generowania materiałów:
 
 ### Inne serwisy:
 - **`docx_service.py`**: Eksport do MS Word z wariantami. Document tworzony z `user_id`.
-- **`file_service.py`**: Obsługa `pymupdf`, `python-docx` z cache'em SHA-256 (`file_content_cache`). OCR i summary korzystają z OpenRouter REST API (requests).
+- **`file_service.py`**: Obsługa `pymupdf`, `python-docx` z cache'em SHA-256 (`file_content_cache`). OCR i summary korzystają z OpenRouter REST API (requests). Detekcja MIME używa `python-magic` (libmagic), a gdy `libmagic` nie jest dostępne (typowo Windows), działa fallback oparty o sygnatury pliku i rozszerzenie nazwy.
 - **`backup_service.py`**: Kopie zapasowe bazy.
 
 ---
