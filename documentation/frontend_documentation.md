@@ -69,6 +69,7 @@ Główny proces biznesowy to generowanie dokumentów. Elementy go wspierające:
 ### `editor/`
 - Edytor dokumentów oparty na silniku **Tiptap** dający interfejs modyfikacji wygenerowanej treści.
 - `TipTapEditor.tsx` ustawia `immediatelyRender: false`, aby uniknąć ostrzeżeń SSR/hydration podczas inicjalizacji edytora w Next.js.
+- **Drag-and-drop reorder (US-011):** `TipTapEditor.tsx` integruje `@tiptap/extension-drag-handle-react`. W trybie edycji po lewej stronie każdego bloku pojawia się uchwyt (`DragIndicatorIcon`) widoczny po najechaniu kursorem. Po zakończeniu przeciągania bloku (`onElementDragStart` + `onUpdate`) wywoływana jest funkcja `renumberQuestions`, która przeszukuje DOM edytora i automatycznie przenumerowuje wszystkie bloki zaczynające się od wzorca `N. ` (pytania). Operacja drag-and-drop jest odwracalna przez Ctrl+Z dzięki wbudowanej historii TipTap (StarterKit).
 - **`RepromptInput.tsx`** — pasek prompt przyklejony na stałe do dołu ekranu (`position: fixed`). Na desktopie uwzględnia szerokość Sidebara (260 px) poprzez `left: calc(50% + 130px)` i `width: calc(100% - 292px)`, dzięki czemu jest wyśrodkowany w obszarze treści, a nie w całym viewporcie.
 - Edytor prototypu (`/generate/[id]/editor`) zapisuje zmiany przyciskiem **„Zapisz wersję roboczą”** do tabeli `prototypes` (`PUT /api/prototypes/{generation_id}`), dzięki czemu materiał można później kontynuować i finalizować.
 
@@ -161,7 +162,7 @@ Walidacja formularzy realizowana przez **Zod** we współpracy z **React Hook Fo
 - `axios` — HTTP client
 - `@tanstack/react-query` — zarządzanie stanem serwera
 - `@mui/material` + `@emotion/*` — biblioteka komponentów UI
-- `@tiptap/*` — edytor WYSIWYG
+- `@tiptap/*` — edytor WYSIWYG (w tym `@tiptap/extension-drag-handle-react` dla drag-and-drop bloków)
 
 ### `next.config.ts`
 - Proxy routing: przekierowuje `/api/*` na Backend (`process.env.BACKEND_URL`).
