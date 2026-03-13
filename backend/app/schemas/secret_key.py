@@ -10,7 +10,7 @@ from pydantic import BaseModel, field_validator
 class SecretKeyCreate(BaseModel):
     platform: str  # e.g. 'openrouter'
     key_name: str  # user-friendly label, e.g. 'My OpenRouter Key'
-    secret_key: str  # AES-256-GCM encrypted key (base64), decrypted server-side
+    secret_key: str  # plain-text key — will be encrypted server-side
 
     @field_validator("platform")
     @classmethod
@@ -37,10 +37,6 @@ class SecretKeyCreate(BaseModel):
         if not v:
             raise ValueError("Klucz API jest wymagany")
         return v
-
-
-class TransportKeyResponse(BaseModel):
-    key: str  # base64-encoded AES-256 key
 
 
 class SecretKeyResponse(BaseModel):
