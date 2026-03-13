@@ -49,6 +49,7 @@ import UndoIcon from "@mui/icons-material/Undo";
 import RedoIcon from "@mui/icons-material/Redo";
 import CheckIcon from "@mui/icons-material/Check";
 import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 
 // ─── Comment Mark Extension ─────────────────────────────────────────────────
 
@@ -363,6 +364,7 @@ function CommentBubbleMenu({ editor }: { editor: Editor }) {
   const theme = useTheme();
   const isDark = theme.palette.mode === "dark";
   const [inputValue, setInputValue] = React.useState("");
+  const [isEditing, setIsEditing] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
 
   const { isInComment, selectionEmpty, activeComment } = useEditorState({
@@ -386,10 +388,15 @@ function CommentBubbleMenu({ editor }: { editor: Editor }) {
   React.useEffect(() => {
     if (showAddMode && !prevShowAddModeRef.current) {
       setInputValue("");
+      setIsEditing(false);
       setTimeout(() => inputRef.current?.focus(), 30);
     }
     prevShowAddModeRef.current = showAddMode;
   }, [showAddMode]);
+
+  React.useEffect(() => {
+    if (!isInComment) setIsEditing(false);
+  }, [isInComment]);
 
   const handleConfirm = () => {
     const text = inputValue.trim();
@@ -398,13 +405,35 @@ function CommentBubbleMenu({ editor }: { editor: Editor }) {
     setInputValue("");
   };
 
+  const handleEditConfirm = () => {
+    const text = inputValue.trim();
+    if (!text) return;
+    editor
+      .chain()
+      .focus()
+      .extendMarkRange("comment")
+      .setMark("comment", { comment: text })
+      .run();
+    setIsEditing(false);
+  };
+
+  const handleStartEdit = () => {
+    setInputValue(activeComment);
+    setIsEditing(true);
+    setTimeout(() => inputRef.current?.focus(), 30);
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
       e.preventDefault();
-      handleConfirm();
+      isEditing ? handleEditConfirm() : handleConfirm();
     }
     if (e.key === "Escape") {
-      editor.commands.blur();
+      if (isEditing) {
+        setIsEditing(false);
+      } else {
+        editor.commands.blur();
+      }
     }
   };
 
@@ -494,6 +523,50 @@ function CommentBubbleMenu({ editor }: { editor: Editor }) {
               </span>
             </Tooltip>
           </>
+        ) : isInComment && isEditing ? (
+          <>
+            <ChatBubbleOutlineIcon
+              sx={{ fontSize: 16, color: "warning.main", flexShrink: 0 }}
+            />
+            <TextField
+              inputRef={inputRef}
+              size="small"
+              placeholder="Edytuj komentarz…"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              variant="standard"
+              sx={{
+                width: 220,
+                "& .MuiInput-root": {
+                  color: isDark ? "grey.100" : "grey.900",
+                },
+                "& .MuiInput-underline:before": {
+                  borderBottomColor: isDark
+                    ? "rgba(255,255,255,0.2)"
+                    : "rgba(0,0,0,0.2)",
+                },
+              }}
+              slotProps={{ input: { style: { fontSize: "0.875rem" } } }}
+            />
+            <Tooltip title="Zapisz (Enter)">
+              <span>
+                <IconButton
+                  size="small"
+                  onClick={handleEditConfirm}
+                  disabled={!inputValue.trim()}
+                  sx={{
+                    color: "success.main",
+                    width: 28,
+                    height: 28,
+                    "&.Mui-disabled": { opacity: 0.3 },
+                  }}
+                >
+                  <CheckIcon fontSize="small" />
+                </IconButton>
+              </span>
+            </Tooltip>
+          </>
         ) : isInComment ? (
           <>
             <ChatBubbleOutlineIcon
@@ -502,13 +575,31 @@ function CommentBubbleMenu({ editor }: { editor: Editor }) {
             <Typography
               sx={{
                 fontSize: "0.875rem",
-                maxWidth: 260,
+                maxWidth: 220,
                 color: isDark ? "grey.100" : "grey.900",
                 wordBreak: "break-word",
               }}
             >
               {activeComment}
             </Typography>
+            <Tooltip title="Edytuj komentarz">
+              <IconButton
+                size="small"
+                onClick={handleStartEdit}
+                sx={{
+                  color: isDark ? "grey.300" : "grey.600",
+                  width: 28,
+                  height: 28,
+                  "&:hover": {
+                    bgcolor: isDark
+                      ? "rgba(255,255,255,0.1)"
+                      : "rgba(0,0,0,0.06)",
+                  },
+                }}
+              >
+                <EditOutlinedIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
             <Tooltip title="Usuń komentarz">
               <IconButton
                 size="small"
