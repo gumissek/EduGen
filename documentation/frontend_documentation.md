@@ -7,6 +7,7 @@ Podczas wprowadzania zmian w części frontendowej projektu, zawsze przestrzegaj
 ## 1. Architektura ogólna
 
 Frontend aplikacji EduGen składa się z trzech głównych warstw w katalogu `src/`:
+
 - **App Router (`app/`)** — konfiguracja ścieżek, podział na strefę uwierzytelnioną i publiczną, główne widoki (strony).
 - **Komponenty (`components/`)** — podzielone domenowo na bloki funkcjonalne (auth, generowanie, edytor, layout). Korzystają z biblioteki Material UI (MUI).
 - **Logika i Stan (`hooks/`, `lib/`, `schemas/`)** — zarządzanie stanem powtórnie używalnym (React Query), walidacja formularzy (Zod) oraz połączenie z API (Axios).
@@ -18,7 +19,9 @@ Frontend aplikacji EduGen składa się z trzech głównych warstw w katalogu `sr
 Aplikacja korzysta z Next.js App Router. Wszystkie pliki `page.tsx` w folderach definiują poszczególne ścieżki (routes).
 
 ### `src/app/(authenticated)/`
+
 Ścieżki wymagające uwierzytelnienia. Otoczone przez `layout.tsx`, który zapewnia główny układ strony (pasek nawigacji, sidebar).
+
 - `/dashboard` — strona startowa / panel główny użytkownika
 - `/documents` — widok zapisanych dokumentów
 - `/generate` — ścieżki kreatora generowania dokumentów i materiałów
@@ -30,6 +33,7 @@ Aplikacja korzysta z Next.js App Router. Wszystkie pliki `page.tsx` w folderach 
   - `/admin-panel/database` — pełny backup bazy (utworzenie zrzutu, pobranie, upload, restore)
 
 #### Aktualny podział na `/dashboard`
+
 - Widok materiałów ma 2 sekcje:
   - **Gotowe materiały** — dokumenty sfinalizowane (jak wcześniej) z drill-down: typ treści → poziom edukacji → klasa → przedmiot → lista materiałów.
     - Karty gotowych materiałów mają akcję kopiowania (`POST /api/documents/{document_id}/copy`).
@@ -38,6 +42,7 @@ Aplikacja korzysta z Next.js App Router. Wszystkie pliki `page.tsx` w folderach 
   - Karty wersji roboczych mają akcję kopiowania (`POST /api/prototypes/{generation_id}/copy`).
 
 ### Ścieżki publiczne (w `src/app/`)
+
 - `/` — publiczna strona wejściowa (opis aplikacji, placeholdery: tekst/obrazy/wideo, linki do `/login`, `/register`, `/about` i disabled odnośniki na przyszłość)
 - `/about` — publiczna strona „O nas” z mock danymi
 - `/login` — ekran logowania (email + hasło)
@@ -51,12 +56,15 @@ Aplikacja korzysta z Next.js App Router. Wszystkie pliki `page.tsx` w folderach 
 Komponenty podzielone na domeny ułatwiające ich znalezienie:
 
 ### `auth/`
+
 - **`LoginForm.tsx`** — formularz logowania z polami email i hasło. Walidacja Zod via `react-hook-form`.
 - **`RegisterForm.tsx`** — formularz rejestracji z polami: email, imię, nazwisko, hasło, potwierdzenie hasła. Walidacja Zod.
 - **`AuthGuard.tsx`** — strażnik tras chronionych. Sprawdza `isAuthenticated()` i przekierowuje do `/login` jeśli brak tokena. Pomija sprawdzanie na stronach `/login` i `/register`.
 
 ### `generate/`
+
 Główny proces biznesowy to generowanie dokumentów. Elementy go wspierające:
+
 - `GenerationWizard.tsx` — główny komponent kreatora krok po kroku.
 - `StepContentType.tsx` — wybór typu materiału (kartkówka, sprawdzian, test, quiz, materiały lekcyjne).
 - `StepSubjectConfig.tsx` — wybór przedmiotu i konfiguracja tematu.
@@ -67,11 +75,13 @@ Główny proces biznesowy to generowanie dokumentów. Elementy go wspierające:
 - `GenerationWizard.tsx` — przechowuje aktywny krok w `localStorage` (`edugen-generation-step`) obok danych formularza (`edugen-generation-draft`). Dzięki temu powrót po błędzie generowania przywraca użytkownika do ostatniego kroku (StepReview), a nie do kroku 0. Po udanej generacji obydwa klucze są czyszczone.
 
 ### `editor/`
+
 - Edytor dokumentów oparty na silniku **Tiptap** dający interfejs modyfikacji wygenerowanej treści.
 - **`RepromptInput.tsx`** — pasek prompt przyklejony na stałe do dołu ekranu (`position: fixed`). Na desktopie uwzględnia szerokość Sidebara (260 px) poprzez `left: calc(50% + 130px)` i `width: calc(100% - 292px)`, dzięki czemu jest wyśrodkowany w obszarze treści, a nie w całym viewporcie.
 - Edytor prototypu (`/generate/[id]/editor`) zapisuje zmiany przyciskiem **„Zapisz wersję roboczą”** do tabeli `prototypes` (`PUT /api/prototypes/{generation_id}`), dzięki czemu materiał można później kontynuować i finalizować.
 
 ### `layout/`
+
 - Layout aplikacji (Sidebar, TopBar).
 - **`Sidebar.tsx`** wyświetla wersję aplikacji w stopce (`NEXT_PUBLIC_APP_NAME`, `NEXT_PUBLIC_APP_VERSION`, `NEXT_PUBLIC_APP_RELEASE_DATE`). Zmienne są wstrzykiwane **w czasie budowania** (build-time). W trybie lokalnym (`npm run dev`) Next.js odczytuje je z `frontend/.env.local`. W Dockerze są przekazywane jako build args w `docker-compose.yml` → `Dockerfile` (`ARG`/`ENV`). Zawiera linki: Generuj, Materiały, Przedmioty i Pliki, Ustawienia.
 - **`Sidebar.tsx`** wyświetla w dolnej sekcji: logo, kontakt e-mail oraz wersję aplikacji (`NEXT_PUBLIC_APP_NAME`, `NEXT_PUBLIC_APP_VERSION`, `NEXT_PUBLIC_APP_RELEASE_DATE`). Zmienne są wstrzykiwane **w czasie budowania** (build-time). W trybie lokalnym (`npm run dev`) Next.js odczytuje je z `frontend/.env.local`. W Dockerze są przekazywane jako build args w `docker-compose.yml` → `Dockerfile` (`ARG`/`ENV`). Zawiera linki: Generuj, Materiały, Przedmioty i Pliki, Ustawienia.
@@ -82,10 +92,11 @@ Główny proces biznesowy to generowanie dokumentów. Elementy go wspierające:
 - **`AppFooter.tsx`** — stopka dla strefy publicznej; zawiera logo (`/logo.png`) i kontakt.
 
 ### Inne
+
 - `documents/`, `subjects/`, `settings/` — komponenty odpowiadające logice poszczególnych domen.
   - **`documents/[id]/page.tsx`** — podgląd gotowego materiału zawiera akcję **„Edytuj i przenieś na wersję roboczą”** z modalem potwierdzenia; po akceptacji wywoływany jest `POST /api/documents/{document_id}/move-to-draft` i następuje przekierowanie do edytora roboczego.
   - **`subjects/FileList.tsx` + `subjects/FileCard.tsx`** — dodana opcja pobierania wgranego pliku źródłowego (`GET /api/files/{file_id}/download`).
-  - **`settings/ApiKeyForm.tsx`** — CRUD kluczy API (tabela secret_keys). Dodawanie, usuwanie, walidacja klucza via OpenRouter. Na ekranach mobilnych (xs) zamiast tabeli wyświetla karty z kluczowymi informacjami i przyciskami akcji.
+  - **`settings/ApiKeyForm.tsx`** — CRUD kluczy API (tabela secret_keys). Dodawanie, usuwanie, walidacja klucza via OpenRouter. Na ekranach mobilnych (xs) zamiast tabeli wyświetla karty z kluczowymi informacjami i przyciskami akcji (pełna szerokość, min. 48px wysokości, układ kolumnowy). Klucz API jest szyfrowany AES-256-GCM (Web Crypto API) przed wysłaniem do backendu — klucz transportowy pobierany z `GET /api/secret-keys/transport-key`. Backend odszyfrowuje AES, następnie szyfruje Fernet at rest. Dialog dodawania jest fullScreen na mobile, a przyciski akcji w dialogach stosują układ `column-reverse` na małych ekranach.
   - **`(authenticated)/settings/page.tsx`** — zawiera informację bezpieczeństwa, że klucz OpenRouter nie jest przechowywany w `localStorage`, tylko szyfrowany po stronie backendu.
   - **`settings/ModelSelector.tsx`** — wybór domyślnego modelu AI (tabela `user_ai_models`). Wyświetla alertem ostrzeżenie jeśli żaden model nie jest wybrany. Po usunięciu aktualnie wybranego modelu automatycznie przełącza na pierwszy z pozostałych (lub czyści wybór jeśli lista jest pusta). Dialog dodawania z linkiem do openrouter.ai/models. Na ekranach mobilnych (xs) zamiast tabeli wyświetla interaktywne karty z przyciskiem radio.
   - Backupy zostały przeniesione z ustawień użytkownika do sekcji admin (`/admin-panel/database`).
@@ -102,9 +113,10 @@ Frontend korzysta z bezstanowej autoryzacji JWT:
 - **`logout()`** — wywołuje `POST /api/auth/logout`, usuwa ciasteczko `edugen-auth`, czyści cache React Query oraz lokalny draft kreatora (`edugen-generation-*`), a następnie przekierowuje do `/login`.
 - **`isAuthenticated()`** — sprawdza istnienie ciasteczka `edugen-auth`.
 
-> Klucze OpenRouter nie są przechowywane po stronie przeglądarki (w tym w `localStorage`).
+> Klucze OpenRouter nie są przechowywane po stronie przeglądarki (w tym w `localStorage`). Przed wysłaniem do backendu klucz jest szyfrowany AES-256-GCM za pomocą Web Crypto API (klucz transportowy z `GET /api/secret-keys/transport-key`), a po stronie backendu odszyfrowywany i szyfrowany algorytmem Fernet do przechowania.
 
 ### `src/lib/api.ts`
+
 - Żądania wysyłane są na ścieżkę bazową `/api`, którą deweloperskie proxy lub Next.js rewrites w `next.config.ts` przekierowują do backendu pod adresem konfigurowanym przez zmienną `BACKEND_URL`.
 - Interceptory requestów pobierają automatycznie JWT token ze specjalnego cookie (`edugen-auth`) i zasilają nagłówek `Authorization: Bearer <token>`.
 - Interceptory response wymuszają powrót do widoku logowania w przypadku błędu `401 Unauthorized` (usuwając cookie i przekierowując do `/login`).
@@ -112,29 +124,34 @@ Frontend korzysta z bezstanowej autoryzacji JWT:
 Za pobieranie, cache'owanie i mutację danych odpowiedzialny jest pakiet **TanStack React Query** (konfiguracja: `src/lib/queryClient.ts`).
 
 ### Wybrane hooki (`src/hooks/`)
-| Hook | Przeznaczenie | Technologie |
-|---|---|---|
-| `useAuth.ts` | Rejestracja, logowanie, wylogowanie. Zarządzanie JWT via ciasteczko. | axios, js-cookie |
-| `useDocuments.ts` | Wyświetlanie, usuwanie, podgląd detali dla `/api/documents`. Eksporter PDF. | React Query |
-| `useGenerations.ts` | Wysłanie żądań o generację materiałów oraz pobranie statusu. | React Query |
-| `useSubjects.ts`, `useLevels.ts` | Dane słownikowe (przedmioty, poziomy zaawansowania). | React Query |
-| `useTaskTypes.ts` | Pobieranie z backendu dostępnych typów zadań. | React Query |
-| `useFiles.ts` | CRUD plików źródłowych dla generatorów. | React Query |
-| `useFiles.ts` | Dodatkowo pobieranie pliku źródłowego (`downloadFile`). | React Query |
-| `useSecretKeys.ts` | CRUD kluczy API użytkownika (tabela secret_keys). List, create, delete, validate. | React Query |
-| `useCurrentUser.ts` | Pobieranie profilu zalogowanego użytkownika (`/api/auth/me`) z polami: email, imię, nazwisko, is_superuser, api_quota, has_secret_keys. | React Query |
+
+| Hook                             | Przeznaczenie                                                                                                                           | Technologie      |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| `useAuth.ts`                     | Rejestracja, logowanie, wylogowanie. Zarządzanie JWT via ciasteczko.                                                                    | axios, js-cookie |
+| `useDocuments.ts`                | Wyświetlanie, usuwanie, podgląd detali dla `/api/documents`. Eksporter PDF.                                                             | React Query      |
+| `useGenerations.ts`              | Wysłanie żądań o generację materiałów oraz pobranie statusu.                                                                            | React Query      |
+| `useSubjects.ts`, `useLevels.ts` | Dane słownikowe (przedmioty, poziomy zaawansowania).                                                                                    | React Query      |
+| `useTaskTypes.ts`                | Pobieranie z backendu dostępnych typów zadań.                                                                                           | React Query      |
+| `useFiles.ts`                    | CRUD plików źródłowych dla generatorów.                                                                                                 | React Query      |
+| `useFiles.ts`                    | Dodatkowo pobieranie pliku źródłowego (`downloadFile`).                                                                                 | React Query      |
+| `useSecretKeys.ts`               | CRUD kluczy API użytkownika (tabela secret_keys). List, create, delete, validate.                                                       | React Query      |
+| `useCurrentUser.ts`              | Pobieranie profilu zalogowanego użytkownika (`/api/auth/me`) z polami: email, imię, nazwisko, is_superuser, api_quota, has_secret_keys. | React Query      |
 
 ---
 
 ## 5. Dane i Typy (`src/types/` i `src/schemas/`)
 
 ### `src/types/index.ts`
+
 Główne interfejsy TypeScript:
+
 - **Enumy / String Typy:** `ContentType` (worksheet, test, quiz, exam, lesson_materials), `EducationLevel`, `LanguageLevel`
 - **Interfejsy:** `Subject`, `SourceFile`, `GenerationParams` (z tablicą `task_types`)
 
 ### `src/schemas/`
+
 Walidacja formularzy realizowana przez **Zod** we współpracy z **React Hook Form**:
+
 - `auth.ts` — `LoginRequestSchema` (email + hasło), `RegisterRequestSchema` (email, imię, nazwisko, hasło, potwierdzenie hasła z refine), `LoginResponseSchema` (access_token + token_type).
 - `generation.ts` — schematy kroków generacji.
 - `document.ts`, `file.ts`, `subject.ts`, `settings.ts` — schematy żądań reszty domen.
@@ -145,14 +162,16 @@ Walidacja formularzy realizowana przez **Zod** we współpracy z **React Hook Fo
 ## 6. Konfiguracja główna i Skrypty
 
 ### `package.json`
-| Skrypt | Komenda | Opis |
-|---|---|---|
-| `dev` | `next dev` | Tryb developerski (Hot-Reload) |
-| `build` | `next build` | Budowa wersji produkcyjnej |
-| `start` | `next start` | Serwowanie po zbuildowaniu |
-| `lint` | `eslint` | Weryfikacja czystości składni TypeScript/React |
+
+| Skrypt  | Komenda      | Opis                                           |
+| ------- | ------------ | ---------------------------------------------- |
+| `dev`   | `next dev`   | Tryb developerski (Hot-Reload)                 |
+| `build` | `next build` | Budowa wersji produkcyjnej                     |
+| `start` | `next start` | Serwowanie po zbuildowaniu                     |
+| `lint`  | `eslint`     | Weryfikacja czystości składni TypeScript/React |
 
 ### Kluczowe zależności
+
 - `js-cookie` + `@types/js-cookie` — zarządzanie ciasteczkami JWT po stronie klienta
 - `@hookform/resolvers` + `react-hook-form` + `zod` — walidacja formularzy
 - `axios` — HTTP client
@@ -161,22 +180,27 @@ Walidacja formularzy realizowana przez **Zod** we współpracy z **React Hook Fo
 - `@tiptap/*` — edytor WYSIWYG
 
 ### `next.config.ts`
+
 - Proxy routing: przekierowuje `/api/*` na Backend (`process.env.BACKEND_URL`).
 - `standalone` mode dla Dockera, transpilacje pakietów MUI.
 
 ### `frontend/.env.local`
+
 - Plik dla trybu lokalnego (dev/build). Zawiera `NEXT_PUBLIC_APP_NAME`, `NEXT_PUBLIC_APP_VERSION`, `NEXT_PUBLIC_APP_RELEASE_DATE`.
 - W Dockerze odpowiedniki są przekazywane jako build args (`NEXT_PUBLIC_APP_*`) z `docker-compose.yml` do `Dockerfile` i inlinowane przez Next.js podczas `npm run build`.
 
 ---
 
 ## 7. Motyw i Style (`src/theme/` i `globals.css`)
+
 - `src/theme/theme.ts` — deklaracja głównych kolorów, cieni, kształtów i typografii MUI.
 - `src/theme/ThemeRegistry.tsx` i `ColorModeContext.tsx` — integracja z SSR Next.JS.
 - `src/app/globals.css` — reset CSS i globalne style.
 
 ### Responsywność mobilna
+
 Aplikacja korzysta z systemu breakpoints MUI (`xs / sm / md / lg`). Zasady stosowane globalnie:
+
 - **Tabele** (ApiKeyForm, ModelSelector, Diagnostics) — na `xs` ukrywane na rzecz kart lub listy z redukcją kolumn (`display: { xs: 'none', sm: 'block' }`).
 - **Nagłówki stron** (h4) — mniejszy `fontSize` na `xs` (`1.5rem` zamiast `2.125rem`).
 - **Przyciski akcji** w nagłówkach (dashboard, editor, documents) — zamiast `flex-row` zastosowano `flexDirection: { xs: 'column', sm: 'row' }` i `width: { xs: '100%', sm: 'auto' }`.
@@ -186,6 +210,7 @@ Aplikacja korzysta z systemu breakpoints MUI (`xs / sm / md / lg`). Zasady stoso
 ---
 
 ## 8. Testowanie i Jakość Kodu
+
 - Weryfikator `ESLint` z konfiguracją Strict (`eslint.config.mjs`) połączony z TypeScript.
 - `@tanstack/react-query-devtools` do debuggowania stanu zapytań w trybie `dev`.
 - TypeScript strict mode — brak `any` w kodzie produkcyjnym.

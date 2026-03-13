@@ -11,16 +11,30 @@ from sqlalchemy.orm import Session as DBSession
 
 from app.database import get_db
 from app.dependencies import get_current_user
-from app.encryption import encrypt_api_key, decrypt_api_key
+from app.encryption import (
+    encrypt_api_key,
+    decrypt_api_key,
+    decrypt_aes_transport,
+    get_transport_key_b64,
+)
 from app.models.user import User
 from app.models.secret_key import SecretKey
 from app.schemas.secret_key import (
     SecretKeyCreate,
     SecretKeyResponse,
     SecretKeyValidateResponse,
+    TransportKeyResponse,
 )
 
 router = APIRouter(prefix="/secret-keys", tags=["secret-keys"])
+
+
+@router.get("/transport-key", response_model=TransportKeyResponse)
+def get_transport_key(
+    current_user: User = Depends(get_current_user),
+):
+    """Return the AES-256 transport key for client-side encryption."""
+    return TransportKeyResponse(key=get_transport_key_b64())
 
 
 @router.get("", response_model=List[SecretKeyResponse])
@@ -44,8 +58,16 @@ def create_secret_key(
     db: DBSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Add a new API key (encrypted at rest)."""
-    encrypted = encrypt_api_key(body.secret_key)
+    """Add a new API key (AES-decrypted from transport, then Fernet-encrypted at rest)."""
+    try:
+        plain_key = decrypt_aes_transport(body.secret_key)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Nie udało się odszyfrować klucza API. Upewnij się, że klucz jest zaszyfrowany AES.",
+        )
+
+    encrypted = encrypt_api_key(plain_key)
 
     key = SecretKey(
         user_id=current_user.id,

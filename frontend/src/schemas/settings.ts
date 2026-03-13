@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 export const SettingsResponseSchema = z.object({
   default_model: z.string(),
@@ -33,4 +33,8 @@ export interface SecretKeyCreate {
 export interface SecretKeyValidateResponse {
   valid: boolean;
   error?: string | null;
+}
+
+export interface TransportKeyResponse {
+  key: string;
 }
