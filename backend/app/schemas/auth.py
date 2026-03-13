@@ -69,3 +69,57 @@ class UserStatsResponse(BaseModel):
     ai_requests_count: int
     generations_count: int
     failed_generations_count: int
+
+
+# ── Email change verification ──
+
+
+class RequestEmailChangeRequest(BaseModel):
+    new_email: EmailStr
+    password: str
+
+
+class RequestEmailChangeResponse(BaseModel):
+    detail: str = "Link weryfikacyjny został wysłany na nowy adres e-mail (ważny 24h)"
+    email_sent: bool = True
+    # Populated only when email_sent=False (local/dev mode) so the user can act on the link
+    verification_link: str | None = None
+
+
+class ConfirmEmailChangeResponse(BaseModel):
+    detail: str = "Adres e-mail został pomyślnie zmieniony"
+
+
+# ── Password change verification ──
+
+
+class RequestPasswordChangeCodeRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+    @field_validator("new_password")
+    @classmethod
+    def password_strength(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("Hasło musi mieć co najmniej 8 znaków")
+        return v
+
+
+class RequestPasswordChangeCodeResponse(BaseModel):
+    detail: str = "Kod weryfikacyjny został wysłany na Twój adres e-mail (ważny 5 minut)"
+
+
+class ConfirmPasswordChangeRequest(BaseModel):
+    code: str
+    new_password: str
+
+    @field_validator("new_password")
+    @classmethod
+    def password_strength(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("Hasło musi mieć co najmniej 8 znaków")
+        return v
+
+
+class ConfirmPasswordChangeResponse(BaseModel):
+    detail: str = "Hasło zostało pomyślnie zmienione"

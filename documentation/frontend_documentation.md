@@ -2,6 +2,18 @@
 
 Podczas wprowadzania zmian w części frontendowej projektu, zawsze przestrzegaj poniższej struktury katalogów i konwencji. Projekt jest zbudowany w oparciu o framework Next.js (App Router) i React 19.
 
+## Struktura plików
+
+```
+frontend/
+├── src/
+│   ├── app/
+│   │   ├── (authenticated)/
+│   │   │   ├── dashboard/
+│   │   │   ├── documents/
+...
+
+
 ---
 
 ## 1. Architektura ogólna
@@ -24,6 +36,7 @@ Aplikacja korzysta z Next.js App Router. Wszystkie pliki `page.tsx` w folderach 
 - `/generate` — ścieżki kreatora generowania dokumentów i materiałów
 - `/subjects` — zarządzanie przedmiotami i plikami źródłowymi ułatwiającymi generowanie
 - `/settings` — powiązane z konfiguracją użytkownika (klucze API OpenRouter, wybór modelu)
+- `/profile` — profil użytkownika: edycja danych osobowych (imię, nazwisko), weryfikowana zmiana e-mail (modal z hasłem → link na nowy e-mail, 24h), weryfikowana zmiana hasła (modal z kodem 6-cyfrowym wysyłanym na e-mail, 5 min), statystyki użytkownika
 - `/diagnostics` — diagnostyka działania (dostępna z panelu admina)
 - `/admin-panel` — panel administracyjny (wyłącznie dla superuserów) z kafelkami do sekcji zarządzania
   - `/admin-panel/users` — pełne zarządzanie użytkownikami (lista, edycja, usuwanie, reset hasła)
@@ -41,8 +54,8 @@ Aplikacja korzysta z Next.js App Router. Wszystkie pliki `page.tsx` w folderach 
 - `/` — publiczna strona wejściowa (opis aplikacji, placeholdery: tekst/obrazy/wideo, linki do `/login`, `/register`, `/about` i disabled odnośniki na przyszłość)
 - `/about` — publiczna strona „O nas” z mock danymi
 - `/login` — ekran logowania (email + hasło)
-- `/register` — ekran rejestracji nowego konta (email, imię, nazwisko, hasło, potwierdzenie hasła)
-- Publiczne strony korzystają z `PublicChrome` (stały topbar + stała stopka) i mają oddzielny topbar od strefy zalogowanej.
+- `/register` — ekran rejestracji nowego konta (email, imię, nazwisko, hasło, potwierdzenie hasła)- `/verify-email-change` — strona weryfikacji zmiany e-mail (przyjmuje `?token=...` z linku weryfikacyjnego, wywołuje `GET /api/auth/verify-email-change` i przekierowuje do `/email-change-succeeded`)
+- `/email-change-succeeded` — strona sukcesu po zmianie e-mail (komunikat + automatyczne wylogowanie i przekierowanie do `/login` po 10 sekundach)- Publiczne strony korzystają z `PublicChrome` (stały topbar + stała stopka) i mają oddzielny topbar od strefy zalogowanej.
 
 ---
 

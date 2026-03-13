@@ -104,14 +104,25 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
 
           {/* Quota chip — show only if user has no secret keys */}
           {user && !user.has_secret_keys && (
-            <Tooltip title={user.api_quota_reset ? `Reset: ${user.api_quota_reset}` : 'Limit zapytań API'}>
-              <Chip
-                label={`Quota: ${user.api_quota}`}
-                size="small"
-                variant="outlined"
-                color="warning"
-                sx={{ fontWeight: 600, fontSize: '0.75rem', flexShrink: 0 }}
-              />
+            <Tooltip title="Limit zapytań API">
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
+                <Chip
+                  label={`Quota: ${user.api_quota}`}
+                  size="small"
+                  variant="outlined"
+                  color="warning"
+                  sx={{ fontWeight: 600, fontSize: '0.75rem' }}
+                />
+                {user.api_quota_reset && (
+                  <Typography
+                    variant="caption"
+                    sx={{ fontSize: '0.6rem', color: 'text.secondary', lineHeight: 1, mt: 0.25 }}
+                    noWrap
+                  >
+                    Reset: {new Date(user.api_quota_reset).toLocaleDateString('pl-PL')}
+                  </Typography>
+                )}
+              </Box>
             </Tooltip>
           )}
 

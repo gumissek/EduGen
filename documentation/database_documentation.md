@@ -218,6 +218,25 @@ Logi zapytań do modeli AI (OpenRouter).
 | metadata_json | TEXT | NULL (JSON string) |
 | created_at | TEXT | NOT NULL DEFAULT (aktualna data ISO 8601) |
 
+### verification_tokens
+
+Tabela przechowująca tokeny/kody weryfikacyjne do zmiany adresu e-mail i zmiany hasła.
+
+| Kolumna | Typ | Ograniczenia |
+|---|---|---|
+| id | VARCHAR(36) | PRIMARY KEY |
+| user_id | VARCHAR(36) | NOT NULL REFERENCES users(id) ON DELETE CASCADE, INDEX |
+| token | VARCHAR(255) | NOT NULL UNIQUE, INDEX |
+| token_type | VARCHAR(50) | NOT NULL (`email_change` lub `password_change`) |
+| payload_json | TEXT | NULL (JSON string — np. `{"new_email": "..."}` lub `{"new_password_hash": "..."}`) |
+| expires_at | TEXT | NOT NULL (ISO 8601) |
+| is_used | BOOLEAN | NOT NULL DEFAULT FALSE |
+| created_at | TEXT | NOT NULL (ISO 8601) |
+
+> - `token_type = 'email_change'`: token URL-safe, ważny 24h, payload zawiera `new_email`.
+> - `token_type = 'password_change'`: 6-cyfrowy kod numeryczny, ważny 5 minut, payload zawiera `new_password_hash`.
+> - Poprzednie nieużyte tokeny tego samego typu dla danego użytkownika są automatycznie oznaczane jako `is_used = TRUE` przy tworzeniu nowego.
+
 ---
 
 ## 2. Relacje między tabelami
@@ -231,6 +250,7 @@ Logi zapytań do modeli AI (OpenRouter).
 - users → generations
 - users → prototypes
 - users → documents
+- users → verification_tokens
 - subjects → source_files
 - subjects → generations
 - generations → prototypes
@@ -293,6 +313,10 @@ CREATE INDEX ix_backups_expiration ON backups(expires_at);
 
 -- Diagnostic logs
 CREATE INDEX ix_diagnostic_logs_created_at ON diagnostic_logs(created_at);
+
+-- Verification tokens
+CREATE INDEX ix_verification_tokens_user_id ON verification_tokens(user_id);
+CREATE UNIQUE INDEX ix_verification_tokens_token ON verification_tokens(token);
 ```
 
 ---
@@ -308,8 +332,9 @@ CREATE INDEX ix_diagnostic_logs_created_at ON diagnostic_logs(created_at);
 - Deduplikacja plików przez `file_content_cache` (klucz: SHA-256 hash pliku).
 - Klucze API szyfrowane AES przechowywane w tabeli `secret_keys` (wiele kluczy per użytkownik).
 - Preferencja modelu AI zapisana bezpośrednio w tabeli `users` (kolumna `default_model`).
-- Migracje schematu zarządzane przez **Alembic** (skonsolidowana migracja: `001`).
+- Migracje schematu zarządzane przez **Alembic** (skonsolidowana migracja: `001`, tokeny weryfikacyjne: `002`).
 - Tabela `settings` (legacy) została usunięta — cala funkcjonalność przeniesiona do `users` i `secret_keys`.
+- Tabela `verification_tokens` obsługuje weryfikację zmiany e-mail (link, 24h) i zmiany hasła (kod 6-cyfrowy, 5 min). W trybie lokalnym e-maile nie są wysyłane — serwis loguje dane do konsoli.
 
 ## 5. Aktualizacja (admin i backupy)
 

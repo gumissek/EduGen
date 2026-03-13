@@ -2,6 +2,18 @@
 
 Podczas wprowadzania zmian w projekcie, zawsze przestrzegaj poniższej struktury katalogów i konwencji.
 
+## Struktura plików
+
+```
+backend/
+├── app/
+│   ├── main.py
+│   ├── config.py
+│   ├── database.py
+...
+
+
+
 ---
 
 ## 1. Architektura ogólna
@@ -72,6 +84,7 @@ Kod dzieli się na dedykowane pliki modelowe oparte na `DeclarativeBase`. Kluczo
 - **`ai_request.py`** — Logi zapytań do modeli AI (OpenRouter). `user_id` (FK → `users.id`, nullable).
 - **`subject.py`** — Przedmioty edukacyjne. `user_id` (FK → `users.id`, nullable — predefinowane przedmioty nie mają właściciela).
 - **`diagnostic_log.py`** — Logowanie wszystkich błędów rzuconych w apce poprzez exception handler.
+- **`verification_token.py`** — Tokeny/kody weryfikacyjne do zmiany e-mail (link URL-safe, 24h) i zmiany hasła (6-cyfrowy kod, 5 min). FK → `users.id`. Przechowują payload JSON z danymi operacji (np. nowy e-mail, nowy hash hasła).
 
 > **Usunięte modele:** `session.py` — usunięty, JWT zastępuje sesje serwerowe. `settings.py` — usunięty, preferencja modelu przeniesiona do `users.default_model`, klucze API do tabeli `secret_keys`.
 
@@ -128,6 +141,13 @@ Orkiestracja procesu generowania materiałów:
 - **`docx_service.py`**: Eksport do MS Word z wariantami. Document tworzony z `user_id`.
 - **`file_service.py`**: Obsługa `pymupdf`, `python-docx` z cache'em SHA-256 (`file_content_cache`). OCR i summary korzystają z OpenRouter REST API (requests). Detekcja MIME używa `python-magic` (libmagic), a gdy `libmagic` nie jest dostępne (typowo Windows), działa fallback oparty o sygnatury pliku i rozszerzenie nazwy.
 - **`backup_service.py`**: Kopie zapasowe bazy.
+- **`verification_service.py`**: Generacja i walidacja tokenów/kodów weryfikacyjnych:
+  - `create_email_change_token(db, user, new_email)` — tworzy token URL-safe (48 znaków) ważny 24h z payloadem `{"new_email": "..."}`.
+  - `confirm_email_change(db, token)` — waliduje token, sprawdza wygaśnięcie i unikalność e-mail, aplikuje zmianę.
+  - `create_password_change_code(db, user, new_password_hash)` — tworzy 6-cyfrowy kod numeryczny ważny 5 min z payloadem `{"new_password_hash": "..."}`.
+  - `confirm_password_change(db, user_id, code)` — waliduje kod i aplikuje nowe hasło.
+  - Automatycznie unieważnia poprzednie nieużyte tokeny tego samego typu.
+- **`email_service.py`**: Stub do wysyłki e-maili weryfikacyjnych. W trybie lokalnym loguje treść na konsolę zamiast faktycznego wysyłania. Przygotowany pod przyszłą integrację z SMTP / SendGrid / Mailgun.
 
 ---
 
@@ -136,7 +156,7 @@ Orkiestracja procesu generowania materiałów:
 Architektura grupuje endpointy na określone sfery:
 | Router | Opis używalności API |
 |---|---|
-| `/api/auth` | JWT: rejestracja (POST `/register`), logowanie (POST `/login`), wylogowanie (POST `/logout`), profil (GET `/me`). |
+| `/api/auth` | JWT: rejestracja (POST `/register`), logowanie (POST `/login`), wylogowanie (POST `/logout`), profil (GET `/me`). Weryfikowana zmiana e-mail (POST `/me/request-email-change`, GET `/verify-email-change`). Weryfikowana zmiana hasła (POST `/me/request-password-change`, POST `/me/confirm-password-change`). |
 | `/api/settings` | Ustawienia użytkownika — wybór modelu AI (`default_model` w tabeli `users`). Filtrowane po `user_id`. |
 | `/api/secret-keys` | CRUD kluczy API użytkownika (SecretKey). Dodawanie, usuwanie, walidacja klucza via OpenRouter API. Filtrowane po `user_id`. |
 | `/api/subjects` | Przedmioty edukacyjne (predefinowane + własne użytkownika). Filtrowane po `user_id`. |

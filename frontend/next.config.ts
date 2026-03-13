@@ -36,6 +36,11 @@ const { appName, version, releaseDate } = readVersionInfo();
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+    allowedDevOrigins: [
+    'localhost',
+    'local-origin.dev',
+    '*.local'
+  ],
   transpilePackages: ['@mui/material', '@mui/system', '@mui/icons-material'],
   env: {
     NEXT_PUBLIC_APP_NAME: appName,
