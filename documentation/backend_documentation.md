@@ -156,7 +156,7 @@ Skrypt inicjalizacyjny uruchamiany przed startem serwera:
 ### `docker-compose.yml`
 Definicja trzech serwisów, dwóch wolumenów i jednej sieci:
 
-- **postgres** — PostgreSQL 16, kontener `edugen-postgres`. Health check: `pg_isready` (interwał 10s, 3 retries). Wolumen `edugen_postgres_data`. Port `5432:5432`.
+- **postgres** — PostgreSQL 16, kontener `edugen-postgres`. Health check: `pg_isready` (interwał 10s, 3 retries). Wolumen `edugen_postgres_data`. Port `${POSTGRES_HOST_PORT:-5432}:5432`.
 - **backend** — FastAPI, kontener `edugen-backend`. Port `0.0.0.0:8000:8000`. Wolumeny: `edugen_data:/app/data`, `./common_filles:/app/common_filles:ro`. Healthcheck: `curl http://localhost:8000/api/health` (interwał 30s, start period 15s). Zależny od healthy Postgres. Command: `init_app.py` → `uvicorn` (2 workery).
 - **frontend** — Next.js, kontener `edugen-frontend`. Port `0.0.0.0:3000:3000`. Build arg: `BACKEND_URL=http://backend:8000`. Wolumen: `./common_filles:/app/common_filles:ro`. Zależny od healthy backendu i Postgresa.
 

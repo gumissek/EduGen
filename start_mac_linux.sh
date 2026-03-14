@@ -116,6 +116,37 @@ fi
 
 POSTGRES_PORT="$(grep -E '^POSTGRES_PORT=' .env 2>/dev/null | head -n1 | cut -d'=' -f2 || true)"
 POSTGRES_PORT="${POSTGRES_PORT:-5432}"
+POSTGRES_HOST_PORT="$(grep -E '^POSTGRES_HOST_PORT=' .env 2>/dev/null | head -n1 | cut -d'=' -f2 || true)"
+POSTGRES_HOST_PORT="${POSTGRES_HOST_PORT:-${POSTGRES_PORT}}"
+
+is_port_busy() {
+    local port="$1"
+    if command -v lsof &>/dev/null; then
+        lsof -iTCP:"${port}" -sTCP:LISTEN -n -P &>/dev/null
+        return $?
+    fi
+    return 1
+}
+
+if is_port_busy "${POSTGRES_HOST_PORT}"; then
+    echo "[UWAGA] Port ${POSTGRES_HOST_PORT} jest zajety na hoście."
+    for candidate in 55432 55433 55434 55435 55436 55437 55438 55439 55440; do
+        if ! is_port_busy "${candidate}"; then
+            POSTGRES_HOST_PORT="${candidate}"
+            echo "[INFO] Uzyje alternatywnego portu hosta dla PostgreSQL: ${POSTGRES_HOST_PORT}"
+            break
+        fi
+    done
+
+    if is_port_busy "${POSTGRES_HOST_PORT}"; then
+        echo "[BLAD] Nie znaleziono wolnego portu PostgreSQL w zakresie 55432-55440."
+        echo "Zwolnij port 5432 lub ustaw recznie POSTGRES_HOST_PORT w pliku .env."
+        exit 1
+    fi
+    echo ""
+fi
+
+export POSTGRES_HOST_PORT
 
 echo "[OK] Plik konfiguracyjny .env istnieje."
 echo ""
@@ -150,7 +181,7 @@ echo "============================================"
 echo ""
 echo "  Frontend (interfejs):  http://localhost:3000"
 echo "  Backend  (API):        http://localhost:8000"
-echo "  Baza danych:           localhost:${POSTGRES_PORT}"
+echo "  Baza danych:           localhost:${POSTGRES_HOST_PORT}"
 echo ""
 
 # Red stop instructions
@@ -167,7 +198,7 @@ printf "${CYAN}  Jezeli przeglądarka nie otworzyla sie automatycznie,${NC}\n"
 printf "${CYAN}  odwiedz recznie ponizsze adresy:${NC}\n"
 printf "${CYAN}  http://localhost:3000  (interfejs aplikacji)${NC}\n"
 printf "${CYAN}  http://localhost:8000  (API backendu)${NC}\n"
-printf "${CYAN}  localhost:${POSTGRES_PORT}  (PostgreSQL)${NC}\n"
+printf "${CYAN}  localhost:${POSTGRES_HOST_PORT}  (PostgreSQL)${NC}\n"
 echo ""
 
 # Uruchamianie w trybie interaktywnym (CTRL+C zatrzyma kontenery)

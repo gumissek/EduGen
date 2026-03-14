@@ -67,6 +67,8 @@ The startup scripts handle Docker checks, automatic `.env` creation from `.env.e
 
 > App runs at `http://localhost:3000` (Frontend) and `http://localhost:8000` (Backend).
 
+> **PostgreSQL port conflict (macOS/Linux):** If `5432` is already in use, startup script automatically switches PostgreSQL host mapping to a free port (e.g. `55432`). You can also set it manually in root `.env` via `POSTGRES_HOST_PORT`.
+
 ### UI Notes (current behavior)
 
 - Public routes (`/`, `/about`, `/login`, `/register`) use a dedicated topbar with `Login`, `Register`, theme toggle, and public navigation.

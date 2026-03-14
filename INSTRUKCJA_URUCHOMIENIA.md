@@ -102,6 +102,8 @@ Skrypty startowe (`start_windows.bat` / `start_mac_linux.sh`) automatycznie wykr
 2. Skopiuj plik **`.env.example`** w głównym katalogu projektu i zmień jego nazwę na **`.env`**.
 3. Otwórz plik `.env` w edytorze tekstowym, zmień `POSTGRES_PASSWORD` na bezpieczne oraz wygeneruj unikalny 64-znakowy ciąg dla `JWT_SECRET_KEY`. Klucz API OpenRouter dodasz po uruchomieniu aplikacji w panelu **Ustawienia**.
 
+> Jeśli port PostgreSQL `5432` jest zajęty przez inną aplikację na komputerze (często lokalny PostgreSQL), ustaw w `.env` zmienną `POSTGRES_HOST_PORT` na wolny port, np. `55432`.
+
 ---
 
 ## Krok 4 – Uruchomienie aplikacji
@@ -235,3 +237,8 @@ Skrypty startowe automatycznie tworzą plik `.env` z szablonu `.env.example`, je
 - Początkowe uruchomienie aplikacji może trwać dłużej ze względu na potrzebę pobrania obrazów instalacyjnych z Internetu. Poczekaj cierpliwie, aż proces się zakończy.
 - Upewnij się, że wpisujesz poprawny adres URL w przeglądarce: **http://localhost:3000**. Sprawdź, czy nie ma literówek i czy nie próbujesz połączyć się przez HTTPS.
 - Sprawdź komunikaty w oknie konsoli, aby zidentyfikować problem. Jeśli widzisz błędy, zrób zrzut ekranu i skontaktuj się z pod adresem email: **bilinski.piotr89@gmail.com**.
+
+### Błąd „Ports are not available” dla `5432`
+- Oznacza to konflikt: port `5432` jest już zajęty na hoście.
+- W pliku `.env` ustaw `POSTGRES_HOST_PORT=55432` (lub inny wolny port) i uruchom aplikację ponownie.
+- Skrypt `start_mac_linux.sh` próbuje automatycznie dobrać wolny port hosta PostgreSQL, ale ustawienie ręczne w `.env` ma pierwszeństwo.
