@@ -8,8 +8,6 @@ import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-import fitz  # PyMuPDF
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import FileResponse as FastAPIFileResponse, StreamingResponse
 from sqlalchemy.orm import Session as DBSession
@@ -32,7 +30,7 @@ from app.schemas.document import (
     BulkDownloadRequest,
     MoveToDraftResponse,
 )
-from app.services.docx_service import generate_docx
+from app.services.docx_service import generate_docx, export_content_as_pdf
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -201,7 +199,7 @@ def export_pdf(
     db: DBSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Convert and download the document as a PDF (converted from DOCX via PyMuPDF)."""
+    """Convert and download the document as a PDF (Markdown → Pandoc → PDF)."""
     document = db.query(Document).filter(
         Document.id == document_id,
         Document.user_id == current_user.id,
@@ -215,11 +213,17 @@ def export_pdf(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found on disk")
 
     try:
-        doc = fitz.open(str(file_path))
-        pdf_bytes = doc.convert_to_pdf()
-        doc.close()
+        pdf_bytes = export_content_as_pdf(document.file_path)
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Markdown source file not found. Re-finalize the document to generate it.",
+        )
     except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"PDF conversion failed: {exc}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"PDF conversion failed: {exc}",
+        )
 
     pdf_filename = document.filename.rsplit(".", 1)[0] + ".pdf"
     return StreamingResponse(

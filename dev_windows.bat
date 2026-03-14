@@ -119,6 +119,57 @@ cd ..
 echo [OK] Srodowisko backendu gotowe.
 echo.
 
+:: ── Sprawdzenie i instalacja Pandoc (wymagane do eksportu DOCX/PDF) ─────────
+echo Sprawdzanie Pandoc...
+where pandoc >nul 2>&1
+if errorlevel 1 (
+    echo [INFO] Pandoc nie jest zainstalowany. Rozpoczynam instalacje...
+
+    set "PANDOC_TMP_MSI=%TEMP%\pandoc-3.9-windows-x86_64.msi"
+    set "PANDOC_URL=https://github.com/jgm/pandoc/releases/download/3.9/pandoc-3.9-windows-x86_64.msi"
+
+    echo [INFO] Pobieranie instalatora Pandoc z:
+    echo        %PANDOC_URL%
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri '%PANDOC_URL%' -OutFile '%PANDOC_TMP_MSI%'"
+    if errorlevel 1 (
+        echo [BLAD] Nie udalo sie pobrac instalatora Pandoc.
+        echo Pobierz recznie: https://pandoc.org/installing.html
+        echo.
+        pause
+        popd
+        exit /b 1
+    )
+    set "PANDOC_INSTALLER=%PANDOC_TMP_MSI%"
+
+    echo [INFO] Uruchamianie instalatora Pandoc...
+    start /wait "Pandoc Installer" msiexec /i "%PANDOC_INSTALLER%" /passive /norestart
+    if errorlevel 1 (
+        echo [BLAD] Instalacja Pandoc zakonczona niepowodzeniem.
+        echo.
+        pause
+        popd
+        exit /b 1
+    )
+
+    :: Odswiezenie PATH dla biezacej sesji (czesto potrzebne po instalacji MSI)
+    set "PATH=%ProgramFiles%\Pandoc;%ProgramFiles(x86)%\Pandoc;%PATH%"
+
+    where pandoc >nul 2>&1
+    if errorlevel 1 (
+        echo [BLAD] Pandoc nadal nie jest dostepny w PATH po instalacji.
+        echo Uruchom skrypt ponownie w nowym oknie terminala.
+        echo.
+        pause
+        popd
+        exit /b 1
+    )
+
+    for /f "tokens=*" %%v in ('pandoc --version 2^>nul ^| findstr /b "pandoc"') do echo [OK] %%v
+) else (
+    for /f "tokens=*" %%v in ('pandoc --version 2^>nul ^| findstr /b "pandoc"') do echo [OK] %%v
+)
+echo.
+
 :: ── Sprawdzenie Node.js i npm ────────────────────────────────────────────────
 echo Sprawdzanie Node.js...
 where npm >nul 2>&1

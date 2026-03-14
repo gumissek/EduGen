@@ -7,7 +7,10 @@
 * Database Migrations: Managed via Alembic (Current version: 007).
 * Validation & Settings: Pydantic v2 and pydantic-settings.
 * Background Tasks: APScheduler for daily backups and asynchronous AI generation.
-* Document Processing: PyMuPDF (fitz) and python-docx for handling PDF and DOCX files.
+* Document Processing:
+    - File parsing: PyMuPDF (fitz) for PDF text extraction, python-docx for DOCX file reading.
+    - Document export pipeline: HTML → BeautifulSoup (cleaning) → markdownify → Markdown → Pandoc (pypandoc) → DOCX / PDF.
+    - System dependencies: pandoc, texlive-xetex (installed in Docker for PDF generation).
 * Security:
     - Password Hashing: Bcrypt with failed login attempt tracking.
     - Key Encryption: AES encryption for external API keys (OpenRouter).

@@ -3,11 +3,22 @@ FROM python:3.12-slim
 WORKDIR /app
 
 # system deps
+# - pandoc: required by pypandoc for Markdown -> DOCX/HTML conversion
+# - fonts-dejavu-core: primary Unicode font family used in PDF export (Linux/Docker)
+#   includes Polish diacritics: ą ć ę ł ń ó ś ź ż
+# - fontconfig: helpful for runtime font discovery/debugging in containers
 RUN apt-get update && apt-get install -y \
     curl \
     build-essential \
     libmagic1 \
+    pandoc \
+    fontconfig \
+    fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
+
+# Fail image build early if the expected Unicode font is missing.
+# This guarantees that backend PDF generation has a Polish-capable fallback in Docker.
+RUN test -f /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf
 
 # install uv
 RUN pip install uv

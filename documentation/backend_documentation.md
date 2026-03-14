@@ -187,6 +187,7 @@ Obsługa uwierzytelniania JWT:
 ### `ai_service.py`
 Odpowiada za logikę formowania wytycznych promptów i połączenie z OpenRouter API:
 - System prompts dla typów generacji: `test`, `worksheet`, `lesson_materials`, `quiz`, `exam`.
+- Typy free-form (`worksheet`, `lesson_materials`) wspierają HTML z tabelami: `<table>`, `<thead>`, `<tbody>`, `<tr>`, `<th>`, `<td>` — oprócz standardowych tagów `<h1>`–`<h3>`, `<p>`, `<ul>`, `<ol>`, `<li>`, `<strong>`, `<em>`, `<br>`.
 - Wewnętrzna funkcja `_call_openrouter()` realizuje połączienie HTTP z `https://openrouter.ai/api/v1/chat/completions`.
 - Formatyzacja odpowiedzi w trybie JSON (`response_format: {"type": "json_object"}`).
 - **Logowanie** każdego z żądań/odpowiedzi w tabeli `AIRequest`.
@@ -198,7 +199,14 @@ Orkiestracja procesu generowania materiałów:
 - Mapowanie wygenerowanych JSONów do HTML (`_render_content_html`) i kluczy odpowiedzi (`_build_answer_key`).
 
 ### Inne serwisy:
-- **`docx_service.py`**: Eksport do MS Word z wariantami. Document tworzony z `user_id`.
+- **`docx_service.py`**: Eksport do MS Word (DOCX) i PDF z wariantami. Wykorzystuje pipeline: **HTML → BeautifulSoup (czyszczenie) → markdownify → Markdown → Pandoc (pypandoc) → DOCX**. Obsługuje dwa tryby:
+  - **Free-form** (worksheet, lesson_materials): HTML z edytora TipTap → czyszczenie (usunięcie `<script>`, `<style>`, `<colgroup>`, unwrap `<mark class="tiptap-comment">`) → konwersja do Markdown (markdownify) → generowanie DOCX via Pandoc.
+  - **Q&A** (test, quiz, exam): parsowanie pytań z JSON/HTML → tasowanie wariantów → renderowanie do HTML → ten sam pipeline do DOCX.
+  - Plik `.md` (Markdown) jest zapisywany obok `.docx` jako źródło do późniejszej konwersji PDF.
+	- Eksport PDF: odczyt zapisanego `.md` → konwersja Markdown → HTML (Pandoc) → PDF (xhtml2pdf). Nie wymaga LaTeX — działa na każdym systemie (Windows, Linux, Docker).
+	- PDF używa rejestracji fontów Unicode w ReportLab (preferencyjnie DejaVu Sans, fallback Arial) pod dedykowaną rodziną CSS, co zapewnia poprawny rendering polskich znaków (ą, ć, ę, ł, ń, ó, ś, ź, ż) i unika fallbacku do Helvetiki.
+	- Zależności: `markdownify`, `pypandoc`, `beautifulsoup4`, `xhtml2pdf`. Systemowe (Dockerfile): `pandoc`, `fonts-dejavu-core` (Unicode/PL znaki), `fontconfig`.
+  - Document tworzony z `user_id`. Hierarchiczna struktura katalogów: `documents/{content_type}/{education_level}/{class_level}/{subject}/`.
 - **`file_service.py`**: Obsługa `pymupdf`, `python-docx` z cache'em SHA-256 (`file_content_cache`). OCR i summary korzystają z OpenRouter REST API (requests). Detekcja MIME używa `python-magic` (libmagic), a gdy `libmagic` nie jest dostępne (typowo Windows), działa fallback oparty o sygnatury pliku i rozszerzenie nazwy.
 - **`backup_service.py`**: Kopie zapasowe bazy.
 - **`verification_service.py`**: Generacja i walidacja tokenów/kodów weryfikacyjnych:

@@ -14,6 +14,8 @@ interface RepromptInputProps {
   isLoading: boolean;
 }
 
+const FIXED_BOTTOM_OFFSET = 50;
+
 export default function RepromptInput({ onSend, isLoading }: RepromptInputProps) {
   const [prompt, setPrompt] = React.useState('');
 
@@ -26,42 +28,47 @@ export default function RepromptInput({ onSend, isLoading }: RepromptInputProps)
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSend();
+      void handleSend();
     }
   };
 
   return (
-    <Paper 
-      elevation={0} 
-      sx={(theme) => ({ 
-        width: '100%', 
-        maxWidth: 680, 
+    <Paper
+      elevation={0}
+      sx={(muiTheme) => ({
+        width: 'calc(100% - 24px)',
+        maxWidth: 680,
         borderRadius: '32px',
         p: '6px 6px 6px 20px',
         display: 'flex',
         alignItems: 'center',
-        
-        // Zależne od motywu tło i obramowanie w odcieniach fioletu
-        bgcolor: theme.palette.mode === 'dark' ? '#1c0b2b' : '#fdf5ff',
+        position: 'fixed',
+        left: '50%',
+        bottom: FIXED_BOTTOM_OFFSET,
+        transform: 'translateX(-50%)',
+        zIndex: 1300,
+        bgcolor: muiTheme.palette.mode === 'dark' ? '#1c0b2b' : '#fdf5ff',
         border: '2px solid',
-        borderColor: theme.palette.mode === 'dark' ? '#702b9d' : '#e0b3ff',
-        
-        // Fioletowa poświata zamiast standardowego szarego cienia
-        boxShadow: theme.palette.mode === 'dark' 
-          ? '0 8px 32px rgba(162, 85, 247, 0.2)' 
-          : '0 8px 32px rgba(192, 132, 252, 0.25)',
-        
-        // Lekki blur dla fajnego efektu nad tekstem (jeśli coś pod niego wjeżdża)
+        borderColor: muiTheme.palette.mode === 'dark' ? '#702b9d' : '#e0b3ff',
+        boxShadow:
+          muiTheme.palette.mode === 'dark'
+            ? '0 8px 32px rgba(162, 85, 247, 0.2)'
+            : '0 8px 32px rgba(192, 132, 252, 0.25)',
         backdropFilter: 'blur(8px)',
+        transition: 'box-shadow 0.2s, transform 0.2s',
       })}
     >
-      <Box sx={{ 
-        color: (theme) => theme.palette.mode === 'dark' ? '#c879ff' : '#9333ea', 
-        display: 'flex', 
-        alignItems: 'center' 
-      }}>
+      <Box
+        sx={{
+          color: (muiTheme) =>
+            muiTheme.palette.mode === 'dark' ? '#c879ff' : '#9333ea',
+          display: 'flex',
+          alignItems: 'center',
+        }}
+      >
         <AutoAwesomeIcon />
       </Box>
+
       <TextField
         fullWidth
         placeholder="Poproś AI o zmianę... (np. ułóż trudniejsze pytania)"
@@ -72,27 +79,33 @@ export default function RepromptInput({ onSend, isLoading }: RepromptInputProps)
         disabled={isLoading}
         sx={{ mx: 2, '& .MuiInputBase-input': { py: 1.5, fontSize: '0.95rem' } }}
         slotProps={{
-          input:{
+          input: {
             disableUnderline: true,
-          }
+          },
         }}
       />
-      <IconButton 
-        onClick={handleSend} 
+
+      <IconButton
+        onClick={() => {
+          void handleSend();
+        }}
         disabled={!prompt.trim() || isLoading}
-        sx={(theme) => ({ 
-          // Aktywny przycisk dostaje różowo-fioletowy gradient
-          background: prompt.trim() 
-            ? 'linear-gradient(45deg, #d946ef, #9333ea)' 
-            : (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)'), 
+        sx={(muiTheme) => ({
+          background: prompt.trim()
+            ? 'linear-gradient(45deg, #d946ef, #9333ea)'
+            : muiTheme.palette.mode === 'dark'
+              ? 'rgba(255,255,255,0.05)'
+              : 'rgba(0,0,0,0.04)',
           color: prompt.trim() ? '#fff' : 'text.disabled',
-          '&:hover': { 
-            background: prompt.trim() 
-              ? 'linear-gradient(45deg, #c026d3, #7e22ce)' 
-              : (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)') 
+          '&:hover': {
+            background: prompt.trim()
+              ? 'linear-gradient(45deg, #c026d3, #7e22ce)'
+              : muiTheme.palette.mode === 'dark'
+                ? 'rgba(255,255,255,0.1)'
+                : 'rgba(0,0,0,0.08)',
           },
           transition: 'all 0.2s',
-          p: 1.5
+          p: 1.5,
         })}
       >
         {isLoading ? <CircularProgress size={24} color="inherit" /> : <SendIcon fontSize="small" />}
