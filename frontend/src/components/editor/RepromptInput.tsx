@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { createPortal } from 'react-dom';
 import Box from '@mui/material/Box';
 import TextField from '@mui/material/TextField';
 import IconButton from '@mui/material/IconButton';
@@ -14,10 +15,15 @@ interface RepromptInputProps {
   isLoading: boolean;
 }
 
-const FIXED_BOTTOM_OFFSET = 50;
+const FIXED_BOTTOM_OFFSET = 30;
 
 export default function RepromptInput({ onSend, isLoading }: RepromptInputProps) {
   const [prompt, setPrompt] = React.useState('');
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleSend = async () => {
     if (!prompt.trim() || isLoading) return;
@@ -32,7 +38,9 @@ export default function RepromptInput({ onSend, isLoading }: RepromptInputProps)
     }
   };
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <Paper
       elevation={0}
       sx={(muiTheme) => ({
@@ -110,6 +118,7 @@ export default function RepromptInput({ onSend, isLoading }: RepromptInputProps)
       >
         {isLoading ? <CircularProgress size={24} color="inherit" /> : <SendIcon fontSize="small" />}
       </IconButton>
-    </Paper>
+    </Paper>,
+    document.body
   );
 }

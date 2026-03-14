@@ -7,12 +7,12 @@ from typing import List
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 
-from app.config import settings
-
 router = APIRouter(prefix="/task-types", tags=["task-types"])
 
-# Determine path based on DATA_DIR so it works both locally and in Docker
-TASK_TYPES_FILE = Path(settings.DATA_DIR).parent / "common_filles" / "task_types.csv"
+# Always use backend/common_filles/task_types.csv.
+# This keeps task types independent from process cwd and root-level common_filles.
+_BACKEND_ROOT = Path(__file__).resolve().parents[2]
+TASK_TYPES_FILE = _BACKEND_ROOT / "common_filles" / "task_types.csv"
 
 
 class TaskTypeCreate(BaseModel):

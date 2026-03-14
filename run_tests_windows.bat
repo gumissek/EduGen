@@ -1,5 +1,5 @@
 @echo off
-setlocal
+setlocal EnableExtensions DisableDelayedExpansion
 
 set "ROOT_DIR=%~dp0"
 pushd "%ROOT_DIR%backend" >nul 2>&1
@@ -11,6 +11,13 @@ if errorlevel 1 (
 where uv >nul 2>&1
 if errorlevel 1 (
     echo [ERROR] Nie znaleziono polecenia uv. Zainstaluj uv i sprobuj ponownie.
+    popd
+    exit /b 1
+)
+
+uv sync --extra test
+if errorlevel 1 (
+    echo [ERROR] Nie udalo sie zsynchronizowac zaleznosci testowych ^(uv sync --extra test^).
     popd
     exit /b 1
 )

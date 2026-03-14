@@ -131,6 +131,25 @@ if not defined DOCKER_COMPOSE_CMD (
     exit /b 1
 )
 
+set "HAS_EXISTING_STACK="
+for /f "delims=" %%i in ('%DOCKER_COMPOSE_CMD% ps -a -q 2^>nul') do set "HAS_EXISTING_STACK=1"
+
+if defined HAS_EXISTING_STACK (
+    echo [INFO] Wykryto istniejace kontenery dla projektu Docker Compose.
+    echo [INFO] Usuwanie starego stacka i lokalnych obrazow budowanych przez Compose...
+    %DOCKER_COMPOSE_CMD% down --remove-orphans --rmi local
+    if errorlevel 1 (
+        echo [BLAD] Nie udalo sie usunac istniejacego stacka Docker Compose.
+        echo Sprawdz logi powyzej i uruchom skrypt ponownie.
+        echo.
+        pause
+        popd
+        exit /b 1
+    )
+    echo [OK] Stary stack zostal usuniety. Rozpoczynam czyste budowanie od nowa.
+    echo.
+)
+
 echo Budowanie i uruchamianie aplikacji...
 echo (Pierwsze uruchomienie moze trwac kilka minut - trwa pobieranie obrazow)
 echo.

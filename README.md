@@ -2,7 +2,7 @@
 
 **EduGen Local** is an advanced desktop application designed to run locally, assisting teachers in generating educational materials such as worksheets, quizzes, and tests. It leverages AI models via **OpenRouter** to create personalized content based on user guidelines and extracted source materials.
 
-This application emphasizes privacy and data control by running entirely on `localhost` via a Docker Compose deployment model. It supports multiple user accounts with JWT-based authentication. Development is focused on a two-step creation process: an interactive editor prototype, followed by a final DOCX export with varied groups (A/B) and answer keys.
+This application emphasizes privacy and data control by running in a local Docker Compose deployment model. It supports multiple user accounts with JWT-based authentication. Development is focused on a two-step creation process: an interactive editor prototype, followed by a final DOCX export with varied groups (A/B) and answer keys.
 
 ---
 
@@ -12,7 +12,7 @@ This application emphasizes privacy and data control by running entirely on `loc
 - **AI Orchestration**: Integration with **OpenRouter** (`https://openrouter.ai`) for flexible model selection across providers. Users manage their own model list (`user_ai_models`) and select their preferred model in the Settings panel. API keys are stored encrypted in the `secret_keys` table. 4 default AI models (Gemini, Nemotron, GPT-5.1, GPT-5-mini) are seeded at registration.
 - **Source File Processing**: OCR capabilities for images/scans using Vision, text extraction from PDF (via PyMuPDF) and DOCX (via python-docx). Global content deduplication via SHA-256 hash cache.
 - **Drafting & Finalization**: WYSIWYG Editor (TipTap) to review/edit AI prototypes, followed by DOCX generation with shuffled questions for multiple test variants. Final DOCX and PDF export supported.
-- **Privacy & Security**: Entirely local environment (`localhost` only, no LAN access), AES-encrypted API keys stored in `secret_keys` table, bcrypt-hashed passwords, and automatic daily database backups.
+- **Privacy & Security**: Local-first environment with AES-encrypted API keys stored in `secret_keys` table, bcrypt-hashed passwords, and automatic daily database backups.
 - **Secure Key Handling**: OpenRouter API keys are managed only through backend endpoints and encrypted storage (not persisted in browser `localStorage`).
 - **Background Processing**: FastAPI BackgroundTasks for async AI generation and document processing.
 - **Profile & Account Management**: Verified email change (token link, 24h) and verified password change (6-digit code, 5 min) flows.
@@ -68,8 +68,12 @@ On Windows, `start_windows.bat` now auto-reopens itself in a persistent `cmd` wi
 > If `.env` is missing at the project root, the startup scripts automatically create it from the `.env.example` template. Remember to add your own OpenRouter API Key in the Settings panel before generating materials.
 
 > App runs at `http://localhost:3000` (Frontend) and `http://localhost:8000` (Backend).
+>
+> The Docker configuration exposes ports on `0.0.0.0`, so the app is also reachable from your local network using the host machine IP (for example: `http://192.168.1.50:3000`). Use this only in trusted LAN environments and keep host firewall rules enabled.
 
 > **PostgreSQL port conflict (macOS/Linux):** If `5432` is already in use, startup script automatically switches PostgreSQL host mapping to a free port (e.g. `55432`). You can also set it manually in root `.env` via `POSTGRES_HOST_PORT`.
+
+> **Hard reset (data wipe):** Use `reset_images_volumes.bat` (Windows), `reset_images_volumes.sh` (macOS/Linux), or `hard_reset_app.app` (macOS UI launcher) only as a last resort. These scripts first shut down the full stack from `docker-compose.yml` (if present), then remove project Docker volumes/images, which irreversibly clears the database.
 
 ### UI Notes (current behavior)
 
@@ -90,16 +94,19 @@ For Windows development mode, you can also use the automation script from the re
 dev_windows.bat
 ```
 
-This script prepares backend/frontend dependencies, starts PostgreSQL (when Docker is available), and opens separate terminal windows for backend and frontend dev servers.
+This script prepares backend/frontend dependencies, synchronizes `common_filles` from repository root to `backend/common_filles`, starts PostgreSQL (when Docker is available), and opens separate terminal windows for backend and frontend dev servers.
 On first Pandoc installation, if `pandoc` is not immediately available in the current PATH, the script now continues with a warning instead of stopping the full development startup.
 
 Additional utility scripts in project root:
 
 - `check_update.bat` - standalone update check for Windows.
 - `check_update.sh` - standalone update check for macOS/Linux.
-- `start_windows.bat` - production-like Docker startup for Windows.
-- `start_mac_linux.sh` - production-like Docker startup for macOS/Linux.
-- `run_tests_windows.bat` - runs backend tests on Windows.
+- `start_windows.bat` - production-like Docker startup for Windows; if an existing Compose stack is detected, it is removed (`down --remove-orphans --rmi local`) before a fresh rebuild.
+- `start_mac_linux.sh` - production-like Docker startup for macOS/Linux; if an existing Compose stack is detected, it is removed (`down --remove-orphans --rmi local`) before a fresh rebuild.
+- `reset_images_volumes.bat` - destructive hard reset on Windows; first stops the full stack from `docker-compose.yml` (if detected), then removes EduGen Docker containers, volumes, and images after explicit confirmation (`USUN_DANE`).
+- `reset_images_volumes.sh` - destructive hard reset on macOS/Linux; first stops the full stack from `docker-compose.yml` (if detected), then removes EduGen Docker containers, volumes, and images after explicit confirmation (`USUN_DANE`).
+- `hard_reset_app.app` - macOS launcher that opens Terminal and runs `reset_images_volumes.sh` (with the same destructive confirmation flow).
+- `run_tests_windows.bat` - runs backend tests on Windows (first executes `uv sync --extra test` to ensure test dependencies are present).
 - `run_tests_mac_linux.sh` - runs backend tests on macOS/Linux.
 
 Run backend tests from project root:
@@ -145,9 +152,9 @@ npm run dev
 
 ## 📚 Technical Scopes & Limits
 
-- The system does not support LAN exposure (bound to `127.0.0.1`).
+- Local network access is available when reaching the host machine IP and mapped ports (default `3000` and `8000`).
+- LAN usage should be limited to trusted networks; avoid exposing the app beyond your private network.
 - No native LaTeX support (mathematical formulas rely on linear/Unicode formatting).
-- Terminated AI generation tasks cannot be resumed; they must be restarted.
 - OCR scanning for PDFs is optimally limited to ranges of max 5 pages at once.
 
 For deeply detailed insights, visit the components documentation:

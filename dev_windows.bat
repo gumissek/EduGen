@@ -40,6 +40,28 @@ if not exist ".env" (
 echo [OK] Plik .env istnieje.
 echo.
 
+:: ── Synchronizacja common_filles do backendu ────────────────────────────────
+echo Synchronizacja folderu common_filles do backend/common_filles...
+if not exist "common_filles\" (
+    echo [BLAD] Brak folderu common_filles w katalogu glownym projektu.
+    pause
+    popd
+    exit /b 1
+)
+
+if not exist "backend\common_filles\" mkdir "backend\common_filles"
+
+robocopy "common_filles" "backend\common_filles" /MIR /NFL /NDL /NJH /NJS /NP >nul
+set "ROBOCOPY_EXIT=%ERRORLEVEL%"
+if %ROBOCOPY_EXIT% GEQ 8 (
+    echo [BLAD] Nie udalo sie skopiowac common_filles do backend/common_filles. Kod: %ROBOCOPY_EXIT%
+    pause
+    popd
+    exit /b 1
+)
+echo [OK] common_filles zsynchronizowane do backend/common_filles.
+echo.
+
 :: ── Wczytanie zmiennych z .env ───────────────────────────────────────────────
 for /f "usebackq tokens=1,* delims==" %%a in (`findstr /v "^#" .env 2^>nul ^| findstr /r /v "^$"`) do (
     set "%%a=%%b"

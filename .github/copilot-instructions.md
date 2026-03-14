@@ -16,6 +16,9 @@ Modules documentation: `documentation\modules\<module_name>_module_documentation
 - Use the documentation to understand the code
 - Use the documentation to make changes to the code
 - Keep the documentation up to date with the latest changes
+- If startup, reset, or recovery scripts are changed, update both `README.md` and `INSTRUKCJA_URUCHOMIENIA.md`
+- Any destructive maintenance script must include a clear irreversible warning and explicit user confirmation in docs and script output
+- When network exposure changes, document localhost and LAN access behavior consistently in user-facing docs
 
 ## BACKEND
 

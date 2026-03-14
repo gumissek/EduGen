@@ -42,6 +42,12 @@ def _append_copy_suffix(value: str) -> str:
     return f"{text} copy"
 
 
+def _resolve_stored_document_path(raw_path: str) -> Path:
+    """Resolve a DB-stored document path across Windows/Linux separators."""
+    normalized = (raw_path or "").replace("\\", "/")
+    return Path(normalized)
+
+
 def _build_detail(document: Document, db: DBSession) -> DocumentDetailResponse:
     """Build a DocumentDetailResponse by joining Generation and Prototype data."""
     generation = db.query(Generation).filter(Generation.id == document.generation_id).first()
@@ -182,7 +188,7 @@ def export_docx(
     if not document:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
 
-    file_path = Path(document.file_path)
+    file_path = _resolve_stored_document_path(document.file_path)
     if not file_path.exists():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found on disk")
 
@@ -208,12 +214,12 @@ def export_pdf(
     if not document:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
 
-    file_path = Path(document.file_path)
+    file_path = _resolve_stored_document_path(document.file_path)
     if not file_path.exists():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found on disk")
 
     try:
-        pdf_bytes = export_content_as_pdf(document.file_path)
+        pdf_bytes = export_content_as_pdf(str(file_path))
     except FileNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -477,7 +483,7 @@ def copy_document(
     )
     db.add(copied_prototype)
 
-    src_path = Path(document.file_path)
+    src_path = _resolve_stored_document_path(document.file_path)
     if not src_path.exists():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found on disk")
 

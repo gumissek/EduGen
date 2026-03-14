@@ -9,7 +9,7 @@ import PublicChrome from '@/components/layout/PublicChrome';
 const inter = Inter({ subsets: ['latin', 'latin-ext'] });
 
 export const metadata: Metadata = {
-  title: 'EduGen Local',
+  title: 'EduGen',
   description: 'AI-powered education material generator.',
 };
 

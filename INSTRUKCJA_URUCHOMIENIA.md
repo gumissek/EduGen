@@ -58,7 +58,7 @@ cd ~/Desktop/EduGen
 ``` 
 2. Mając otwartą sesję z wnętrza środowiska aplikacji nadaj skryptom potrzebne oprogramowaniu autoryzacje zezwalające wprost:
 ```bash
-chmod +x start_mac_linux.sh run_tests_mac_linux.sh launch_app.app/Contents/MacOS/launch_app
+chmod +x start_mac_linux.sh run_tests_mac_linux.sh reset_images_volumes.sh launch_app.app/Contents/MacOS/launch_app hard_reset_app.app/Contents/MacOS/hard_reset_app
 ```
 
 ---
@@ -179,12 +179,15 @@ Po otwarciu przeglądarki pod adresem **http://localhost:3000** zostaniesz przek
 
 W głównym katalogu projektu dostępne są poniższe skrypty:
 
-- **`start_windows.bat`** – standardowe uruchomienie aplikacji na Windows (Docker Compose).
+- **`start_windows.bat`** – standardowe uruchomienie aplikacji na Windows (Docker Compose). Jeśli wykryje istniejący stack Compose, usuwa go (`down --remove-orphans --rmi local`) i buduje aplikację od nowa.
 - **`check_update.bat`** – sprawdzenie i opcjonalna aktualizacja wersji na Windows.
-- **`start_mac_linux.sh`** – standardowe uruchomienie aplikacji na macOS/Linux (Docker Compose).
+- **`start_mac_linux.sh`** – standardowe uruchomienie aplikacji na macOS/Linux (Docker Compose). Jeśli wykryje istniejący stack Compose, usuwa go (`down --remove-orphans --rmi local`) i buduje aplikację od nowa.
 - **`check_update.sh`** – sprawdzenie i opcjonalna aktualizacja wersji na macOS/Linux.
-- **`dev_windows.bat`** – tryb deweloperski na Windows (backend i frontend w osobnych oknach, PostgreSQL lokalnie przez Docker jeśli dostępny).
+- **`dev_windows.bat`** – tryb deweloperski na Windows (backend i frontend w osobnych oknach, PostgreSQL lokalnie przez Docker jeśli dostępny). Przed startem synchronizuje `common_filles` z katalogu głównego do `backend/common_filles`.
 - **`launch_app.app`** – launcher macOS uruchamiający w Terminalu skrypt `start_mac_linux.sh`.
+- **`reset_images_volumes.bat`** – awaryjny hard reset na Windows. Najpierw zamyka cały stack z `docker-compose.yml` (jeśli istnieje), a następnie usuwa kontenery, obrazy i wolumeny Docker powiązane z EduGen po wymaganym potwierdzeniu (`USUN_DANE`).
+- **`reset_images_volumes.sh`** – awaryjny hard reset na macOS/Linux. Najpierw zamyka cały stack z `docker-compose.yml` (jeśli istnieje), a następnie usuwa kontenery, obrazy i wolumeny Docker powiązane z EduGen po wymaganym potwierdzeniu (`USUN_DANE`).
+- **`hard_reset_app.app`** – launcher macOS uruchamiający w Terminalu skrypt `reset_images_volumes.sh`.
 - **`run_tests_windows.bat`** – ręczne uruchomienie testów backendu na Windows.
 - **`run_tests_mac_linux.sh`** – ręczne uruchomienie testów backendu na macOS/Linux.
 
@@ -242,3 +245,12 @@ Skrypty startowe automatycznie tworzą plik `.env` z szablonu `.env.example`, je
 - Oznacza to konflikt: port `5432` jest już zajęty na hoście.
 - W pliku `.env` ustaw `POSTGRES_HOST_PORT=55432` (lub inny wolny port) i uruchom aplikację ponownie.
 - Skrypt `start_mac_linux.sh` próbuje automatycznie dobrać wolny port hosta PostgreSQL, ale ustawienie ręczne w `.env` ma pierwszeństwo.
+
+### Nic nie pomaga? Ostateczność: hard reset danych Docker
+- Jeśli żadne kroki z tej sekcji nie pomagają, możesz użyć skryptu hard reset:
+   - Windows: `reset_images_volumes.bat`
+   - macOS/Linux: `reset_images_volumes.sh`
+   - macOS (UI): `hard_reset_app.app`
+- Skrypt wyświetla czerwony alert i wymaga wpisania potwierdzenia `USUN_DANE`.
+- **To działanie jest nieodwracalne**: skrypt najpierw zamyka cały stack z `docker-compose.yml`, a następnie usuwa wolumeny i obrazy Docker projektu EduGen, co oznacza **całkowitą utratę danych**, w tym bazy PostgreSQL.
+- Po hard resecie aplikacja uruchomi się jak świeża instalacja i trzeba będzie ponownie utworzyć konto oraz dane.

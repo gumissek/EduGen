@@ -38,8 +38,8 @@ COPY app ./app
 COPY alembic.ini ./
 COPY alembic ./alembic
 
-# create mount point for shared common files
-RUN mkdir -p /app/common_filles
+# copy backend default CSV dictionaries used by routers
+COPY common_filles ./common_filles
 
 # start backend server
 CMD ["uv", "run", "sh", "-c", "python app/init_app.py && uvicorn app.main:app --host 0.0.0.0 --port 8000"]

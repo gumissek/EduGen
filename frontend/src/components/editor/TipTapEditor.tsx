@@ -653,7 +653,10 @@ function TablePicker({ onSelect }: TablePickerProps) {
 
   return (
     <>
-      <Tooltip title="Wstaw tabelę \n ">
+      <Tooltip 
+          title={<span style={{ whiteSpace: 'pre-line' }}>Wstaw tabelę{"\n"}Nowa tabela zostanie dodana w miejscu kursora</span>} 
+          placement="top"
+        >
         <IconButton
           size="small"
           onClick={(e) => setAnchorEl(e.currentTarget)}
@@ -994,7 +997,7 @@ export default function TipTapEditor({
 
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure({ underline: false }),
       Underline,
       CommentMark,
       TextAlign.configure({ types: ["heading", "paragraph"] }),
