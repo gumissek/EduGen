@@ -44,6 +44,7 @@ export default function DocumentDetailsPage({ params }: { params: Promise<{ id: 
   const [content, setContent] = React.useState('');
   const [isEdited, setIsEdited] = React.useState(false);
   const [isMoveDialogOpen, setIsMoveDialogOpen] = React.useState(false);
+  const [isEditMode, setIsEditMode] = React.useState(false);
 
   React.useEffect(() => {
     if (document?.content && !isEdited) {
@@ -61,6 +62,11 @@ export default function DocumentDetailsPage({ params }: { params: Promise<{ id: 
     const result = await moveToDraft();
     setIsMoveDialogOpen(false);
     router.push(`/generate/${result.generation_id}/editor`);
+  };
+
+  const handleEditWithAI = () => {
+    setIsEditMode(true);
+    setIsMoveDialogOpen(true);
   };
 
   if (isLoading) return <CircularProgress />;
@@ -84,7 +90,7 @@ export default function DocumentDetailsPage({ params }: { params: Promise<{ id: 
         </Box>
 
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', width: { xs: '100%', sm: 'auto' } }}>
-          <Button 
+          {/* <Button 
             variant="contained" 
             color="primary"
             startIcon={<SaveIcon />}
@@ -93,12 +99,12 @@ export default function DocumentDetailsPage({ params }: { params: Promise<{ id: 
             sx={{ borderRadius: 2, px: 3, fontWeight: 600, flex: { xs: 1, sm: 'none' } }}
           >
             Zapisz
-          </Button>
+          </Button> */}
           <Button
             variant="outlined"
             color="secondary"
             startIcon={<EditNoteIcon />}
-            onClick={() => setIsMoveDialogOpen(true)}
+            onClick={handleEditWithAI}
             disabled={isMovingToDraft}
             sx={{ borderRadius: 2 }}
           >
@@ -133,7 +139,8 @@ export default function DocumentDetailsPage({ params }: { params: Promise<{ id: 
           onChange={(html) => {
             setContent(html);
             if (html !== (document.content ?? '')) setIsEdited(true);
-          }} 
+          }}
+          readOnly={!isEditMode}
         />
       </Box>
 

@@ -128,6 +128,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
         ModalProps={{ keepMounted: true }}
         sx={{
           display: { xs: 'block', md: 'none' },
+          zIndex: 1400,
           '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
         }}
       >
