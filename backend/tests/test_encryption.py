@@ -7,6 +7,9 @@ import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+from cryptography.fernet import Fernet
+
 
 class TestEncryption:
     def test_encrypt_decrypt_round_trip(self):
@@ -36,3 +39,23 @@ class TestEncryption:
 
                 enc_mod.encrypt_api_key("test")
                 assert key_path.exists()
+
+    def test_decrypt_wrong_key_raises_value_error(self):
+        """Decrypting with a different key should raise ValueError, not InvalidToken."""
+        with tempfile.TemporaryDirectory() as tmpdir1, tempfile.TemporaryDirectory() as tmpdir2:
+            import app.encryption as enc_mod
+
+            # Encrypt with key from tmpdir1
+            with patch("app.encryption.settings") as mock_settings:
+                mock_settings.DATA_DIR = tmpdir1
+                enc_mod._fernet = None
+                enc_mod._KEY_FILE = Path(tmpdir1) / "fernet.key"
+                encrypted = enc_mod.encrypt_api_key("sk-secret")
+
+            # Decrypt with a different key from tmpdir2
+            with patch("app.encryption.settings") as mock_settings:
+                mock_settings.DATA_DIR = tmpdir2
+                enc_mod._fernet = None
+                enc_mod._KEY_FILE = Path(tmpdir2) / "fernet.key"
+                with pytest.raises(ValueError, match="klucz szyfrowania uległ zmianie"):
+                    enc_mod.decrypt_api_key(encrypted)

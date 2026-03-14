@@ -32,7 +32,7 @@ services:
       - "0.0.0.0:8000:8000"
     volumes:
       - edugen_data:/app/data
-      - ./common_filles:/app/common_filles:ro
+      - ./backend/common_filles:/app/common_filles:ro
     environment:
       - UV_PROJECT_ENVIRONMENT=/app/.venv
       - DATABASE_URL=postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:${POSTGRES_PORT}/${POSTGRES_DB}

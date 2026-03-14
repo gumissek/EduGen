@@ -161,6 +161,14 @@ if ! command -v pandoc &>/dev/null; then
     echo ""
 fi
 
+if ${DOCKER_COMPOSE_CMD} ps -a -q | grep -q .; then
+    echo "[INFO] Wykryto istniejace kontenery dla projektu Docker Compose."
+    echo "[INFO] Usuwanie starego stacka i lokalnych obrazow budowanych przez Compose..."
+    ${DOCKER_COMPOSE_CMD} down --remove-orphans --rmi local
+    echo "[OK] Stary stack zostal usuniety. Rozpoczynam czyste budowanie od nowa."
+    echo ""
+fi
+
 echo "Budowanie i uruchamianie aplikacji..."
 echo "(Pierwsze uruchomienie moze trwac kilka minut - trwa pobieranie obrazow)"
 echo ""

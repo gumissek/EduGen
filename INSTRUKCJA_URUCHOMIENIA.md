@@ -179,11 +179,11 @@ Po otwarciu przeglądarki pod adresem **http://localhost:3000** zostaniesz przek
 
 W głównym katalogu projektu dostępne są poniższe skrypty:
 
-- **`start_windows.bat`** – standardowe uruchomienie aplikacji na Windows (Docker Compose).
+- **`start_windows.bat`** – standardowe uruchomienie aplikacji na Windows (Docker Compose). Jeśli wykryje istniejący stack Compose, usuwa go (`down --remove-orphans --rmi local`) i buduje aplikację od nowa.
 - **`check_update.bat`** – sprawdzenie i opcjonalna aktualizacja wersji na Windows.
-- **`start_mac_linux.sh`** – standardowe uruchomienie aplikacji na macOS/Linux (Docker Compose).
+- **`start_mac_linux.sh`** – standardowe uruchomienie aplikacji na macOS/Linux (Docker Compose). Jeśli wykryje istniejący stack Compose, usuwa go (`down --remove-orphans --rmi local`) i buduje aplikację od nowa.
 - **`check_update.sh`** – sprawdzenie i opcjonalna aktualizacja wersji na macOS/Linux.
-- **`dev_windows.bat`** – tryb deweloperski na Windows (backend i frontend w osobnych oknach, PostgreSQL lokalnie przez Docker jeśli dostępny).
+- **`dev_windows.bat`** – tryb deweloperski na Windows (backend i frontend w osobnych oknach, PostgreSQL lokalnie przez Docker jeśli dostępny). Przed startem synchronizuje `common_filles` z katalogu głównego do `backend/common_filles`.
 - **`launch_app.app`** – launcher macOS uruchamiający w Terminalu skrypt `start_mac_linux.sh`.
 - **`run_tests_windows.bat`** – ręczne uruchomienie testów backendu na Windows.
 - **`run_tests_mac_linux.sh`** – ręczne uruchomienie testów backendu na macOS/Linux.

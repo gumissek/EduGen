@@ -54,6 +54,10 @@ class TestBackendDockerfileRegression:
         content = _read(DOCKERFILE_PATH)
         assert "python app/init_app.py && uvicorn app.main:app" in content
 
+    def test_copies_backend_common_files_into_image(self):
+        content = _read(DOCKERFILE_PATH)
+        assert "COPY common_filles ./common_filles" in content
+
 
 class TestDockerComposeRegression:
     def test_declares_required_services(self):
@@ -72,7 +76,7 @@ class TestDockerComposeRegression:
 
     def test_backend_mounts_shared_common_files_read_only(self):
         content = _read(COMPOSE_PATH)
-        assert "./common_filles:/app/common_filles:ro" in content
+        assert "./backend/common_filles:/app/common_filles:ro" in content
 
     def test_backend_waits_for_healthy_postgres(self):
         content = _read(COMPOSE_PATH)

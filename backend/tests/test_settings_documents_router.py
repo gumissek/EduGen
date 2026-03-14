@@ -205,6 +205,20 @@ class TestDocumentsRouter:
         resp = client.get(f"/api/documents/{doc.id}/export/docx")
         assert resp.status_code == 404
 
+    def test_export_docx_windows_style_path(self, client, db, test_user):
+        with tempfile.NamedTemporaryFile(suffix=".docx", delete=False) as f:
+            f.write(b"fake docx content")
+            tmp_path = f.name
+
+        try:
+            # Simulate paths saved on Windows while backend runs on Linux.
+            windows_style_path = tmp_path.replace("/", "\\")
+            doc, _gen = self._seed_document(db, test_user, file_path=windows_style_path)
+            resp = client.get(f"/api/documents/{doc.id}/export/docx")
+            assert resp.status_code == 200
+        finally:
+            Path(tmp_path).unlink(missing_ok=True)
+
     # ── EXPORT PDF ──
 
     def test_export_pdf_not_found(self, client):

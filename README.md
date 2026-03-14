@@ -90,16 +90,16 @@ For Windows development mode, you can also use the automation script from the re
 dev_windows.bat
 ```
 
-This script prepares backend/frontend dependencies, starts PostgreSQL (when Docker is available), and opens separate terminal windows for backend and frontend dev servers.
+This script prepares backend/frontend dependencies, synchronizes `common_filles` from repository root to `backend/common_filles`, starts PostgreSQL (when Docker is available), and opens separate terminal windows for backend and frontend dev servers.
 On first Pandoc installation, if `pandoc` is not immediately available in the current PATH, the script now continues with a warning instead of stopping the full development startup.
 
 Additional utility scripts in project root:
 
 - `check_update.bat` - standalone update check for Windows.
 - `check_update.sh` - standalone update check for macOS/Linux.
-- `start_windows.bat` - production-like Docker startup for Windows.
-- `start_mac_linux.sh` - production-like Docker startup for macOS/Linux.
-- `run_tests_windows.bat` - runs backend tests on Windows.
+- `start_windows.bat` - production-like Docker startup for Windows; if an existing Compose stack is detected, it is removed (`down --remove-orphans --rmi local`) before a fresh rebuild.
+- `start_mac_linux.sh` - production-like Docker startup for macOS/Linux; if an existing Compose stack is detected, it is removed (`down --remove-orphans --rmi local`) before a fresh rebuild.
+- `run_tests_windows.bat` - runs backend tests on Windows (first executes `uv sync --extra test` to ensure test dependencies are present).
 - `run_tests_mac_linux.sh` - runs backend tests on macOS/Linux.
 
 Run backend tests from project root:

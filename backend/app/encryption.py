@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, InvalidToken
 
 from app.config import settings
 
@@ -35,4 +35,10 @@ def encrypt_api_key(plain: str) -> str:
 
 def decrypt_api_key(encrypted: str) -> str:
     """Decrypt a previously encrypted API key."""
-    return _get_fernet().decrypt(encrypted.encode()).decode()
+    try:
+        return _get_fernet().decrypt(encrypted.encode()).decode()
+    except InvalidToken:
+        raise ValueError(
+            "Nie można odszyfrować klucza API — klucz szyfrowania uległ zmianie. "
+            "Usuń zapisany klucz API w Ustawieniach i dodaj go ponownie."
+        )

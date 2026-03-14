@@ -165,7 +165,7 @@ Parametry środowiskowe dla inicjalizacji DB:
 Definicja trzech serwisów, dwóch wolumenów i jednej sieci:
 
 - **postgres** — PostgreSQL 16, kontener `edugen-postgres`. Health check: `pg_isready` (interwał 10s, 3 retries). Wolumen `edugen_postgres_data`. Port `${POSTGRES_HOST_PORT:-5432}:5432`.
-- **backend** — FastAPI, kontener `edugen-backend`. Port `0.0.0.0:8000:8000`. Wolumeny: `edugen_data:/app/data`, `./common_filles:/app/common_filles:ro`. Healthcheck: `curl http://localhost:8000/api/health` (interwał 30s, start period 15s). Zależny od healthy Postgres. Command: `init_app.py` → `uvicorn` (2 workery).
+- **backend** — FastAPI, kontener `edugen-backend`. Port `0.0.0.0:8000:8000`. Wolumeny: `edugen_data:/app/data`, `./backend/common_filles:/app/common_filles:ro`. Healthcheck: `curl http://localhost:8000/api/health` (interwał 30s, start period 15s). Zależny od healthy Postgres. Command: `init_app.py` → `uvicorn` (2 workery).
 - **frontend** — Next.js, kontener `edugen-frontend`. Port `0.0.0.0:3000:3000`. Build arg: `BACKEND_URL=http://backend:8000`. Wolumen: `./common_filles:/app/common_filles:ro`. Zależny od healthy backendu i Postgresa.
 
 ---
@@ -253,7 +253,8 @@ Eksport do MS Word (DOCX) i PDF z wariantami. Pipeline: **HTML → BeautifulSoup
 - `export_content_as_pdf(file_path)` — odczyt zapisanego `.md` → konwersja Markdown → HTML (Pandoc) → PDF (xhtml2pdf/pisa). Nie wymaga LaTeX.
 - PDF używa rejestracji fontów Unicode w ReportLab (preferencyjnie DejaVu Sans, fallback Arial) pod dedykowaną rodziną CSS, co zapewnia poprawny rendering polskich znaków (ą, ć, ę, ł, ń, ó, ś, ź, ż).
 - Hierarchiczna struktura katalogów: `data/documents/{content_type}/{education_level}/{class_level}/{subject}/`.
-- Document tworzony z `user_id`.
+- Document tworzony z `user_id`, a `file_path` zapisywany jest w formacie POSIX (`/`), aby był przenośny między Windows i Linux (host vs kontener).
+- Endpointy dokumentów normalizują zapisane ścieżki (Windows `\` i Linux `/`) przy eksporcie DOCX/PDF oraz kopiowaniu dokumentu.
 - Zależności: `markdownify`, `pypandoc`, `beautifulsoup4`, `xhtml2pdf`, `reportlab`. Systemowe (Dockerfile): `pandoc`, `fonts-dejavu-core`, `fontconfig`, `pkg-config`, `libcairo2-dev`.
 
 ### `file_service.py`
@@ -374,8 +375,8 @@ Architektura grupuje endpointy na moduły. Łącznie **58 endpointów** w 14 rou
 
 | Metoda | Ścieżka | Opis |
 |--------|---------|------|
-| GET | `/task-types` | Lista typów zadań z CSV. |
-| POST | `/task-types` | Dodanie typu zadania do CSV. Idempotentne. Walidacja niepustej nazwy (400). Zwraca 201. |
+| GET | `/task-types` | Lista typów zadań z CSV (`backend/common_filles/task_types.csv`). |
+| POST | `/task-types` | Dodanie typu zadania do CSV (`backend/common_filles/task_types.csv`). Idempotentne. Walidacja niepustej nazwy (400). Zwraca 201. |
 
 #### Levels (`/api/levels`)
 
@@ -535,7 +536,7 @@ Schematy request/response zorganizowane w dedykowane pliki:
 - Plik testowy: `backend/tests/test_container_config_regression.py`
 - Zakres testów:
 	- `backend/Dockerfile`: obecność wymaganych pakietów systemowych (`pandoc`, `fontconfig`, `fonts-dejavu-core`, `libmagic1`, `pkg-config`, `libcairo2-dev`), walidacja fontu DejaVu Sans, instalacja zależności przez `uv sync --frozen`, komenda startowa z `init_app.py` i `uvicorn`.
-	- `docker-compose.yml`: obecność usług `postgres`, `backend`, `frontend`, pinning obrazu `postgres:16`, healthcheck backendu (`/api/health`), zależność backendu od zdrowego Postgresa, montowanie `common_filles` w trybie read-only i sieć bridge.
+	- `docker-compose.yml`: obecność usług `postgres`, `backend`, `frontend`, pinning obrazu `postgres:16`, healthcheck backendu (`/api/health`), zależność backendu od zdrowego Postgresa, montowanie `backend/common_filles` w trybie read-only i sieć bridge.
 
 ### Ręczne uruchamianie testów backendu
 
@@ -586,3 +587,7 @@ Testy backendu uruchamiane są ręcznie z katalogu głównego projektu dedykowan
 ### Pakiety systemowe (Dockerfile, `python:3.12-slim`)
 
 `curl`, `build-essential`, `pkg-config`, `libcairo2-dev`, `libmagic1`, `pandoc`, `fontconfig`, `fonts-dejavu-core`
+
+### Zasoby kopiowane do obrazu backendu
+
+- `backend/common_filles/*` jest kopiowane w buildzie jako `/app/common_filles/*` (`COPY common_filles ./common_filles`).

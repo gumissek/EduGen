@@ -602,7 +602,7 @@ def generate_docx(
         user_id=user_id or generation.user_id,
         generation_id=generation_id,
         filename=filename,
-        file_path=str(file_path),
+        file_path=file_path.as_posix(),
         variants_count=variants_count,
     )
     db.add(document)

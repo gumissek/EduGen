@@ -25,16 +25,12 @@ export default function PublicChrome({ children }: { children: React.ReactNode }
 
   return (
     <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>
-      <Box hidden={!showPublicChrome} aria-hidden={!showPublicChrome}>
-        <PublicTopBar />
-      </Box>
+      {showPublicChrome && <PublicTopBar />}
       <Toolbar hidden={!showPublicChrome} sx={{ minHeight: { xs: 64, sm: 70 } }} />
       <Box component="main" sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
         {children}
       </Box>
-      <Box hidden={!showPublicChrome} aria-hidden={!showPublicChrome}>
-        <AppFooter compact />
-      </Box>
+      {showPublicChrome && <AppFooter compact />}
     </Box>
   );
 }
