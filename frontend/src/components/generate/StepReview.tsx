@@ -8,8 +8,6 @@ import Paper from '@mui/material/Paper';
 import Grid2 from '@mui/material/Grid2'; 
 import Divider from '@mui/material/Divider';
 import Chip from '@mui/material/Chip';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import Switch from '@mui/material/Switch';
 import SchoolIcon from '@mui/icons-material/School';
 import PersonIcon from '@mui/icons-material/Person';
 import { GenerationParamsForm, TYPES_WITHOUT_QUESTIONS } from '@/schemas/generation';
@@ -18,13 +16,11 @@ import { useFiles } from '@/hooks/useFiles';
 import { CONTENT_TYPES, DIFFICULTY_LEVELS } from '@/lib/constants';
 import { useLevels } from '@/hooks/useLevels';
 import { Subject, SourceFile } from '@/types';
-import { useCurriculum } from '@/hooks/useCurriculum';
 
 export default function StepReview() {
-  const { getValues, setValue } = useFormContext<GenerationParamsForm>();
+  const { getValues } = useFormContext<GenerationParamsForm>();
   const values = getValues();
   const { subjects } = useSubjects();
-  const { documents: curriculumDocs } = useCurriculum();
 
   const { educationLevels } = useLevels();
 
@@ -159,36 +155,6 @@ export default function StepReview() {
           
         </Grid2>
       </Paper>
-
-      {/* Curriculum compliance toggle */}
-      {curriculumDocs.length > 0 && !isFreeForm && (
-        <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 }, mb: 3, borderRadius: '24px', borderColor: 'divider' }}>
-          <FormControlLabel
-            control={
-              <Switch
-                checked={values.curriculum_compliance_enabled ?? false}
-                onChange={(e) => setValue('curriculum_compliance_enabled', e.target.checked)}
-                color="primary"
-              />
-            }
-            label={
-              <Box>
-                <Typography variant="body1" fontWeight="medium">
-                  Weryfikuj zgodność z Podstawą Programową
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  System sprawdzi, czy wygenerowane pytania realizują wymagania ministerialne
-                </Typography>
-              </Box>
-            }
-          />
-        </Paper>
-      )}
-      {curriculumDocs.length === 0 && !isFreeForm && (
-        <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
-          Weryfikacja zgodności z PP niedostępna — brak dokumentów Podstawy Programowej w systemie.
-        </Typography>
-      )}
       
       <Typography variant="body2" color="text.secondary">
         Sprawdź powyższe dane. Jeśli wszystko się zgadza, kliknij &quot;Generuj materiał&quot;, aby rozpocząć generowanie prototypu przez AI.

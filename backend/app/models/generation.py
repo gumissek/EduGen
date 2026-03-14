@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from sqlalchemy import String, Text, Integer, Boolean, ForeignKey
+from sqlalchemy import String, Text, Integer, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -40,6 +40,4 @@ class Generation(Base):
     prototype = relationship("Prototype", back_populates="generation", uselist=False, cascade="all, delete-orphan")
     documents = relationship("Document", back_populates="generation", cascade="all, delete-orphan")
     ai_requests = relationship("AIRequest", back_populates="generation")
-    curriculum_compliance_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-
     source_files = relationship("SourceFile", secondary="generation_source_files", back_populates="generations")

@@ -42,7 +42,6 @@ def create_generation(
         closed_questions=body.closed_questions,
         variants_count=body.variants_count,
         task_types=json.dumps(body.task_types) if body.task_types else None,
-        curriculum_compliance_enabled=body.curriculum_compliance_enabled,
         status="processing",
     )
     db.add(generation)

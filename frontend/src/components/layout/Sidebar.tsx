@@ -17,7 +17,6 @@ import DashboardIcon from '@mui/icons-material/Dashboard';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import SettingsIcon from '@mui/icons-material/Settings';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
-import MenuBookIcon from '@mui/icons-material/MenuBook';
 import { usePathname, useRouter } from 'next/navigation';
 import Image from 'next/image';
 
@@ -27,7 +26,6 @@ const menuItems = [
   { text: 'Generuj', icon: <AddCircleIcon />, path: '/generate' },
   { text: 'Materiały', icon: <DashboardIcon />, path: '/dashboard' },
   { text: 'Przedmioty i Pliki', icon: <FolderOpenIcon />, path: '/subjects' },
-  { text: 'Podstawa Programowa', icon: <MenuBookIcon />, path: '/state-documents/pp' },
   { text: 'Ustawienia', icon: <SettingsIcon />, path: '/settings' },
   { text: 'Mój profil', icon: <AccountCircleIcon />, path: '/profile' },
 ];

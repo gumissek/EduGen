@@ -4,7 +4,7 @@ import type { NextRequest } from 'next/server';
 import { logger } from '@/lib/logger';
 
 // Public routes that don't require authentication
-const PUBLIC_ROUTES = ['/', '/about', '/login', '/register', '/state-documents'];
+const PUBLIC_ROUTES = ['/', '/about', '/login', '/register'];
 
 // Routes that should redirect authenticated users to dashboard
 const AUTH_ONLY_ROUTES = ['/login'];

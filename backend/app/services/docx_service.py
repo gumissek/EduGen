@@ -497,38 +497,6 @@ def _build_filename(topic: str) -> str:
 # ── Main generate_docx function ────────────────────────────────────────────
 
 
-def _build_compliance_markdown(compliance_data: dict) -> str:
-    """Build Markdown compliance table from compliance_json data."""
-    lines = [
-        "\\newpage",
-        "",
-        "## Metryczka zgodności z Podstawą Programową",
-        "",
-        "| Nr pytania | Wymaganie | Sekcja | Podobieństwo |",
-        "|---|---|---|---|",
-    ]
-
-    for q in compliance_data.get("questions", []):
-        q_idx = q.get("question_index", 0) + 1
-        for req in q.get("matched_requirements", []):
-            req_code = req.get("requirement_code", "-") or "-"
-            section = req.get("section_title", "-") or "-"
-            score = req.get("similarity_score", 0)
-            lines.append(f"| {q_idx} | {req_code} | {section} | {score:.0%} |")
-        if not q.get("matched_requirements"):
-            lines.append(f"| {q_idx} | - | Brak dopasowania | - |")
-
-    summary = compliance_data.get("coverage_summary", {})
-    lines.extend([
-        "",
-        f"**Podsumowanie:** {summary.get('matched_questions', 0)}/{summary.get('total_questions', 0)} "
-        f"pytań powiązanych z PP, {summary.get('unique_requirements_covered', 0)} unikalnych wymagań.",
-        "",
-    ])
-
-    return "\n".join(lines)
-
-
 def generate_docx(
     db: DBSession, generation_id: str, user_id: str | None = None,
 ) -> Document:
@@ -616,15 +584,6 @@ def generate_docx(
         combined_html = "\n".join(html_parts)
         clean_html = _clean_tiptap_html(combined_html)
         markdown = _html_to_markdown(clean_html)
-
-    # ── Append compliance table if available ──────────────────────────────
-    if prototype.compliance_json:
-        try:
-            compliance_data = json.loads(prototype.compliance_json)
-            compliance_md = _build_compliance_markdown(compliance_data)
-            markdown += "\n\n" + compliance_md
-        except (json.JSONDecodeError, TypeError):
-            pass
 
     # ── Build output path ───────────────────────────────────────────────
     docs_dir = _build_output_dir(generation, db)

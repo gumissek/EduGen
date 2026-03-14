@@ -22,7 +22,6 @@ class GenerationCreate(BaseModel):
     variants_count: int = 1
     task_types: List[str] = []
     source_file_ids: List[str] = []
-    curriculum_compliance_enabled: bool = False
 
     @field_validator('subject_id', mode='before')
     @classmethod
@@ -128,7 +127,6 @@ class GenerationResponse(BaseModel):
     closed_questions: int
     variants_count: int
     task_types: List[str] = []
-    curriculum_compliance_enabled: bool = False
     status: str
     error_message: Optional[str] = None
     created_at: str

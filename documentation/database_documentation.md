@@ -238,55 +238,6 @@ Tabela przechowująca tokeny/kody weryfikacyjne do zmiany adresu e-mail i zmiany
 > - `token_type = 'password_change'`: 6-cyfrowy kod numeryczny, ważny 5 minut, payload zawiera `new_password_hash`.
 > - Poprzednie nieużyte tokeny tego samego typu dla danego użytkownika są automatycznie oznaczane jako `is_used = TRUE` przy tworzeniu nowego.
 
-### curriculum_documents
-
-Tabela przechowująca metadane dokumentów Podstawy Programowej (PDF).
-
-| Kolumna | Typ | Ograniczenia |
-|---|---|---|
-| id | VARCHAR(36) | PRIMARY KEY |
-| filename | VARCHAR(255) | NOT NULL |
-| original_filename | VARCHAR(255) | NOT NULL |
-| file_path | VARCHAR(500) | NOT NULL |
-| markdown_path | VARCHAR(500) | NULL |
-| file_size | INTEGER | NOT NULL |
-| file_hash | VARCHAR(64) | NOT NULL UNIQUE |
-| education_level | VARCHAR(100) | NULL |
-| subject_name | VARCHAR(200) | NULL |
-| description | TEXT | NULL |
-| status | VARCHAR(50) | NOT NULL DEFAULT 'uploaded' |
-| error_message | TEXT | NULL |
-| page_count | INTEGER | NULL |
-| chunk_count | INTEGER | NULL DEFAULT 0 |
-| uploaded_by | VARCHAR(36) | NULL REFERENCES users(id) ON DELETE SET NULL |
-| created_at | TEXT | NOT NULL (ISO 8601) |
-| updated_at | TEXT | NOT NULL (ISO 8601) |
-
-> - `status` przyjmuje wartości: `uploaded`, `processing`, `ready`, `error`.
-> - `file_hash` (SHA-256) zapobiega duplikatom — ponowny upload tego samego PDF jest blokowany.
-> - Kaskadowe usuwanie chunków przy usunięciu dokumentu.
-
-### curriculum_chunks
-
-Tabela przechowująca fragmenty (chunki) tekstu z dokumentów PP wraz z embeddingami wektorowymi.
-
-| Kolumna | Typ | Ograniczenia |
-|---|---|---|
-| id | VARCHAR(36) | PRIMARY KEY |
-| document_id | VARCHAR(36) | NOT NULL REFERENCES curriculum_documents(id) ON DELETE CASCADE |
-| chunk_index | INTEGER | NOT NULL |
-| content | TEXT | NOT NULL |
-| content_hash | VARCHAR(64) | NOT NULL |
-| section_title | VARCHAR(500) | NULL |
-| heading_hierarchy | TEXT | NULL (JSON string) |
-| embedding | VECTOR(3072) | NULL (pgvector) |
-| char_count | INTEGER | NOT NULL DEFAULT 0 |
-| created_at | TEXT | NOT NULL (ISO 8601) |
-
-> - UniqueConstraint na `(document_id, chunk_index)`.
-> - Indeks HNSW (cosine) na kolumnie `embedding` dla szybkiego wyszukiwania wektorowego: `m=16, ef_construction=64`.
-> - Wymaga rozszerzenia PostgreSQL `vector` (pgvector).
-
 ---
 
 ## 2. Relacje między tabelami
@@ -306,8 +257,6 @@ Tabela przechowująca fragmenty (chunki) tekstu z dokumentów PP wraz z embeddin
 - generations → prototypes
 - generations → documents
 - generations → ai_requests
-- curriculum_documents → curriculum_chunks
-- users → curriculum_documents (uploaded_by, nullable)
 
 ### Wiele-do-wielu
 
@@ -369,14 +318,6 @@ CREATE INDEX ix_diagnostic_logs_created_at ON diagnostic_logs(created_at);
 -- Verification tokens
 CREATE INDEX ix_verification_tokens_user_id ON verification_tokens(user_id);
 CREATE UNIQUE INDEX ix_verification_tokens_token ON verification_tokens(token);
-
--- Curriculum documents
-CREATE UNIQUE INDEX ix_curriculum_documents_file_hash ON curriculum_documents(file_hash);
-CREATE INDEX ix_curriculum_documents_status ON curriculum_documents(status);
-
--- Curriculum chunks
-CREATE UNIQUE INDEX uq_curriculum_chunks_doc_index ON curriculum_chunks(document_id, chunk_index);
-CREATE INDEX ix_curriculum_chunks_embedding ON curriculum_chunks USING hnsw (embedding vector_cosine_ops) WITH (m = 16, ef_construction = 64);
 ```
 
 ---
@@ -384,7 +325,7 @@ CREATE INDEX ix_curriculum_chunks_embedding ON curriculum_chunks USING hnsw (emb
 ## 4. Uwagi projektowe
 
 - Schemat zgodny z 3NF.
-- Silnik bazy danych: **PostgreSQL 16** z rozszerzeniem **pgvector** (Docker, `pgvector/pgvector:pg16`).
+- Silnik bazy danych: **PostgreSQL 16** (Docker, `postgres:16`).
 - Izolacja danych: każda tabela z danymi użytkownika zawiera kolumnę `user_id` (FK → `users.id`).
 - Predefinowane przedmioty (`subjects`) mają `user_id = NULL` — widoczne dla wszystkich.
 - JWT zastępuje sesje serwerowe — tabela `sessions` została usunięta.
@@ -392,7 +333,7 @@ CREATE INDEX ix_curriculum_chunks_embedding ON curriculum_chunks USING hnsw (emb
 - Deduplikacja plików przez `file_content_cache` (klucz: SHA-256 hash pliku).
 - Klucze API szyfrowane AES przechowywane w tabeli `secret_keys` (wiele kluczy per użytkownik).
 - Preferencja modelu AI zapisana bezpośrednio w tabeli `users` (kolumna `default_model`).
-- Migracje schematu zarządzane przez **Alembic** (skonsolidowana migracja: `001`, tokeny weryfikacyjne: `002`, comments_json: `003`, tabele curriculum + pgvector: `004`).
+- Migracje schematu zarządzane przez **Alembic** (skonsolidowana migracja: `001`, tokeny weryfikacyjne: `002`).
 - Tabela `settings` (legacy) została usunięta — cala funkcjonalność przeniesiona do `users` i `secret_keys`.
 - Tabela `verification_tokens` obsługuje weryfikację zmiany e-mail (link, 24h) i zmiany hasła (kod 6-cyfrowy, 5 min). W trybie lokalnym e-maile nie są wysyłane — serwis loguje dane do konsoli.
 

@@ -177,7 +177,6 @@ Aplikacja korzysta z Next.js App Router. Wszystkie pliki `page.tsx` w folderach 
 - `/admin-panel` — panel administracyjny (wyłącznie dla superuserów) z kafelkami do sekcji zarządzania
   - `/admin-panel/users` — pełne zarządzanie użytkownikami (lista, edycja, usuwanie, reset hasła)
   - `/admin-panel/database` — pełny backup bazy (utworzenie zrzutu, pobranie, upload, restore)
-  - `/admin-panel/curriculum` — zarządzanie dokumentami Podstawy Programowej (upload PDF, status przetwarzania, usuwanie, reprocessing)
 
 #### Aktualny podział na `/dashboard`
 - Widok materiałów ma 2 zakładki:
@@ -194,7 +193,6 @@ Aplikacja korzysta z Next.js App Router. Wszystkie pliki `page.tsx` w folderach 
 - `/register` — ekran rejestracji nowego konta (email, imię, nazwisko, hasło, potwierdzenie hasła)
 - `/verify-email-change` — strona weryfikacji zmiany e-mail (przyjmuje `?token=...` z linku weryfikacyjnego, wywołuje `GET /api/auth/verify-email-change` i przekierowuje do `/email-change-succeeded`)
 - `/email-change-succeeded` — strona sukcesu po zmianie e-mail (komunikat + automatyczne wylogowanie i przekierowanie do `/login` po 10 sekundach)
-- `/state-documents/pp` — publiczna lista dokumentów Podstawy Programowej z chipami statusu, poziomu edukacji i przedmiotu, oraz możliwością pobrania pliku PDF
 - Publiczne strony korzystają z `PublicChrome` (stały topbar + stała stopka) i mają oddzielny topbar od strefy zalogowanej.
 
 ---
@@ -247,7 +245,6 @@ Główny proces biznesowy to generowanie dokumentów. Elementy go wspierające:
   - **Persystencja komentarzy:** helper `extractCommentsFromHtml()` wyodrębnia z HTML wszystkie znaczniki `<mark class="tiptap-comment" data-comment="...">` i wysyła jako strukturyzowany JSON (`comments_json`) obok treści HTML.
 - **`RepromptInput.tsx`** — pole AI renderowane jako `position: fixed`, przyklejone 50 px od dołu ekranu. Efekt glassmorphism z gradientem. Input z ikoną wysyłania, Enter wysyła, Shift+Enter nowa linia. Props: `onSend(prompt)`, `isLoading`.
 - Edytor prototypu (`/generate/[id]/editor`) zapisuje zmiany przyciskiem **„Zapisz wersję roboczą"** do tabeli `prototypes` (`PUT /api/prototypes/{generation_id}`).
-- **`ComplianceSidebar.tsx`** — wysuwany panel boczny (Drawer, 380 px) wyświetlający wyniki weryfikacji zgodności pytań z Podstawą Programową. Podsumowanie (progress bar, liczba dopasowanych pytań), akordeony per pytanie z chipami similarity (≥70% zielony, 50–70% żółty, <50% pomarańczowy), przycisk „Uruchom weryfikację" / „Uruchom ponownie". Widoczny tylko gdy `curriculum_compliance_enabled` dla generacji.
 
 ### `layout/`
 - **`MainLayout.tsx`** — główna struktura strefy zalogowanej: Sidebar (lewy panel) + TopBar (fixed u góry) + obszar treści (prawa strona). Na mobile Sidebar jako tymczasowy Drawer z toggle via TopBar. Tło: radialny gradient.
@@ -340,7 +337,6 @@ Za pobieranie, cache'owanie i mutację danych odpowiedzialny jest pakiet **TanSt
 | `useSubjects.ts` | CRUD przedmiotów (`GET/POST/DELETE /api/subjects`). | React Query |
 | `useTaskTypes.ts` | Lista typów zadań (`GET /api/task-types`), tworzenie nowych (`POST /api/task-types`). | React Query |
 | `useUserAIModels.ts` | CRUD modeli AI użytkownika (`GET/POST/DELETE /api/user-ai-models`). Interfejs `UserAIModel`: id, user_id, provider, model_name, description, price_description, is_available, created_at, changed_at, request_made. Obsługa 409 Conflict. | React Query |
-| `useCurriculum.ts` | `useCurriculum(filters?)` — lista dokumentów PP z auto-refetch podczas przetwarzania (co 5 s). Upload, delete. `useCurriculumCompliance(generationId)` — mutacja sprawdzania zgodności z PP. | React Query |
 
 ---
 
@@ -349,7 +345,7 @@ Za pobieranie, cache'owanie i mutację danych odpowiedzialny jest pakiet **TanSt
 ### `src/types/index.ts`
 Główne interfejsy TypeScript:
 - **String Typy:** `ContentType` (worksheet, test, quiz, exam, lesson_materials), `EducationLevel` (primary, secondary), `LanguageLevel` (A1–C2)
-- **Interfejsy:** `Subject` (id, name, is_custom, created_at), `SourceFile` (id, subject_id, filename, file_type, file_size, summary, has_extracted_text, extraction_error, page_count, created_at), `GenerationParams` (pełny zestaw parametrów generacji z tablicą `task_types`, `source_file_ids` i `curriculum_compliance_enabled`), `CurriculumDocument`, `CurriculumSearchResult`, `ComplianceResult`
+- **Interfejsy:** `Subject` (id, name, is_custom, created_at), `SourceFile` (id, subject_id, filename, file_type, file_size, summary, has_extracted_text, extraction_error, page_count, created_at), `GenerationParams` (pełny zestaw parametrów generacji z tablicą `task_types` i `source_file_ids`)
 
 ### `src/schemas/`
 Walidacja formularzy realizowana przez **Zod** we współpracy z **React Hook Form**:

@@ -16,7 +16,6 @@ RUN apt-get update && apt-get install -y \
     pandoc \
     fontconfig \
     fonts-dejavu-core \
-    poppler-utils \
     && rm -rf /var/lib/apt/lists/*
 
 # Fail image build early if the expected Unicode font is missing.
