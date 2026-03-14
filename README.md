@@ -83,6 +83,7 @@ dev_windows.bat
 ```
 
 This script prepares backend/frontend dependencies, starts PostgreSQL (when Docker is available), and opens separate terminal windows for backend and frontend dev servers.
+On first Pandoc installation, if `pandoc` is not immediately available in the current PATH, the script now continues with a warning instead of stopping the full development startup.
 
 **Backend:**
 Ensure Python 3.12+ and `uv` are installed.

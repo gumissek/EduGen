@@ -123,14 +123,15 @@ echo.
 echo Sprawdzanie Pandoc...
 where pandoc >nul 2>&1
 if errorlevel 1 (
+    setlocal EnableDelayedExpansion
     echo [INFO] Pandoc nie jest zainstalowany. Rozpoczynam instalacje...
 
     set "PANDOC_TMP_MSI=%TEMP%\pandoc-3.9-windows-x86_64.msi"
     set "PANDOC_URL=https://github.com/jgm/pandoc/releases/download/3.9/pandoc-3.9-windows-x86_64.msi"
 
     echo [INFO] Pobieranie instalatora Pandoc z:
-    echo        %PANDOC_URL%
-    powershell -NoProfile -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri '%PANDOC_URL%' -OutFile '%PANDOC_TMP_MSI%'"
+    echo        !PANDOC_URL!
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri '!PANDOC_URL!' -OutFile '!PANDOC_TMP_MSI!'"
     if errorlevel 1 (
         echo [BLAD] Nie udalo sie pobrac instalatora Pandoc.
         echo Pobierz recznie: https://pandoc.org/installing.html
@@ -139,10 +140,10 @@ if errorlevel 1 (
         popd
         exit /b 1
     )
-    set "PANDOC_INSTALLER=%PANDOC_TMP_MSI%"
+    set "PANDOC_INSTALLER=!PANDOC_TMP_MSI!"
 
     echo [INFO] Uruchamianie instalatora Pandoc...
-    start /wait "Pandoc Installer" msiexec /i "%PANDOC_INSTALLER%" /passive /norestart
+    start /wait "Pandoc Installer" msiexec /i "!PANDOC_INSTALLER!" /passive /norestart
     if errorlevel 1 (
         echo [BLAD] Instalacja Pandoc zakonczona niepowodzeniem.
         echo.
@@ -152,19 +153,28 @@ if errorlevel 1 (
     )
 
     :: Odswiezenie PATH dla biezacej sesji (czesto potrzebne po instalacji MSI)
-    set "PATH=%ProgramFiles%\Pandoc;%ProgramFiles(x86)%\Pandoc;%PATH%"
+    set "PATH=%ProgramFiles%\Pandoc;%ProgramFiles(x86)%\Pandoc;%LocalAppData%\Pandoc;%PATH%"
 
     where pandoc >nul 2>&1
     if errorlevel 1 (
-        echo [BLAD] Pandoc nadal nie jest dostepny w PATH po instalacji.
-        echo Uruchom skrypt ponownie w nowym oknie terminala.
-        echo.
-        pause
-        popd
-        exit /b 1
+        set "PANDOC_EXE="
+        if exist "%ProgramFiles%\Pandoc\pandoc.exe" set "PANDOC_EXE=%ProgramFiles%\Pandoc\pandoc.exe"
+        if not defined PANDOC_EXE if exist "%ProgramFiles(x86)%\Pandoc\pandoc.exe" set "PANDOC_EXE=%ProgramFiles(x86)%\Pandoc\pandoc.exe"
+        if not defined PANDOC_EXE if exist "%LocalAppData%\Pandoc\pandoc.exe" set "PANDOC_EXE=%LocalAppData%\Pandoc\pandoc.exe"
+
+        if defined PANDOC_EXE (
+            for %%I in ("!PANDOC_EXE!") do set "PATH=%%~dpI;!PATH!"
+        )
     )
 
-    for /f "tokens=*" %%v in ('pandoc --version 2^>nul ^| findstr /b "pandoc"') do echo [OK] %%v
+    where pandoc >nul 2>&1
+    if errorlevel 1 (
+        echo [UWAGA] Pandoc zainstalowany, ale nie jest widoczny w biezacej sesji PATH.
+        echo         Kontynuuje uruchamianie. W razie problemow uruchom skrypt ponownie.
+    ) else (
+        for /f "tokens=*" %%v in ('pandoc --version 2^>nul ^| findstr /b "pandoc"') do echo [OK] %%v
+    )
+    endlocal
 ) else (
     for /f "tokens=*" %%v in ('pandoc --version 2^>nul ^| findstr /b "pandoc"') do echo [OK] %%v
 )
