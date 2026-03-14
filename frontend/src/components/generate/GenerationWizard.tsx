@@ -467,46 +467,49 @@ export default function GenerationWizard() {
         </Box>
       )}
 
+      {/* --- ZOPTYMALIZOWANY KONTENER DLA MOBILE STEPPERA --- */}
       <Box
         sx={{
-          width: { xs: "calc(100% + 32px)", sm: "100%" },
-          mx: { xs: -2, sm: 0 },
-          px: { xs: 2, sm: 0 },
-          overflowX: "auto",
-          WebkitOverflowScrolling: "touch",
-          pb: 1,
+          width: "100%",
           mb: { xs: 3, md: 5 },
-          scrollbarWidth: "none",
-          "&::-webkit-scrollbar": { display: "none" },
+          px: { xs: 0, sm: 0 },
         }}
       >
         <Stepper
           activeStep={activeStep}
-          alternativeLabel
+          alternativeLabel={true}
           sx={{
-            minWidth: { xs: "max-content", sm: "100%" },
+            width: "100%",
             "& .MuiStep-root": {
-              minWidth: { xs: "110px", sm: "auto" },
-            },
-            "& .MuiStepLabel-label": {
-              fontWeight: 500,
-              mt: 1,
-              fontSize: { xs: "0.75rem", sm: "0.875rem" },
-              whiteSpace: { xs: "nowrap", sm: "normal" },
-            },
-            "& .MuiStepLabel-label.Mui-active": {
-              color: "primary.main",
-              fontWeight: 700,
-            },
-            "& .MuiStepLabel-label.Mui-completed": {
-              color: "text.primary",
-              fontWeight: 600,
+              px: { xs: 0, sm: 1 },
             },
             "& .MuiStepConnector-line": {
               borderColor: "divider",
               borderWidth: 2,
               borderRadius: 1,
             },
+            "& .MuiStepLabel-label": {
+              fontWeight: 500,
+              mt: 1,
+              fontSize: { xs: "0.7rem", sm: "0.875rem" },
+              display: { xs: "none", sm: "block" },
+            },
+            "& .MuiStepLabel-label.Mui-active": {
+              display: { xs: "block", sm: "block" },
+              color: "primary.main",
+              fontWeight: 700,
+              position: { xs: "absolute", sm: "static" },
+              width: { xs: "200px", sm: "auto" },
+              left: { xs: "50%", sm: "auto" },
+              transform: { xs: "translateX(-50%)", sm: "none" },
+              textAlign: "center",
+              mt: { xs: 1.5, sm: 1 },
+            },
+            "& .MuiStepLabel-label.Mui-completed": {
+              color: "text.primary",
+              fontWeight: 600,
+            },
+            pb: { xs: 3, sm: 0 },
           }}
         >
           {ALL_STEPS.map((label, index) => {
@@ -521,12 +524,11 @@ export default function GenerationWizard() {
                         component="span"
                         color="error"
                         sx={{
-                          display: "block",
+                          display: { xs: "none", sm: "block" },
                           textAlign: "center",
-                          fontSize: { xs: "9px", sm: "11px" },
+                          fontSize: "11px",
                           fontWeight: 600,
                           letterSpacing: "0.02em",
-                          mt: { xs: 0.5, sm: 0 },
                         }}
                       >
                         Nie dotyczy

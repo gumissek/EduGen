@@ -784,6 +784,7 @@ export default function StepQuestionConfig() {
 
         <Paper variant="outlined" sx={sectionSx}>
           <Grid2 container spacing={3} alignItems="stretch">
+            {/* Sekcja: Poziom trudności */}
             <Grid2 size={{ xs: 12, md: 9 }}>
               <Stack spacing={2.5} sx={{ height: "100%" }}>
                 <Stack direction="row" spacing={1} alignItems="center">
@@ -838,10 +839,14 @@ export default function StepQuestionConfig() {
                         !!fieldState.error &&
                         (fieldState.isTouched || submitCount > 0);
 
+                      const sliderValue = Number(parseNumber(field.value) ?? 2);
+
                       return (
                         <>
+                          {/* --- WIDOK DESKTOP: SLIDER (widoczny od breakpointu 'md') --- */}
                           <Box
                             sx={{
+                              display: { xs: "none", md: "block" }, // Ukryte na mobile, widoczne na desktopie
                               px: { xs: 2, md: 4 },
                               pt: 1,
                               pb: 4.5,
@@ -849,7 +854,7 @@ export default function StepQuestionConfig() {
                             }}
                           >
                             <Slider
-                              value={Number(parseNumber(field.value) ?? 2)}
+                              value={sliderValue}
                               onChange={(_, value) =>
                                 field.onChange(value as number)
                               }
@@ -900,11 +905,35 @@ export default function StepQuestionConfig() {
                             </Box>
                           </Box>
 
+                          {/* --- WIDOK MOBILE: STEPPER (widoczny do breakpointu 'md') --- */}
+                          <Box
+                            sx={{ display: { xs: "block", md: "none" }, pt: 1 }}
+                          >
+                            <StepperField
+                              value={sliderValue}
+                              min={1}
+                              max={5}
+                              error={showError}
+                              helperText={
+                                showError
+                                  ? getFriendlyErrorMessage(fieldState.error)
+                                  : undefined
+                              }
+                              onChange={(nextValue) =>
+                                field.onChange(nextValue)
+                              }
+                            />
+                          </Box>
+
+                          {/* Komunikat o błędzie dla Slidera na Desktopie (Stepper wyświetla swój we własnym helperText) */}
                           {showError && (
                             <Typography
                               variant="caption"
                               color="error"
-                              sx={{ mt: 1, display: "block" }}
+                              sx={{
+                                mt: 1,
+                                display: { xs: "none", md: "block" },
+                              }}
                             >
                               {getFriendlyErrorMessage(fieldState.error)}
                             </Typography>
@@ -917,6 +946,7 @@ export default function StepQuestionConfig() {
               </Stack>
             </Grid2>
 
+            {/* Sekcja: Warianty (Bez zmian) */}
             <Grid2 size={{ xs: 12, md: 3 }}>
               <Stack spacing={2} sx={{ height: "100%" }}>
                 <Stack direction="row" spacing={1} alignItems="center">
