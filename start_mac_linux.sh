@@ -122,7 +122,11 @@ POSTGRES_HOST_PORT="${POSTGRES_HOST_PORT:-${POSTGRES_PORT}}"
 is_port_busy() {
     local port="$1"
     if command -v lsof &>/dev/null; then
-        lsof -iTCP:"${port}" -sTCP:LISTEN -n -P &>/dev/null
+        lsof -iTCP:"${port}" -sTCP:LISTEN -n -P &>/dev/null && return 0
+    fi
+    # Fallback: nc is always available on macOS/Linux
+    if command -v nc &>/dev/null; then
+        nc -z 127.0.0.1 "${port}" &>/dev/null 2>&1
         return $?
     fi
     return 1
