@@ -49,6 +49,7 @@ for /f "usebackq tokens=1,* delims==" %%a in (`findstr /v "^#" .env 2^>nul ^| fi
 if not defined POSTGRES_USER set "POSTGRES_USER=postgres"
 if not defined POSTGRES_DB set "POSTGRES_DB=edugen"
 if not defined POSTGRES_PORT set "POSTGRES_PORT=5432"
+if not defined POSTGRES_HOST_PORT set "POSTGRES_HOST_PORT=%POSTGRES_PORT%"
 
 if not defined POSTGRES_PASSWORD (
     echo [BLAD] Brak zmiennej POSTGRES_PASSWORD w pliku .env.
@@ -59,8 +60,8 @@ if not defined POSTGRES_PASSWORD (
     exit /b 1
 )
 
-:: Skonstruuj DATABASE_URL wskazujacy na localhost (zamiast nazwy serwisu Docker)
-set "DATABASE_URL=postgresql+psycopg://%POSTGRES_USER%:%POSTGRES_PASSWORD%@localhost:%POSTGRES_PORT%/%POSTGRES_DB%"
+:: Skonstruuj DATABASE_URL wskazujacy na localhost i port hosta (mapowanie Docker)
+set "DATABASE_URL=postgresql+psycopg://%POSTGRES_USER%:%POSTGRES_PASSWORD%@localhost:%POSTGRES_HOST_PORT%/%POSTGRES_DB%"
 
 :: ── Sprawdzenie i instalacja uv ──────────────────────────────────────────────
 echo Sprawdzanie uv...
@@ -252,23 +253,23 @@ if not errorlevel 1 (
             !DOCKER_COMPOSE_CMD! up -d postgres
             if errorlevel 1 (
                 echo [UWAGA] Nie udalo sie uruchomic kontenera postgres.
-                echo         Upewnij sie, ze PostgreSQL jest dostepny na localhost:!POSTGRES_PORT!
+                echo         Upewnij sie, ze PostgreSQL jest dostepny na localhost:!POSTGRES_HOST_PORT!
             ) else (
                 set "POSTGRES_STARTED=1"
-                echo [OK] Baza danych PostgreSQL uruchomiona na porcie !POSTGRES_PORT!.
+                echo [OK] Baza danych PostgreSQL uruchomiona na porcie !POSTGRES_HOST_PORT!.
                 timeout /t 3 /nobreak >nul
             )
         ) else (
             echo [UWAGA] Brak pluginu docker compose i polecenia docker-compose.
-            echo         Upewnij sie, ze PostgreSQL jest dostepny lokalnie na porcie !POSTGRES_PORT!.
+            echo         Upewnij sie, ze PostgreSQL jest dostepny lokalnie na porcie !POSTGRES_HOST_PORT!.
         )
     ) else (
         echo [UWAGA] Docker Desktop nie jest uruchomiony.
-        echo         Upewnij sie, ze PostgreSQL jest dostepny lokalnie na porcie !POSTGRES_PORT!.
+        echo         Upewnij sie, ze PostgreSQL jest dostepny lokalnie na porcie !POSTGRES_HOST_PORT!.
     )
 ) else (
     echo [UWAGA] Docker nie jest zainstalowany.
-    echo         Upewnij sie, ze PostgreSQL jest dostepny lokalnie na porcie !POSTGRES_PORT!.
+    echo         Upewnij sie, ze PostgreSQL jest dostepny lokalnie na porcie !POSTGRES_HOST_PORT!.
 )
 endlocal
 echo.
@@ -299,7 +300,7 @@ echo ============================================
 echo.
 echo   Frontend:  http://localhost:3000
 echo   Backend:   http://localhost:8000
-echo   Baza:      localhost:%POSTGRES_PORT%
+echo   Baza:      localhost:%POSTGRES_HOST_PORT%
 echo.
 echo   Aby zatrzymac aplikacje, zamknij okna:
 echo   "EduGen-Backend [DEV]" i "EduGen-Frontend [DEV]"
