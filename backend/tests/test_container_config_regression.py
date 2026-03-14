@@ -34,6 +34,8 @@ class TestBackendDockerfileRegression:
             "fonts-dejavu-core",
             "libmagic1",
             "build-essential",
+            "pkg-config",
+            "libcairo2-dev",
         ]
 
         for package in required_packages:
@@ -46,16 +48,10 @@ class TestBackendDockerfileRegression:
     def test_uses_locked_dependency_installation(self):
         content = _read(DOCKERFILE_PATH)
         assert "COPY pyproject.toml uv.lock ./" in content
-        assert "RUN uv sync --frozen --extra test" in content
-
-    def test_copies_backend_tests_into_image(self):
-        content = _read(DOCKERFILE_PATH)
-        assert "COPY tests ./tests" in content
+        assert "RUN uv sync --frozen" in content
 
     def test_backend_startup_runs_init_before_server(self):
         content = _read(DOCKERFILE_PATH)
-        assert "BACKEND_RUN_TESTS_ON_STARTUP" in content
-        assert "then pytest tests/ --tb=short --no-header -q; fi &&" in content
         assert "python app/init_app.py && uvicorn app.main:app" in content
 
 
@@ -90,8 +86,6 @@ class TestDockerComposeRegression:
 
     def test_backend_command_runs_init_and_uvicorn(self):
         content = _read(COMPOSE_PATH)
-        assert "BACKEND_RUN_TESTS_ON_STARTUP=${BACKEND_RUN_TESTS_ON_STARTUP:-true}" in content
-        assert "then pytest tests/ --tb=short --no-header -q; fi &&" in content
         assert "python app/init_app.py && uvicorn app.main:app" in content
 
     def test_frontend_build_uses_backend_internal_url(self):

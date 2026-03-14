@@ -10,6 +10,8 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     curl \
     build-essential \
+    pkg-config \
+    libcairo2-dev \
     libmagic1 \
     pandoc \
     fontconfig \
@@ -26,14 +28,11 @@ RUN pip install uv
 # copy dependency files first (cache layer)
 COPY pyproject.toml uv.lock ./
 
-# install dependencies (including test extras so pytest can run at container startup)
-RUN uv sync --frozen --extra test
+# install dependencies
+RUN uv sync --frozen
 
 # copy source
 COPY app ./app
-
-# copy backend tests used as startup gate
-COPY tests ./tests
 
 # copy alembic migrations
 COPY alembic.ini ./
@@ -42,5 +41,5 @@ COPY alembic ./alembic
 # create mount point for shared common files
 RUN mkdir -p /app/common_filles
 
-# start server with optional startup test gate (enabled by default)
-CMD ["uv", "run", "sh", "-c", "if [ \"${BACKEND_RUN_TESTS_ON_STARTUP:-true}\" = \"true\" ]; then pytest tests/ --tb=short --no-header -q; fi && python app/init_app.py && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+# start backend server
+CMD ["uv", "run", "sh", "-c", "python app/init_app.py && uvicorn app.main:app --host 0.0.0.0 --port 8000"]

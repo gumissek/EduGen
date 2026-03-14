@@ -102,18 +102,18 @@ Modules documentation: `documentation\modules\<module_name>_module_documentation
 
 ### Guidelines for STYLING
 
-#### STYLED_COMPONENTS
+#### MATERIAL_UI
 
-- Use the ThemeProvider for consistent theming across components
-- Implement the css helper for sharing styles between components
-- Use props for conditional styling within template literals
-- Leverage the createGlobalStyle for global styling
-- Implement attrs method to pass HTML attributes to the underlying DOM elements
-- Use the as prop for dynamic component rendering
-- Leverage styled(Component) syntax for extending existing components
-- Implement the css prop for one-off styling needs
-- Use the & character for nesting selectors
-- Leverage the keyframes helper for animations
+- Use the `ThemeProvider` with `createTheme` for consistent design tokens (colors, typography, spacing) across the application
+- Use the `sx` prop for one-off style overrides — prefer it over inline `style` or creating new styled components for simple cases
+- Leverage MUI's `useTheme` hook to access theme values inside component logic and custom hooks
+- Prefer MUI component props (`variant`, `color`, `size`, `component`) over custom styling where the API covers the use case
+- Use `CssBaseline` in the root layout for consistent cross-browser baseline styles
+- Implement responsive design with MUI breakpoint utilities: `sx={{ display: { xs: 'none', md: 'block' } }}` and `useMediaQuery`
+- Use `Grid` and `Stack` for layout composition; avoid manual flexbox where MUI layout components suffice
+- Extend components with Emotion's `styled()` from `@emotion/styled` when encapsulating reusable styled variants (not one-off overrides)
+- Support Dark/Light mode via `ColorModeContext` — never hardcode colors; always reference theme tokens
+- Use `alpha()` from `@mui/material/styles` for transparent color variants derived from theme palette
 
 ### Guidelines for ACCESSIBILITY
 

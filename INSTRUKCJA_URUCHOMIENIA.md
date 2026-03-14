@@ -14,8 +14,9 @@ Poniższa instrukcja krok po kroku wyjaśnia, jak uruchomić aplikację na włas
 4. [Krok 3 – Przygotowanie pliku konfiguracyjnego](#krok-3--przygotowanie-pliku-konfiguracyjnego)
 5. [Krok 4 – Uruchomienie aplikacji](#krok-4--uruchomienie-aplikacji)
 6. [Krok 5 – Rejestracja i logowanie](#krok-5--rejestracja-i-logowanie)
-7. [Zatrzymywanie aplikacji](#zatrzymywanie-aplikacji)
-8. [Rozwiązywanie problemów](#rozwiązywanie-problemów)
+7. [Skrypty uruchamiania i aktualizacji](#skrypty-uruchamiania-i-aktualizacji)
+8. [Zatrzymywanie aplikacji](#zatrzymywanie-aplikacji)
+9. [Rozwiązywanie problemów](#rozwiązywanie-problemów)
 
 ---
 
@@ -57,7 +58,7 @@ cd ~/Desktop/EduGen
 ``` 
 2. Mając otwartą sesję z wnętrza środowiska aplikacji nadaj skryptom potrzebne oprogramowaniu autoryzacje zezwalające wprost:
 ```bash
-chmod +x start_mac_linux.sh Uruchom_Mac.command
+chmod +x start_mac_linux.sh run_tests_mac_linux.sh launch_app.app/Contents/MacOS/launch_app
 ```
 
 ---
@@ -132,11 +133,11 @@ Dostępne są dwie metody uruchomienia – wybierz tę wygodniejszą dla siebie:
 > Wyłącznie dla **macOS** (nie działa na Linuxie).
 
 1. Wejdź do folderu **EduGen** w Finderze.
-2. Dwukrotnie kliknij plik **`Uruchom_Mac.command`**.
+2. Dwukrotnie kliknij plik **`launch_app.app`**.
 3. Jeśli macOS zapyta o zezwolenie na uruchomienie, potwierdź. Skrypt automatycznie przejdzie do odpowiedniego katalogu i wywoła `start_mac_linux.sh`.
 4. Otworzy się okno terminala, a przeglądarka uruchomi się automatycznie po **15 sekundach** od uruchomienia skryptu pod adresem **http://localhost:3000**.
 
-> **Uwaga:** Plik `Uruchom_Mac.command` musi mieć nadane uprawnienia wykonywania (`chmod +x`) zgodnie z Krokiem 1 punkt 3, inaczej macOS odmówi uruchomienia.
+> **Uwaga:** Jeśli system macOS blokuje uruchomienie aplikacji, nadaj uprawnienia wykonywania zgodnie z Krokiem 1 punkt 3 (dla `launch_app.app/Contents/MacOS/launch_app`) i uruchom ponownie.
 
 #### Metoda B – Terminal (macOS i Linux)
 
@@ -172,6 +173,35 @@ Po otwarciu przeglądarki pod adresem **http://localhost:3000** zostaniesz przek
 
 ---
 
+## Skrypty uruchamiania i aktualizacji
+
+W głównym katalogu projektu dostępne są poniższe skrypty:
+
+- **`start_windows.bat`** – standardowe uruchomienie aplikacji na Windows (Docker Compose).
+- **`check_update.bat`** – sprawdzenie i opcjonalna aktualizacja wersji na Windows.
+- **`start_mac_linux.sh`** – standardowe uruchomienie aplikacji na macOS/Linux (Docker Compose).
+- **`check_update.sh`** – sprawdzenie i opcjonalna aktualizacja wersji na macOS/Linux.
+- **`dev_windows.bat`** – tryb deweloperski na Windows (backend i frontend w osobnych oknach, PostgreSQL lokalnie przez Docker jeśli dostępny).
+- **`launch_app.app`** – launcher macOS uruchamiający w Terminalu skrypt `start_mac_linux.sh`.
+- **`run_tests_windows.bat`** – ręczne uruchomienie testów backendu na Windows.
+- **`run_tests_mac_linux.sh`** – ręczne uruchomienie testów backendu na macOS/Linux.
+
+Przykład uruchomienia testów backendu z katalogu głównego projektu:
+
+```bash
+# macOS / Linux
+bash run_tests_mac_linux.sh
+```
+
+```bat
+:: Windows
+run_tests_windows.bat
+```
+
+> **Ważne:** Skrypty aktualizacji (`check_update.bat` i `check_update.sh`) są automatycznie wywoływane przez skrypty startowe tylko na gałęzi **master**. Jeśli pracujesz na innej gałęzi, uruchamianie aplikacji jest kontynuowane bez sprawdzania aktualizacji.
+
+---
+
 ## Zatrzymywanie aplikacji
 
 Aplikacja pozostaje uruchomiona w tle tak długo, jak aktywne jest okno konsoli terminala. Krok jej bezproblemowego zatrzymania po zakończeniu pracy należy wdrożyć według wytycznych poniżej. Pomyślne zatrzymywanie procesów zachowuje pełną sprawność procesora RAM dla Twojego sprzętu podczas zakończenia projektów na daną sesję roboczą platformy.
@@ -182,9 +212,9 @@ Aplikacja pozostaje uruchomiona w tle tak długo, jak aktywne jest okno konsoli 
 3. Gdy konsola zapyta o potwierdzenie procedury zamknięcia ("Przerwanie działania skryptu wsadowego? / Terminate batch job?") wpisz w pole konsoli wiersza na znak **T** (lub **Y** w zależności od języka systemu) i zaakceptuj wciskając **Enter**. Skrypt samodzielnie zatrzyma aplikację.
 
 ### Komputery macOS / Linux:
-1. Przełącz do otwartego okna **Terminal**, w którym działa **`start_mac_linux.sh`** lub **`Uruchom_Mac.command`**.
+1. Przełącz do otwartego okna **Terminal**, w którym działa **`start_mac_linux.sh`** lub **`launch_app.app`**.
 2. Na klawiaturze naciśnij jednocześnie klawisze **CTRL + C**.
-3. Terminal zapyta o potwierdzenie procedury zamknięcia. Wpisz **T** (lub **Y** w zależności od języka systemu) i zatwierdź wciskając **Enter**. Skrypt samodzielnie zatrzyma aplikację.
+3. Skrypt zawiera wbudowaną obsługę sygnału (`trap`), która automatycznie wywoła `docker compose down` i zatrzyma wszystkie kontenery bez potrzeby dodatkowego potwierdzenia.
 
 ---
 

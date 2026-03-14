@@ -157,7 +157,7 @@ Skrypt inicjalizacyjny uruchamiany przed startem serwera:
 Definicja trzech serwisów, dwóch wolumenów i jednej sieci:
 
 - **postgres** — PostgreSQL 16, kontener `edugen-postgres`. Health check: `pg_isready` (interwał 10s, 3 retries). Wolumen `edugen_postgres_data`. Port `5432:5432`.
-- **backend** — FastAPI, kontener `edugen-backend`. Port `0.0.0.0:8000:8000`. Wolumeny: `edugen_data:/app/data`, `./common_filles:/app/common_filles:ro`. Healthcheck: `curl http://localhost:8000/api/health` (interwał 30s, start period 15s). Zależny od healthy Postgres. Command: warunkowa bramka testowa (`BACKEND_RUN_TESTS_ON_STARTUP`) → `init_app.py` → `uvicorn` (2 workery).
+- **backend** — FastAPI, kontener `edugen-backend`. Port `0.0.0.0:8000:8000`. Wolumeny: `edugen_data:/app/data`, `./common_filles:/app/common_filles:ro`. Healthcheck: `curl http://localhost:8000/api/health` (interwał 30s, start period 15s). Zależny od healthy Postgres. Command: `init_app.py` → `uvicorn` (2 workery).
 - **frontend** — Next.js, kontener `edugen-frontend`. Port `0.0.0.0:3000:3000`. Build arg: `BACKEND_URL=http://backend:8000`. Wolumen: `./common_filles:/app/common_filles:ro`. Zależny od healthy backendu i Postgresa.
 
 ---
@@ -246,7 +246,7 @@ Eksport do MS Word (DOCX) i PDF z wariantami. Pipeline: **HTML → BeautifulSoup
 - PDF używa rejestracji fontów Unicode w ReportLab (preferencyjnie DejaVu Sans, fallback Arial) pod dedykowaną rodziną CSS, co zapewnia poprawny rendering polskich znaków (ą, ć, ę, ł, ń, ó, ś, ź, ż).
 - Hierarchiczna struktura katalogów: `data/documents/{content_type}/{education_level}/{class_level}/{subject}/`.
 - Document tworzony z `user_id`.
-- Zależności: `markdownify`, `pypandoc`, `beautifulsoup4`, `xhtml2pdf`, `reportlab`. Systemowe (Dockerfile): `pandoc`, `fonts-dejavu-core`, `fontconfig`.
+- Zależności: `markdownify`, `pypandoc`, `beautifulsoup4`, `xhtml2pdf`, `reportlab`. Systemowe (Dockerfile): `pandoc`, `fonts-dejavu-core`, `fontconfig`, `pkg-config`, `libcairo2-dev`.
 
 ### `file_service.py`
 Obsługa plików źródłowych z cache'em SHA-256:
@@ -526,16 +526,15 @@ Schematy request/response zorganizowane w dedykowane pliki:
 
 - Plik testowy: `backend/tests/test_container_config_regression.py`
 - Zakres testów:
-	- `backend/Dockerfile`: obecność wymaganych pakietów systemowych (`pandoc`, `fontconfig`, `fonts-dejavu-core`, `libmagic1`), walidacja fontu DejaVu Sans, instalacja zależności przez `uv sync --frozen --extra test`, komenda startowa z `init_app.py` i `uvicorn`.
+	- `backend/Dockerfile`: obecność wymaganych pakietów systemowych (`pandoc`, `fontconfig`, `fonts-dejavu-core`, `libmagic1`, `pkg-config`, `libcairo2-dev`), walidacja fontu DejaVu Sans, instalacja zależności przez `uv sync --frozen`, komenda startowa z `init_app.py` i `uvicorn`.
 	- `docker-compose.yml`: obecność usług `postgres`, `backend`, `frontend`, pinning obrazu `postgres:16`, healthcheck backendu (`/api/health`), zależność backendu od zdrowego Postgresa, montowanie `common_filles` w trybie read-only i sieć bridge.
 
-### Automatyczne uruchamianie testów w Docker
+### Ręczne uruchamianie testów backendu
 
-Backend jest skonfigurowany tak, aby uruchamiał pełny zestaw testów (`pytest tests/`) przed startem aplikacji:
+Testy backendu uruchamiane są ręcznie z katalogu głównego projektu dedykowanymi skryptami:
 
-- Przełącznik środowiskowy: `BACKEND_RUN_TESTS_ON_STARTUP` (`true`/`false`, domyślnie `true`) w głównym `.env`.
-- W Compose (`backend.command`): warunkowa bramka testowa → `init_app.py` → `uvicorn` (2 workery).
-- Obraz backendu kopiuje katalog `tests/` oraz instaluje zależności testowe przez `uv sync --frozen --extra test`.
+- Windows: `run_tests_windows.bat`
+- macOS/Linux: `run_tests_mac_linux.sh`
 
 ---
 
@@ -578,4 +577,4 @@ Backend jest skonfigurowany tak, aby uruchamiał pełny zestaw testów (`pytest 
 
 ### Pakiety systemowe (Dockerfile, `python:3.12-slim`)
 
-`curl`, `build-essential`, `libmagic1`, `pandoc`, `fontconfig`, `fonts-dejavu-core`
+`curl`, `build-essential`, `pkg-config`, `libcairo2-dev`, `libmagic1`, `pandoc`, `fontconfig`, `fonts-dejavu-core`

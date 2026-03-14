@@ -4,13 +4,14 @@
 ---
 * Framework: FastAPI (Asynchronous REST API).
 * ORM: SQLAlchemy using PostgreSQL 16 as the database engine.
-* Database Migrations: Managed via Alembic (Current version: 007).
+* Database Migrations: Managed via Alembic (Current version: 003).
 * Validation & Settings: Pydantic v2 and pydantic-settings.
 * Background Tasks: APScheduler for daily backups and asynchronous AI generation.
 * Document Processing:
     - File parsing: PyMuPDF (fitz) for PDF text extraction, python-docx for DOCX file reading.
-    - Document export pipeline: HTML → BeautifulSoup (cleaning) → markdownify → Markdown → Pandoc (pypandoc) → DOCX / PDF.
-    - System dependencies: pandoc, texlive-xetex (installed in Docker for PDF generation).
+    - DOCX export pipeline: HTML → BeautifulSoup (cleaning) → markdownify → Markdown → Pandoc (pypandoc) → DOCX.
+    - PDF export pipeline: Markdown → Pandoc → HTML → xhtml2pdf (pisa) → PDF. ReportLab used for Unicode font registration (DejaVu Sans) ensuring correct rendering of Polish characters.
+    - System dependencies: pandoc, fonts-dejavu-core, fontconfig (installed in Docker).
 * Security:
     - Password Hashing: Bcrypt with failed login attempt tracking.
     - Key Encryption: AES encryption for external API keys (OpenRouter).
@@ -18,7 +19,7 @@
 
 ## FRONTEND ARCHITECTURE (TypeScript)
 ---
-* Framework: Next.js (App Router) with React 19.
+* Framework: Next.js 16 (App Router) with React 19.
 * State Management: TanStack React Query for server-state and caching.
 * UI Library: Material UI (MUI) for components and layout.
 * Rich Text Editor: Tiptap for the document prototype editor.
