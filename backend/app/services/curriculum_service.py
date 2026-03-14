@@ -21,8 +21,8 @@ from app.models.curriculum_document import CurriculumDocument
 logger = logging.getLogger(__name__)
 
 OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
-EMBEDDING_MODEL = "openai/text-embedding-3-large"
-EMBEDDING_DIMENSIONS = 3072
+EMBEDDING_MODEL = "openai/text-embedding-3-small"
+EMBEDDING_DIMENSIONS = 1536
 
 
 def _compute_file_hash(file_bytes: bytes) -> str:

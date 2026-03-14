@@ -96,6 +96,7 @@ dev_windows.bat
 
 This script prepares backend/frontend dependencies, synchronizes `common_filles` from repository root to `backend/common_filles`, starts PostgreSQL (when Docker is available), and opens separate terminal windows for backend and frontend dev servers.
 On first Pandoc installation, if `pandoc` is not immediately available in the current PATH, the script now continues with a warning instead of stopping the full development startup.
+Backend window startup is handled by `backend/start_backend_dev.bat`, which runs `init_app.py` first and then starts `uvicorn`; on failure it keeps the window open with an explicit error and exit code.
 
 Additional utility scripts in project root:
 

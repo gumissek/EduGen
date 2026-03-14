@@ -77,10 +77,7 @@ backend/
 │   ├── env.py
 │   ├── script.py.mako
 │   └── versions/
-│       ├── 001_initial_schema.py
-│       ├── 002_add_verification_tokens.py
-│       ├── 003_add_comments_json_to_prototypes.py
-│       └── 004_add_curriculum_tables.py
+│       └── 001_initial_schema.py
 ├── alembic.ini
 ├── Dockerfile
 └── pyproject.toml
@@ -100,7 +97,7 @@ Projekt EduGen opiera się na nowoczesnym, modularnym backendzie. Składa się o
 
 ### Główne katalogi w `backend/`:
 - `app/` — Główny kod źródłowy aplikacji (FastAPI, w tym endpointy, serwisy, modele, schematy Pydantic).
-- `alembic/` — Migracje bazy danych (3 wersje: initial schema, verification tokens, comments_json).
+- `alembic/` — Migracje bazy danych (1 skonsolidowana wersja: pełny aktualny schemat).
 - `tests/` — Testy jednostkowe i regresyjne (pytest).
 
 ---
@@ -159,13 +156,17 @@ Konfiguracja silnika SQLAlchemy (PostgreSQL):
 Skrypt inicjalizacyjny uruchamiany przed startem serwera:
 - `create_database_if_not_exists()` — łączy się z bazą `postgres` (admin DB) i tworzy docelową bazę jeśli nie istnieje (`CREATE DATABASE`).
 	Obsługuje retry przy niedostępnym PostgreSQL i ustawia timeout połączenia, aby start nie „wisiał” bez logów.
-- `run_migrations()` — uruchamia Alembic `upgrade head` jeśli bieżąca rewizja różni się od head. Kończy z kodem 1 przy błędzie.
+- `run_migrations()` — uruchamia Alembic `upgrade head` jeśli bieżąca rewizja różni się od head.
+	Jeżeli wykryje niepustą schemę bez wpisu w `alembic_version` (np. po konsolidacji migracji), domyślnie wykonuje `alembic stamp head` zamiast ponownego uruchamiania migracji inicjalnej.
+	Jeżeli wykryje nieznaną rewizję w tabeli `alembic_version` (np. pozostałość po starej linii migracji), również domyślnie wykonuje `alembic stamp head`.
+	To zachowanie można wyłączyć przez `INIT_DB_AUTO_STAMP_UNVERSIONED=false`. Kończy z kodem 1 przy błędzie.
 - `ensure_directories()` — tworzy katalogi: `DATA_DIR`, `DATA_DIR/subjects`, `DATA_DIR/documents`, `DATA_DIR/backups`.
 
 Parametry środowiskowe dla inicjalizacji DB:
 - `INIT_DB_MAX_RETRIES` (domyślnie `30`)
 - `INIT_DB_RETRY_DELAY_SECONDS` (domyślnie `2.0`)
 - `INIT_DB_CONNECT_TIMEOUT_SECONDS` (domyślnie `5`)
+- `INIT_DB_AUTO_STAMP_UNVERSIONED` (domyślnie `true`)
 
 ### `docker-compose.yml`
 Definicja trzech serwisów, dwóch wolumenów i jednej sieci:
@@ -306,12 +307,13 @@ Stub do wysyłki e-maili weryfikacyjnych:
 Serwis obsługujący pipeline wektorowej bazy Podstawy Programowej (RAG):
 - `convert_pdf_to_markdown(pdf_path)` — konwersja PDF → HTML (PyMuPDF) → Markdown (markdownify). Zwraca string Markdown.
 - `chunk_markdown(markdown_text)` — Dzielenie Markdown na chunki: najpierw `MarkdownHeaderTextSplitter` (wg nagłówków H1–H3), potem `RecursiveCharacterTextSplitter` (1000 znaków, 200 overlap). Zwraca listę `(content, metadata)`.
-- `generate_embedding(text, api_key)` — generacja embeddingu (3072 wymiarów) przez OpenRouter API (`openai/text-embedding-3-large`). Zwraca `list[float]`.
+- `generate_embedding(text, api_key)` — generacja embeddingu (1536 wymiarów) przez OpenRouter API (`openai/text-embedding-3-small`). Zwraca `list[float]`.
 - `generate_embeddings_batch(texts, api_key, batch_size=20)` — batch generacja embeddingów.
 - `process_curriculum_document(document_id, db, api_key)` — background pipeline: PDF → Markdown → Chunki → Embeddingi → zapis do bazy. Aktualizuje status dokumentu (`processing` → `ready` / `error`).
 - `search_similar_chunks(query_embedding, db, limit, threshold, edu_level, subject)` — wyszukiwanie najbardziej podobnych chunków za pomocą pgvector cosine similarity (raw SQL). Zwraca listę wyników z metadanymi dokumentu.
 - `check_compliance(generation_id, db, api_key)` — sprawdza zgodność pytań prototypu z Podstawą Programową: embeddingi pytań → search → ranking. Zapisuje JSON do `prototype.compliance_json`. Zwraca `ComplianceResponse`.
 - `_extract_requirement_code(text)` — regex extraction kodu wymagania z tekstu.
+- W skonsolidowanej migracji `001` kolumna `embedding vector(1536)` jest tworzona dla `curriculum_chunks`; indeks HNSW jest tworzony warunkowo. Na środowiskach pgvector z limitem 2000 wymiarów dla HNSW nad `vector`, migracja pomija indeks i kontynuuje start aplikacji (bez blokowania inicjalizacji backendu).
 
 ---
 

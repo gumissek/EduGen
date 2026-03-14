@@ -279,7 +279,7 @@ Tabela przechowująca fragmenty (chunki) tekstu z dokumentów PP wraz z embeddin
 | content_hash | VARCHAR(64) | NOT NULL |
 | section_title | VARCHAR(500) | NULL |
 | heading_hierarchy | TEXT | NULL (JSON string) |
-| embedding | VECTOR(3072) | NULL (pgvector) |
+| embedding | VECTOR(1536) | NULL (pgvector) |
 | char_count | INTEGER | NOT NULL DEFAULT 0 |
 | created_at | TEXT | NOT NULL (ISO 8601) |
 
@@ -392,7 +392,7 @@ CREATE INDEX ix_curriculum_chunks_embedding ON curriculum_chunks USING hnsw (emb
 - Deduplikacja plików przez `file_content_cache` (klucz: SHA-256 hash pliku).
 - Klucze API szyfrowane AES przechowywane w tabeli `secret_keys` (wiele kluczy per użytkownik).
 - Preferencja modelu AI zapisana bezpośrednio w tabeli `users` (kolumna `default_model`).
-- Migracje schematu zarządzane przez **Alembic** (skonsolidowana migracja: `001`, tokeny weryfikacyjne: `002`, comments_json: `003`, tabele curriculum + pgvector: `004`).
+- Migracje schematu zarządzane przez **Alembic** (1 skonsolidowana migracja: `001_initial_schema.py`, zawierająca pełny aktualny schemat, w tym verification tokens, comments/compliance JSON oraz tabele curriculum + pgvector).
 - Tabela `settings` (legacy) została usunięta — cala funkcjonalność przeniesiona do `users` i `secret_keys`.
 - Tabela `verification_tokens` obsługuje weryfikację zmiany e-mail (link, 24h) i zmiany hasła (kod 6-cyfrowy, 5 min). W trybie lokalnym e-maile nie są wysyłane — serwis loguje dane do konsoli.
 

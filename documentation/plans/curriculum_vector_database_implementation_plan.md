@@ -173,11 +173,11 @@ Stores chunked text with vector embeddings and structural metadata.
 | `section_title` | TEXT | NULL |
 | `page_numbers` | TEXT | NULL (e.g. `"12-14"`) |
 | `metadata_json` | TEXT | NULL (JSON string) |
-| `embedding` | VECTOR(3072) | NULL, INDEX (ivfflat or hnsw) |
+| `embedding` | VECTOR(1536) | NULL, INDEX (ivfflat or hnsw) |
 | `created_at` | TEXT | NOT NULL (ISO 8601) |
 
 **Notes:**
-- `VECTOR(3072)` — dimension for `text-embedding-3-large` from OpenAI.
+- `VECTOR(1536)` — dimension for `text-embedding-3-small` from OpenAI.
 - `content_hash` (SHA-256 of chunk text) enables skip-if-exists caching — if a chunk with the same hash already exists for this document, skip embedding generation.
 - `heading_hierarchy` preserves the Markdown heading context (`#`, `##`, `###`) from the parent document so we know where in the curriculum structure this chunk lives.
 - `metadata_json` stores additional extraction metadata (tables detected, content type, etc.).
@@ -308,7 +308,7 @@ def upgrade():
         sa.Column("section_title", sa.Text(), nullable=True),
         sa.Column("page_numbers", sa.Text(), nullable=True),
         sa.Column("metadata_json", sa.Text(), nullable=True),
-        # VECTOR(3072) added via raw SQL below
+        # VECTOR(1536) added via raw SQL below
         sa.Column("created_at", sa.Text(), nullable=False),
     )
     op.create_index("ix_curriculum_chunks_document_id", "curriculum_chunks", ["document_id"])
@@ -316,7 +316,7 @@ def upgrade():
     op.create_unique_constraint("uq_curriculum_chunks_doc_index", "curriculum_chunks", ["document_id", "chunk_index"])
 
     # Add vector column (pgvector type, not native SQLAlchemy)
-    op.execute("ALTER TABLE curriculum_chunks ADD COLUMN embedding vector(3072)")
+    op.execute("ALTER TABLE curriculum_chunks ADD COLUMN embedding vector(1536)")
 
     # HNSW index for cosine similarity
     op.execute("""
@@ -403,7 +403,7 @@ class CurriculumChunk(Base):
     section_title = Column(Text, nullable=True)
     page_numbers = Column(Text, nullable=True)
     metadata_json = Column(Text, nullable=True)
-    # embedding column defined as vector(3072) in migration, accessed via raw SQL
+    # embedding column defined as vector(1536) in migration, accessed via raw SQL
     created_at = Column(Text, nullable=False)
 
     document = relationship("CurriculumDocument", back_populates="chunks")
@@ -558,8 +558,8 @@ def chunk_markdown(markdown_content: str, chunk_size: int = 1000, chunk_overlap:
 ```python
 def generate_embedding(text: str, api_key: str) -> list[float]:
     """
-    Generate embedding via OpenRouter using text-embedding-3-large.
-    Returns 3072-dimensional vector.
+    Generate embedding via OpenRouter using text-embedding-3-small.
+    Returns 1536-dimensional vector.
     """
     import requests
 
@@ -570,7 +570,7 @@ def generate_embedding(text: str, api_key: str) -> list[float]:
             "Content-Type": "application/json",
         },
         json={
-            "model": "openai/text-embedding-3-large",
+            "model": "openai/text-embedding-3-small",
             "input": text,
         },
         timeout=30,
@@ -598,7 +598,7 @@ def generate_embeddings_batch(texts: list[str], api_key: str) -> list[list[float
                 "Content-Type": "application/json",
             },
             json={
-                "model": "openai/text-embedding-3-large",
+                "model": "openai/text-embedding-3-small",
                 "input": batch,
             },
             timeout=60,
@@ -1313,7 +1313,7 @@ def ensure_directories():
 │       ├── Hash exists in DB? → Skip (cache hit)                     │
 │       │                                                             │
 │       ▼                                                             │
-│  [OpenRouter Embedding API] → text-embedding-3-large (dim 3072)     │
+│  [OpenRouter Embedding API] → text-embedding-3-small (dim 1536)     │
 │       │       → Batch of 100 chunks per request                     │
 │       ▼                                                             │
 │  [Store in curriculum_chunks] → content + embedding + metadata      │
@@ -1375,7 +1375,7 @@ This handles:
 - **Updated document** with minor changes: only changed chunks re-embedded.
 - **Completely different document**: all new hashes → all chunks embedded.
 
-**Cost estimation:** `text-embedding-3-large` costs ~$0.13/1M tokens. A 200-page curriculum PDF ≈ 300 chunks × 150 tokens = ~45K tokens ≈ $0.006. Negligible cost.
+**Cost estimation:** `text-embedding-3-small` costs $0.0001 per 1000 tokens (~750 words). With 1000-char chunks (~200 tokens), each embedding costs ~$0.00002. For a 50-page curriculum with ~20 chunks/page = 1000 chunks → $0.02 per document. Caching ensures that re-processing or similar documents incur minimal additional cost.
 
 ---
 
@@ -1710,7 +1710,7 @@ docker-compose.yml                           # Change postgres image to pgvector
 
 1. **Normalize `heading_hierarchy` as a separate table:** Instead of storing heading hierarchy as a JSON string per chunk, create a `curriculum_sections` table representing the document's TOC structure. Each chunk references its section. This enables searching/filtering by section without JSON parsing. However, this adds significant complexity — the JSON approach is pragmatic and sufficient for v1.
 
-2. **Embedding model versioning:** Add a `model_version` column to `curriculum_chunks` (e.g., `"text-embedding-3-large-2024"`) so that if the embedding model changes, old vectors can be identified and re-generated. Store model identifier in config as well.
+2. **Embedding model versioning:** Add a `model_version` column to `curriculum_chunks` (e.g., `"text-embedding-3-small"`) so that if the embedding model changes, old vectors can be identified and re-generated. Store model identifier in config as well.
 
 ### 12.5 Future Extension Points
 
@@ -1831,9 +1831,9 @@ No new environment variables required. The feature uses:
 
 | Property | Value |
 |---|---|
-| Model | `openai/text-embedding-3-large` |
+| Model | `openai/text-embedding-3-small` |
 | Provider | OpenRouter |
-| Dimensions | 3072 |
+| Dimensions | 1536 |
 | Max Input Tokens | 8191 |
 | Cost | ~$0.13 / 1M tokens |
 | Distance Metric | Cosine similarity (`<=>` operator in pgvector) |

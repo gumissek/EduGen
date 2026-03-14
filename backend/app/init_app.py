@@ -58,6 +58,22 @@ def _get_positive_float_env(name: str, default: float) -> float:
     return value
 
 
+def _get_bool_env(name: str, default: bool) -> bool:
+    """Read a boolean from env, falling back to default on invalid data."""
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+
+    normalized = raw.strip().lower()
+    if normalized in {"1", "true", "yes", "y", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "n", "off"}:
+        return False
+
+    logger.warning("[init] Invalid %s=%r. Using default=%s.", name, raw, default)
+    return default
+
+
 def create_database_if_not_exists() -> None:
     """Create the database if it doesn't exist.
     
@@ -135,7 +151,8 @@ def run_migrations() -> None:
         from alembic.config import Config
         from alembic.runtime.migration import MigrationContext
         from alembic.script import ScriptDirectory
-        from sqlalchemy import create_engine
+        from alembic.util.exc import CommandError
+        from sqlalchemy import create_engine, inspect
 
         from app.config import settings
 
@@ -143,6 +160,7 @@ def run_migrations() -> None:
         alembic_cfg = Config(str(alembic_cfg_path))
 
         connect_timeout_seconds = _get_positive_int_env("INIT_DB_CONNECT_TIMEOUT_SECONDS", 5)
+        auto_stamp_unversioned = _get_bool_env("INIT_DB_AUTO_STAMP_UNVERSIONED", True)
         engine = create_engine(
             settings.DATABASE_URL,
             connect_args={"connect_timeout": connect_timeout_seconds},
@@ -150,10 +168,59 @@ def run_migrations() -> None:
         with engine.connect() as conn:
             migration_ctx = MigrationContext.configure(conn)
             current_rev = migration_ctx.get_current_revision()
+            inspector = inspect(conn)
+            table_names = set(inspector.get_table_names())
+            user_tables = table_names - {"alembic_version"}
         engine.dispose()
 
         script = ScriptDirectory.from_config(alembic_cfg)
         head_rev = script.get_current_head()
+
+        has_unknown_current_rev = False
+        if current_rev is not None:
+            try:
+                has_unknown_current_rev = script.get_revision(current_rev) is None
+            except CommandError:
+                has_unknown_current_rev = True
+
+        if has_unknown_current_rev:
+            if auto_stamp_unversioned:
+                logger.warning(
+                    "[migrations] Detected unknown Alembic revision in DB (%s). "
+                    "Stamping database to head=%s.",
+                    current_rev,
+                    head_rev,
+                )
+                command.stamp(alembic_cfg, "head", purge=True)
+                logger.info("[migrations] Alembic version table stamped to head=%s.", head_rev)
+                return
+
+            logger.error(
+                "[migrations] Unknown Alembic revision in DB (%s). "
+                "Refusing automatic stamp because INIT_DB_AUTO_STAMP_UNVERSIONED=%s.",
+                current_rev,
+                auto_stamp_unversioned,
+            )
+            sys.exit(1)
+
+        if current_rev is None and user_tables:
+            if auto_stamp_unversioned:
+                logger.warning(
+                    "[migrations] Detected non-empty schema without Alembic revision (%s tables). "
+                    "Stamping database to head=%s instead of re-running initial migration.",
+                    len(user_tables),
+                    head_rev,
+                )
+                command.stamp(alembic_cfg, "head", purge=True)
+                logger.info("[migrations] Alembic version table stamped to head=%s.", head_rev)
+                return
+
+            logger.error(
+                "[migrations] Non-empty schema detected without Alembic revision. "
+                "Refusing automatic stamp because INIT_DB_AUTO_STAMP_UNVERSIONED=%s.",
+                auto_stamp_unversioned,
+            )
+            sys.exit(1)
 
         if current_rev == head_rev:
             logger.info("[migrations] Database is up to date (rev: %s).", current_rev)
@@ -163,6 +230,13 @@ def run_migrations() -> None:
             )
             command.upgrade(alembic_cfg, "head")
             logger.info("[migrations] Migrations applied successfully.")
+    except SystemExit as exc:
+        exit_code = exc.code if isinstance(exc.code, int) else 1
+        logger.error(
+            "[migrations] Alembic terminated startup with SystemExit(code=%s) — aborting.",
+            exit_code,
+        )
+        sys.exit(exit_code)
     except Exception:
         logger.exception("[migrations] Failed to apply migrations — aborting.")
         sys.exit(1)

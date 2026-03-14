@@ -307,7 +307,7 @@ if not exist "%PROJECT_ROOT%backend\.venv\Scripts\python.exe" (
     exit /b 1
 )
 
-start "EduGen-Backend [DEV]" /D "%PROJECT_ROOT%backend" cmd /k ".venv\Scripts\python.exe app\init_app.py && echo. && echo [Backend] Serwer gotowy - hot-reload wlaczony && echo. && .venv\Scripts\uvicorn.exe app.main:app --reload --host 0.0.0.0 --port 8000"
+start "EduGen-Backend [DEV]" /D "%PROJECT_ROOT%backend" cmd /k "call start_backend_dev.bat"
 
 timeout /t 2 /nobreak >nul
 

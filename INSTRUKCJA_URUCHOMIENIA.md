@@ -183,7 +183,7 @@ W głównym katalogu projektu dostępne są poniższe skrypty:
 - **`check_update.bat`** – sprawdzenie i opcjonalna aktualizacja wersji na Windows.
 - **`start_mac_linux.sh`** – standardowe uruchomienie aplikacji na macOS/Linux (Docker Compose). Jeśli wykryje istniejący stack Compose, usuwa go (`down --remove-orphans --rmi local`) i buduje aplikację od nowa.
 - **`check_update.sh`** – sprawdzenie i opcjonalna aktualizacja wersji na macOS/Linux.
-- **`dev_windows.bat`** – tryb deweloperski na Windows (backend i frontend w osobnych oknach, PostgreSQL lokalnie przez Docker jeśli dostępny). Przed startem synchronizuje `common_filles` z katalogu głównego do `backend/common_filles`.
+- **`dev_windows.bat`** – tryb deweloperski na Windows (backend i frontend w osobnych oknach, PostgreSQL lokalnie przez Docker jeśli dostępny). Przed startem synchronizuje `common_filles` z katalogu głównego do `backend/common_filles`. Uruchomienie backendu realizuje `backend/start_backend_dev.bat` (najpierw `init_app.py`, potem `uvicorn`) z czytelnym komunikatem błędu i kodem zakończenia.
 - **`launch_app.app`** – launcher macOS uruchamiający w Terminalu skrypt `start_mac_linux.sh`.
 - **`reset_images_volumes.bat`** – awaryjny hard reset na Windows. Najpierw zamyka cały stack z `docker-compose.yml` (jeśli istnieje), a następnie usuwa kontenery, obrazy i wolumeny Docker powiązane z EduGen po wymaganym potwierdzeniu (`USUN_DANE`).
 - **`reset_images_volumes.sh`** – awaryjny hard reset na macOS/Linux. Najpierw zamyka cały stack z `docker-compose.yml` (jeśli istnieje), a następnie usuwa kontenery, obrazy i wolumeny Docker powiązane z EduGen po wymaganym potwierdzeniu (`USUN_DANE`).
