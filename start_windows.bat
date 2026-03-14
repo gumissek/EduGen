@@ -1,4 +1,14 @@
 @echo off
+if /i "%~1"=="--run-in-cmd" goto :main
+
+echo %CMDCMDLINE% | findstr /i /c:" /c " >nul
+if not errorlevel 1 (
+    start "EduGen Startup" cmd /k ""%~f0" --run-in-cmd"
+    exit /b 0
+)
+
+:main
+if /i "%~1"=="--run-in-cmd" shift /1
 setlocal EnableExtensions EnableDelayedExpansion
 
 pushd "%~dp0" >nul 2>&1

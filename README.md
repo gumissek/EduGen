@@ -58,6 +58,8 @@ The startup scripts handle Docker checks, automatic `.env` creation from `.env.e
 | **macOS** | `launch_app.app` | Double-click (Finder) — opens Terminal and calls `start_mac_linux.sh` internally |
 | **macOS / Linux** | `start_mac_linux.sh` | `bash start_mac_linux.sh` in Terminal |
 
+On Windows, `start_windows.bat` now auto-reopens itself in a persistent `cmd` window when launched via double-click (`cmd /c`) so startup errors remain visible instead of the console closing immediately.
+
 > **macOS / Linux permissions:** Before first run, grant execute rights to the scripts:
 > ```bash
 > chmod +x start_mac_linux.sh run_tests_mac_linux.sh launch_app.app/Contents/MacOS/launch_app
