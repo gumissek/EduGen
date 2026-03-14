@@ -15,6 +15,9 @@ import { useSnackbar } from '@/components/ui/SnackbarProvider';
 import dynamic from 'next/dynamic';
 import RepromptInput from '@/components/editor/RepromptInput';
 import { extractCommentsFromHtml } from '@/components/editor/TipTapEditor';
+import ComplianceSidebar from '@/components/editor/ComplianceSidebar';
+import { useCurriculumCompliance } from '@/hooks/useCurriculum';
+import { ComplianceResult } from '@/types';
 
 // Lazy load TipTap to avoid SSR issues
 const TipTapEditor = dynamic(() => import('@/components/editor/TipTapEditor'), {
@@ -32,6 +35,7 @@ interface PrototypeData {
   original_content: string;
   edited_content: string | null;
   answer_key: string;
+  compliance_json: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -52,6 +56,16 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
   const { success, error } = useSnackbar();
   const [content, setContent] = React.useState('');
   const [isEdited, setIsEdited] = React.useState(false);
+  const [complianceOpen, setComplianceOpen] = React.useState(false);
+
+  // Fetch generation to check if compliance was enabled
+  const { data: generation } = useQuery<{ curriculum_compliance_enabled: boolean }>({
+    queryKey: ['generation', id],
+    queryFn: async () => {
+      const res = await api.get(`/api/generations/${id}`);
+      return res.data;
+    },
+  });
 
   // Fetch prototype data
   const { data: prototype, isLoading, isError } = useQuery<PrototypeData>({
@@ -63,6 +77,18 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
     retry: 3,
     retryDelay: 2000,
   });
+
+  const generationId = prototype?.generation_id ?? '';
+  const { runCompliance, complianceData: mutationComplianceData, isLoading: complianceLoading } = useCurriculumCompliance(generationId);
+
+  // Parse compliance from saved prototype or from fresh mutation result
+  const complianceData: ComplianceResult | null = React.useMemo(() => {
+    if (mutationComplianceData) return mutationComplianceData as ComplianceResult;
+    if (prototype?.compliance_json) {
+      try { return JSON.parse(prototype.compliance_json) as ComplianceResult; } catch { return null; }
+    }
+    return null;
+  }, [mutationComplianceData, prototype?.compliance_json]);
 
   React.useEffect(() => {
     if (prototype && !isEdited) {
@@ -218,6 +244,14 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
           >
             {finalizeMutation.isPending ? 'Finalizowanie...' : 'Finalizuj i Dodaj do Bazy'}
           </Button>
+          <ComplianceSidebar
+            complianceData={complianceData}
+            onRunCompliance={runCompliance}
+            isLoading={complianceLoading}
+            isOpen={complianceOpen}
+            onToggle={() => setComplianceOpen((o) => !o)}
+            isAvailable={generation?.curriculum_compliance_enabled ?? false}
+          />
         </Box>
       </Box>
 

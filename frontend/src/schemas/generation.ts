@@ -19,6 +19,7 @@ export const GenerationParamsSchema = z.object({
   variants_count: z.number().int().min(1).max(6),
   task_types: z.array(z.string()).optional(),
   source_file_ids: z.array(z.string().uuid()).optional(),
+  curriculum_compliance_enabled: z.boolean().optional().default(false),
 }).refine(
   (data) => {
     if ((TYPES_WITHOUT_QUESTIONS as readonly string[]).includes(data.content_type)) return true;

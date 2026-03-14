@@ -36,6 +36,7 @@ class TestBackendDockerfileRegression:
             "build-essential",
             "pkg-config",
             "libcairo2-dev",
+            "poppler-utils",
         ]
 
         for package in required_packages:
@@ -67,7 +68,7 @@ class TestDockerComposeRegression:
 
     def test_postgres_version_is_pinned(self):
         content = _read(COMPOSE_PATH)
-        assert "image: postgres:16" in content
+        assert "image: pgvector/pgvector:pg16" in content
 
     def test_backend_build_configuration_targets_backend_dockerfile(self):
         content = _read(COMPOSE_PATH)

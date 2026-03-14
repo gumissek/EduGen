@@ -14,6 +14,8 @@ from app.models.backup import Backup
 from app.models.diagnostic_log import DiagnosticLog
 from app.models.user_ai_model import UserAIModel
 from app.models.verification_token import VerificationToken
+from app.models.curriculum_document import CurriculumDocument
+from app.models.curriculum_chunk import CurriculumChunk
 
 __all__ = [
     "User",
@@ -30,4 +32,6 @@ __all__ = [
     "DiagnosticLog",
     "UserAIModel",
     "VerificationToken",
+    "CurriculumDocument",
+    "CurriculumChunk",
 ]

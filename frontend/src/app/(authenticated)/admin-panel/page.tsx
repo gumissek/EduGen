@@ -14,6 +14,7 @@ import PeopleIcon from '@mui/icons-material/People';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import SecurityIcon from '@mui/icons-material/Security';
 import StorageIcon from '@mui/icons-material/Storage';
+import MenuBookIcon from '@mui/icons-material/MenuBook';
 import { useRouter } from 'next/navigation';
 import { useAdminAccess } from '@/hooks/useAdminAccess';
 
@@ -60,6 +61,13 @@ const adminTiles: AdminTile[] = [
     icon: <SecurityIcon sx={{ fontSize: 48, color: 'error.main' }} />,
     path: null,
     enabled: false,
+  },
+  {
+    title: 'Podstawa Programowa',
+    description: 'Zarządzanie dokumentami Podstawy Programowej i bazą wektorową.',
+    icon: <MenuBookIcon sx={{ fontSize: 48, color: 'secondary.main' }} />,
+    path: '/admin-panel/curriculum',
+    enabled: true,
   },
 ];
 
