@@ -13,7 +13,7 @@ services:
     volumes:
       - edugen_postgres_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "${POSTGRES_HOST_PORT:-5432}:5432"
     networks:
       - backend_network
     healthcheck:
