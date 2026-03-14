@@ -13,6 +13,7 @@ class PrototypeResponse(BaseModel):
     original_content: str
     edited_content: Optional[str] = None
     answer_key: str
+    comments_json: Optional[str] = None
     created_at: str
     updated_at: str
 
@@ -22,6 +23,7 @@ class PrototypeResponse(BaseModel):
 
 class PrototypeUpdate(BaseModel):
     edited_content: str
+    comments_json: Optional[str] = None
 
 
 class RepromptRequest(BaseModel):

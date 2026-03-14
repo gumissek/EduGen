@@ -14,6 +14,7 @@ import { useRouter } from 'next/navigation';
 import { useDocumentDetails } from '@/hooks/useDocuments';
 import dynamic from 'next/dynamic';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import { extractCommentsFromHtml } from '@/components/editor/TipTapEditor';
 
 const TipTapEditor = dynamic(() => import('@/components/editor/TipTapEditor'), {
   ssr: false,
@@ -51,7 +52,8 @@ export default function DocumentDetailsPage({ params }: { params: Promise<{ id: 
   }, [document, isEdited]);
 
   const handleSave = async () => {
-    await updateDocument(content);
+    const commentsJson = extractCommentsFromHtml(content);
+    await updateDocument(content, commentsJson);
     setIsEdited(false);
   };
 
@@ -100,7 +102,7 @@ export default function DocumentDetailsPage({ params }: { params: Promise<{ id: 
             disabled={isMovingToDraft}
             sx={{ borderRadius: 2 }}
           >
-            Edytuj i przenieś na wersję roboczą
+            Edytuj z AI i przenieś na wersję roboczą
           </Button>
           <Button 
             variant="outlined" 

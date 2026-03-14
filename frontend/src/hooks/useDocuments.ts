@@ -66,8 +66,11 @@ export function useDocumentDetails(id: string) {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async (content: string) => {
-      const res = await api.put<Document>(`/api/documents/${id}`, { content });
+    mutationFn: async ({ content, commentsJson }: { content: string; commentsJson?: string | null }) => {
+      const res = await api.put<Document>(`/api/documents/${id}`, {
+        content,
+        comments_json: commentsJson ?? undefined,
+      });
       return res.data;
     },
     onSuccess: () => {
@@ -141,7 +144,8 @@ export function useDocumentDetails(id: string) {
     document: query.data,
     isLoading: query.isLoading,
     isError: query.isError,
-    updateDocument: updateMutation.mutateAsync,
+    updateDocument: (content: string, commentsJson?: string | null) =>
+      updateMutation.mutateAsync({ content, commentsJson }),
     isUpdating: updateMutation.isPending,
     exportPDF: generatePDFMutation.mutate,
     isExportingPDF: generatePDFMutation.isPending,

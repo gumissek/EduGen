@@ -65,6 +65,8 @@ export default function DiagnosticsPage() {
       return res.data;
     },
     enabled: isAuthorized,
+    refetchInterval: 30_000, // auto-refresh every 30 s
+    refetchIntervalInBackground: false,
   });
 
   const handleLevelChange = (_: React.MouseEvent<HTMLElement>, value: string | null) => {

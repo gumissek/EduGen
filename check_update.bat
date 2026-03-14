@@ -1,5 +1,11 @@
 @echo off
-setlocal EnableDelayedExpansion
+setlocal EnableExtensions EnableDelayedExpansion
+
+pushd "%~dp0" >nul 2>&1
+if errorlevel 1 (
+    echo [BLAD] Nie mozna przejsc do katalogu projektu.
+    exit /b 1
+)
 
 set REPO_URL=https://github.com/gumissek/EduGen
 set REMOTE_VERSION_URL=https://raw.githubusercontent.com/gumissek/EduGen/master/.version
@@ -20,13 +26,19 @@ echo Pobieranie informacji o repozytorium...
 set REMOTE_VERSION=
 set TEMP_VERSION=%TEMP%\edugen_remote_version.txt
 
+where curl.exe >nul 2>&1
+if errorlevel 1 (
+    echo [UWAGA] Narzedzie curl nie jest dostepne. Pomijam sprawdzanie aktualizacji.
+    echo.
+    goto koniec
+)
+
 :: [ZMIANA 1] Uzycie systemowego curl zamiast ciezkiego powershella
 curl.exe -s -f -o "%TEMP_VERSION%" "%REMOTE_VERSION_URL%"
 if %ERRORLEVEL% NEQ 0 (
     echo [UWAGA] Nie mozna pobrac pliku .version z: %REPO_URL% ^(%MASTER_BRANCH%^). Sprawdz polaczenie z internetem.
     echo.
     goto koniec
-    exit /b 0
 )
 
 if exist "%TEMP_VERSION%" (
@@ -37,7 +49,6 @@ if exist "%TEMP_VERSION%" (
 if "%REMOTE_VERSION%"=="" (
     echo [UWAGA] Nie mozna odczytac zdalnej wersji z pobranego pliku.
     echo.
-    exit /b 0
     goto koniec
 )
 
@@ -49,7 +60,7 @@ echo.
 if "%LOCAL_VERSION%"=="%REMOTE_VERSION%" (
     echo [OK] Masz najnowsza wersje aplikacji (%LOCAL_VERSION%).
     echo.
-    exit /b 0
+    goto koniec
 )
 
 echo [INFO] Dostepna jest nowa wersja aplikacji!
@@ -64,7 +75,6 @@ if /i "%UPDATE%"=="T" (
     if !ERRORLEVEL! NEQ 0 (
         echo [UWAGA] Git nie jest zainstalowany. Nie moge wykonac automatycznej aktualizacji.
         echo.
-        exit /b 0
         goto koniec
     )
 
@@ -72,7 +82,6 @@ if /i "%UPDATE%"=="T" (
     if !ERRORLEVEL! NEQ 0 (
         echo [UWAGA] Katalog nie jest repozytorium git - wykonaj aktualizacje recznie.
         echo.
-        exit /b 0
         goto koniec
     )
 
@@ -82,17 +91,16 @@ if /i "%UPDATE%"=="T" (
         echo [UWAGA] Jestes na galezi '!CURRENT_BRANCH!'.
         echo         Automatyczna aktualizacja obsluguje tylko galaz '%MASTER_BRANCH%'.
         echo.
-        exit /b 0
         goto koniec
     )
 
     :: [ZMIANA 2] Sprawdzenie czy sa niezatwierdzone zmiany przed wykonaniem pull
+    set HAS_CHANGES=
     for /f %%i in ('git status --porcelain') do set HAS_CHANGES=1
     if defined HAS_CHANGES (
         echo [BLAD] Wykryto lokalne zmiany w plikach projektu. 
         echo [BLAD] Automatyczna aktualizacja zostala przerwana, aby nie nadpisac Twojej pracy.
         echo.
-        exit /b 0
         goto koniec
     )
 
@@ -105,7 +113,7 @@ if /i "%UPDATE%"=="T" (
         echo [OK] Aktualizacja pobrana! Zmiany w plikach skryptow mogly zostac nadpisane.
         echo Zamknij to okno i uruchom aplikacje ponownie.
         pause
-        exit
+        goto koniec
     ) else (
         echo.
         echo [BLAD] Nie udalo sie wykonac automatycznej aktualizacji (Sprawdz logi gita powyzej).
@@ -115,4 +123,5 @@ if /i "%UPDATE%"=="T" (
 )
 :koniec
 echo.
+popd
 exit /b 0

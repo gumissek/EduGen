@@ -18,6 +18,7 @@ import AlertTitle from '@mui/material/AlertTitle';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import SchoolIcon from '@mui/icons-material/School';
+import VpnKeyIcon from '@mui/icons-material/VpnKey';
 import NextLink from 'next/link';
 import Typography from '@mui/material/Typography';
 import { useForm, FormProvider, useWatch } from 'react-hook-form';
@@ -28,6 +29,7 @@ import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useGenerations } from '@/hooks/useGenerations';
 import { useSubjects } from '@/hooks/useSubjects';
 import { useLevels } from '@/hooks/useLevels';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { CONTENT_TYPES } from '@/lib/constants';
 
 import StepContentType from './StepContentType';
@@ -58,6 +60,7 @@ export default function GenerationWizard() {
   const [confirmOpen, setConfirmOpen] = React.useState(false);
   const [draft, setDraft, removeDraft] = useLocalStorage<Partial<GenerationParamsForm>>('edugen-generation-draft', defaultValues);
   const { subjects, isLoading: subjectsLoading } = useSubjects();
+  const { user, isLoading: userLoading } = useCurrentUser();
 
   const methods = useForm<GenerationParamsForm>({
     resolver: zodResolver(GenerationParamsSchema),
@@ -145,6 +148,45 @@ export default function GenerationWizard() {
     removeDraft();
     removeStep();
   });
+
+  // No API key and no quota – show blocking alert
+  const canGenerate = userLoading || !user || user.has_secret_keys || user.api_quota > 0;
+  if (!canGenerate) {
+    return (
+      <Alert
+        severity="error"
+        icon={<VpnKeyIcon />}
+        sx={{
+          justifyContent: "center",
+          textAlign: "center",
+          "& .MuiAlert-message": {
+            width: "100%"
+          }
+        }}
+      >
+        <AlertTitle sx={{ textAlign: "center" }}>
+          Brak dostępu do generowania
+        </AlertTitle>
+
+        <Box>
+          Nie masz aktywnego klucza API OpenRouter ani dostępnej puli zapytań (quota).
+          Aby generować materiały, dodaj własny klucz API lub skontaktuj się z administratorem w celu doładowania quota.
+        </Box>
+
+        <Box sx={{ mt: 1 }}>
+          <Button
+            component={NextLink}
+            href="/settings"
+            color="inherit"
+            size="small"
+            variant="outlined"
+          >
+            Przejdź do Ustawień
+          </Button>
+        </Box>
+      </Alert>
+    );
+  }
 
   // No subjects yet – show blocking alert
   if (!subjectsLoading && subjects.length === 0) {

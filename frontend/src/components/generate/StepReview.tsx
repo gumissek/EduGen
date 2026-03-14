@@ -157,7 +157,7 @@ export default function StepReview() {
       </Paper>
       
       <Typography variant="body2" color="text.secondary">
-        Sprawdź powyższe dane. Jeśli wszystko się zgadza, kliknij &quot;Generuj materiał&quot;, aby rozpocząć generowanie prototypu przez AI (OpenRouter).
+        Sprawdź powyższe dane. Jeśli wszystko się zgadza, kliknij &quot;Generuj materiał&quot;, aby rozpocząć generowanie prototypu przez AI.
       </Typography>
     </Box>
   );

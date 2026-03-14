@@ -20,14 +20,7 @@ export const DIFFICULTY_LEVELS = [
 
 export const LANGUAGE_LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'] as const;
 
-export const ALLOWED_FILE_TYPES = [
-  'application/pdf',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'image/jpeg',
-  'image/png',
-];
-
-export const MAX_FILE_SIZE_MB = 10;
+const MAX_FILE_SIZE_MB = 10;
 export const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 export const SESSION_TIMEOUT_MS = 15 * 60 * 1000;
 export const SESSION_WARNING_MS = 14 * 60 * 1000;

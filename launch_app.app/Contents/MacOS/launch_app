@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# EduGen launcher — otwiera Terminal i uruchamia aplikacje
+
+PROJECT_DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
+
+osascript << EOF
+tell application "Terminal"
+    activate
+    do script "cd '$PROJECT_DIR' && bash start_mac_linux.sh; echo; read -r -p 'Press Enter to close...' dummy"
+end tell
+EOF

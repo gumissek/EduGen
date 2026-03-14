@@ -133,8 +133,6 @@ export default function StepSourceFiles() {
           );
         })}
       </List>
-      
-      {/* We need ListItemButton imported from MUI, so let's use it */}
     </Box>
   );
 }

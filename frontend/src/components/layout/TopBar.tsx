@@ -12,6 +12,7 @@ import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 import LogoutIcon from '@mui/icons-material/Logout';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
@@ -40,6 +41,7 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
   if (pathname.includes('/settings')) title = 'Ustawienia';
   if (pathname.includes('/diagnostics')) title = 'Diagnostyka';
   if (pathname.includes('/admin-panel')) title = 'Panel administracyjny';
+  if (pathname.includes('/profile')) title = 'Mój profil';
 
   const handleLogout = () => {
     logout();
@@ -76,7 +78,7 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
         >
           <MenuIcon />
         </IconButton>
-        <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 700, letterSpacing: '-0.01em', mr: 2 }}>
+        <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 700, letterSpacing: '-0.01em', mr: 2, display: { xs: 'none', sm: 'block' } }}>
           {title}
         </Typography>
 
@@ -102,16 +104,43 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
 
           {/* Quota chip — show only if user has no secret keys */}
           {user && !user.has_secret_keys && (
-            <Tooltip title={user.api_quota_reset ? `Reset: ${user.api_quota_reset}` : 'Limit zapytań API'}>
-              <Chip
-                label={`Quota: ${user.api_quota}`}
-                size="small"
-                variant="outlined"
-                color="warning"
-                sx={{ fontWeight: 600, fontSize: '0.75rem', flexShrink: 0 }}
-              />
+            <Tooltip title="Limit zapytań API">
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
+                <Chip
+                  label={`Quota: ${user.api_quota}`}
+                  size="small"
+                  variant="outlined"
+                  color="warning"
+                  sx={{ fontWeight: 600, fontSize: '0.75rem' }}
+                />
+                {user.api_quota_reset && (
+                  <Typography
+                    variant="caption"
+                    sx={{ fontSize: '0.6rem', color: 'text.secondary', lineHeight: 1, mt: 0.25 }}
+                    noWrap
+                  >
+                    Reset: {new Date(user.api_quota_reset).toLocaleDateString('pl-PL')}
+                  </Typography>
+                )}
+              </Box>
             </Tooltip>
           )}
+
+          {/* Profile button */}
+          <Tooltip title="Mój profil">
+            <IconButton
+              color="inherit"
+              onClick={() => router.push('/profile')}
+              sx={{
+                bgcolor: 'action.hover',
+                flexShrink: 0,
+                '&:hover': { bgcolor: 'action.selected', transform: 'scale(1.05)' },
+                transition: 'all 0.2s',
+              }}
+            >
+              <AccountCircleIcon />
+            </IconButton>
+          </Tooltip>
 
           {/* Admin panel button — superuser only */}
           {user?.is_superuser && (

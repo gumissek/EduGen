@@ -13,6 +13,7 @@ from app.models.ai_request import AIRequest
 from app.models.backup import Backup
 from app.models.diagnostic_log import DiagnosticLog
 from app.models.user_ai_model import UserAIModel
+from app.models.verification_token import VerificationToken
 
 __all__ = [
     "User",
@@ -28,4 +29,5 @@ __all__ = [
     "Backup",
     "DiagnosticLog",
     "UserAIModel",
+    "VerificationToken",
 ]

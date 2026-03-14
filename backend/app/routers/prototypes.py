@@ -33,7 +33,7 @@ from app.schemas.prototype import (
     PrototypeListResponse,
 )
 from app.services.ai_service import call_openrouter_reprompt, call_openrouter_reprompt_free_form, TYPES_WITHOUT_QUESTIONS
-from app.services.generation_service import _render_content_html, _build_answer_key
+from app.services.generation_service import render_content_html, build_answer_key
 
 router = APIRouter(prefix="/prototypes", tags=["prototypes"])
 
@@ -139,6 +139,8 @@ def update_prototype(
     prototype = _get_user_prototype(db, generation_id, current_user.id)
 
     prototype.edited_content = body.edited_content
+    if body.comments_json is not None:
+        prototype.comments_json = body.comments_json
     prototype.updated_at = datetime.now(timezone.utc).isoformat()
     db.commit()
     db.refresh(prototype)
@@ -249,8 +251,8 @@ async def reprompt(
         )
 
         # Update prototype
-        new_content = _render_content_html(result, generation.content_type)
-        new_answer_key = _build_answer_key(result)
+        new_content = render_content_html(result, generation.content_type)
+        new_answer_key = build_answer_key(result)
 
         prototype.edited_content = new_content
         prototype.answer_key = new_answer_key
@@ -353,6 +355,7 @@ def copy_prototype_draft(
         edited_content=prototype.edited_content,
         answer_key=prototype.answer_key,
         raw_questions_json=prototype.raw_questions_json,
+        comments_json=prototype.comments_json,
         created_at=now_iso,
         updated_at=now_iso,
     )

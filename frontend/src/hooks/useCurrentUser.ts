@@ -23,7 +23,9 @@ export function useCurrentUser() {
       const res = await api.get<CurrentUser>('/api/auth/me');
       return res.data;
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   return {

@@ -29,7 +29,7 @@ services:
     container_name: edugen-backend
     stop_grace_period: 2s # natychmiastowe ubijanie kontenera
     ports:
-      - "127.0.0.1:8000:8000"
+      - "0.0.0.0:8000:8000"
     volumes:
       - edugen_data:/app/data
       - ./common_filles:/app/common_filles:ro
@@ -65,7 +65,7 @@ services:
     container_name: edugen-frontend
     stop_grace_period: 2s # natychmiastowe ubijanie kontenera
     ports:
-      - "127.0.0.1:3000:3000"
+      - "0.0.0.0:3000:3000"
     volumes:
       - ./common_filles:/app/common_filles:ro
     environment:

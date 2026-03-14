@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import traceback
 from datetime import datetime, timezone
 
@@ -17,8 +18,10 @@ from app.models.source_file import SourceFile
 from app.models.diagnostic_log import DiagnosticLog
 from app.services.ai_service import build_system_prompt, call_openrouter, TYPES_WITHOUT_QUESTIONS
 
+logger = logging.getLogger(__name__)
 
-def _render_content_html(data: dict, content_type: str = "") -> str:
+
+def render_content_html(data: dict, content_type: str = "") -> str:
     """Render AI-generated JSON into HTML content for the WYSIWYG editor."""
     if not isinstance(data, dict):
         return "<p><em>Błąd renderowania: nieprawidłowy format danych AI.</em></p>"
@@ -58,7 +61,7 @@ def _render_content_html(data: dict, content_type: str = "") -> str:
     return "\n".join(html_parts)
 
 
-def _build_answer_key(data: dict) -> str:
+def build_answer_key(data: dict) -> str:
     """Build an answer key from the AI response."""
     if not isinstance(data, dict):
         return "Klucz odpowiedzi: (brak danych)"
@@ -76,7 +79,10 @@ def generate_prototype_task(db: DBSession, generation_id: str) -> None:
     """Background task: generate AI prototype for a given generation."""
     generation = db.query(Generation).filter(Generation.id == generation_id).first()
     if not generation:
+        logger.warning("[generation] generation_id=%s not found — skipping.", generation_id)
         return
+
+    logger.info("[generation] Starting generation_id=%s content_type=%s.", generation_id, generation.content_type)
 
     try:
         # Update status
@@ -118,8 +124,8 @@ def generate_prototype_task(db: DBSession, generation_id: str) -> None:
 
         # Create prototype
         is_free_form = generation.content_type in TYPES_WITHOUT_QUESTIONS
-        original_content = _render_content_html(result, generation.content_type)
-        answer_key = "" if is_free_form else _build_answer_key(result)
+        original_content = render_content_html(result, generation.content_type)
+        answer_key = "" if is_free_form else build_answer_key(result)
         # For free-form types, don't store raw questions JSON (there are none)
         raw_json = None if is_free_form else json.dumps(result, ensure_ascii=False)
 
@@ -135,8 +141,10 @@ def generate_prototype_task(db: DBSession, generation_id: str) -> None:
         generation.status = "ready"
         generation.updated_at = datetime.now(timezone.utc).isoformat()
         db.commit()
+        logger.info("[generation] Completed generation_id=%s.", generation_id)
 
     except Exception as e:
+        logger.error("[generation] Failed generation_id=%s: %s", generation_id, e, exc_info=True)
         generation.status = "error"
         generation.error_message = str(e)
         generation.updated_at = datetime.now(timezone.utc).isoformat()

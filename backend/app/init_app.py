@@ -18,10 +18,9 @@ from pathlib import Path
 # Ensure the app package is importable when executed directly
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-)
+from app.logging_config import configure_logging  # noqa: E402
+
+configure_logging()
 logger = logging.getLogger(__name__)
 
 

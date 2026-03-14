@@ -9,12 +9,16 @@ This application emphasizes privacy and data control by running entirely on `loc
 ## 🚀 Key Features
 
 - **Multi-user Support**: JWT-based authentication system with individual accounts — each user's data is fully isolated.
-- **AI Orchestration**: Integration with **OpenRouter** (`https://openrouter.ai`) for flexible model selection across providers. Users manage their own model list (`user_ai_models`) and select their preferred model in the Settings panel. API keys are stored encrypted in the `secret_keys` table.
-- **Source File Processing**: OCR capabilities for images/scans using Vision, text extraction from PDF (via PyMuPDF) and DOCX (via python-docx).
-- **Drafting & Finalization**: WYSIWYG Editor (TipTap) to review/edit AI prototypes, followed by DOCX generation with shuffled questions for multiple test variants.
+- **AI Orchestration**: Integration with **OpenRouter** (`https://openrouter.ai`) for flexible model selection across providers. Users manage their own model list (`user_ai_models`) and select their preferred model in the Settings panel. API keys are stored encrypted in the `secret_keys` table. 4 default AI models (Gemini, Nemotron, GPT-5.1, GPT-5-mini) are seeded at registration.
+- **Source File Processing**: OCR capabilities for images/scans using Vision, text extraction from PDF (via PyMuPDF) and DOCX (via python-docx). Global content deduplication via SHA-256 hash cache.
+- **Drafting & Finalization**: WYSIWYG Editor (TipTap) to review/edit AI prototypes, followed by DOCX generation with shuffled questions for multiple test variants. Final DOCX and PDF export supported.
 - **Privacy & Security**: Entirely local environment (`localhost` only, no LAN access), AES-encrypted API keys stored in `secret_keys` table, bcrypt-hashed passwords, and automatic daily database backups.
 - **Secure Key Handling**: OpenRouter API keys are managed only through backend endpoints and encrypted storage (not persisted in browser `localStorage`).
 - **Background Processing**: FastAPI BackgroundTasks for async AI generation and document processing.
+- **Profile & Account Management**: Verified email change (token link, 24h) and verified password change (6-digit code, 5 min) flows.
+- **Admin Panel**: Superuser-only panel for user management and full database backup/restore.
+- **Diagnostics**: Superuser-only diagnostic log viewer with JSONL export.
+- **Draft Recovery**: Generation wizard state (including active step) persisted in `localStorage` — survives browser refresh and generation errors.
 - **Unified UX Shell**: Separate topbars for authenticated vs public routes, plus a global footer (logo + contact) visible across the app.
 
 ---
@@ -22,7 +26,7 @@ This application emphasizes privacy and data control by running entirely on `loc
 ## 🛠 Tech Stack
 
 **Frontend**
-- **Framework**: Next.js 15+ (App Router)
+- **Framework**: Next.js 16 (App Router)
 - **Language**: TypeScript
 - **UI Library**: Material UI (MUI) with Dark/Light mode support
 - **State Management**: TanStack Query (React Query)
@@ -33,9 +37,9 @@ This application emphasizes privacy and data control by running entirely on `loc
 - **Framework**: FastAPI (Asynchronous, High Performance)
 - **Package Manager**: `uv` (fast package manager replacing pip/poetry)
 - **Database**: PostgreSQL 16 (SQLAlchemy ORM + `psycopg` driver + Alembic for migrations)
-- **Auth**: JWT (`python-jose`/`PyJWT`), bcrypt password hashing
+- **Auth**: JWT (PyJWT), bcrypt password hashing
 - **AI Integration**: OpenRouter REST API (via `requests`); model preference stored per-user in `users.default_model`, available models managed in `user_ai_models` table, API keys in `secret_keys` table
-- **Document Tooling**: `python-docx` (DOCX), `PyMuPDF` (PDF extraction)
+- **Document Tooling**: `python-docx` (DOCX), `PyMuPDF` (PDF extraction), `markdownify` + `pypandoc` (Pandoc) for DOCX export, `xhtml2pdf` + `reportlab` for PDF export
 - **Orchestration**: Docker Compose (3 services: `postgres`, `backend`, `frontend`)
 
 ---
@@ -46,20 +50,20 @@ EduGen is designed for fully containerized local execution via Docker Compose.
 
 **Option 1: Automated Startup (Recommended)**
 
-The startup scripts handle Docker checks, automatic `.env` creation from `.config_backend`, update checks via `check_update.bat` / `check_update.sh`, and automatic browser launch (~15 s after start):
+The startup scripts handle Docker checks, automatic `.env` creation from `.env.example`, update checks via `check_update.bat` / `check_update.sh` (on `master` branch), and automatic browser launch (~15 s after start):
 
 | Platform | Script | How to run |
 |---|---|---|
 | **Windows** | `start_windows.bat` | Double-click the file |
-| **macOS** | `Uruchom_Mac.command` | Double-click (Finder) — calls `start_mac_linux.sh` internally |
+| **macOS** | `launch_app.app` | Double-click (Finder) — opens Terminal and calls `start_mac_linux.sh` internally |
 | **macOS / Linux** | `start_mac_linux.sh` | `bash start_mac_linux.sh` in Terminal |
 
 > **macOS / Linux permissions:** Before first run, grant execute rights to the scripts:
 > ```bash
-> chmod +x start_mac_linux.sh Uruchom_Mac.command
+> chmod +x start_mac_linux.sh run_tests_mac_linux.sh launch_app.app/Contents/MacOS/launch_app
 > ```
 
-> If `backend/.env` is missing, the startup scripts automatically copy the bundled `.config_backend` template to `backend/.env`. Remember to add your own OpenRouter API Key in the Settings panel before generating materials.
+> If `.env` is missing at the project root, the startup scripts automatically create it from the `.env.example` template. Remember to add your own OpenRouter API Key in the Settings panel before generating materials.
 
 > App runs at `http://localhost:3000` (Frontend) and `http://localhost:8000` (Backend).
 
@@ -75,6 +79,36 @@ The startup scripts handle Docker checks, automatic `.env` creation from `.confi
 - **macOS / Linux:** Press `CTRL + C` in the Terminal — the `trap` handler automatically calls `docker compose down`.
 
 **Option 2: Local Development (Manual)**
+
+For Windows development mode, you can also use the automation script from the repository root:
+
+```bat
+dev_windows.bat
+```
+
+This script prepares backend/frontend dependencies, starts PostgreSQL (when Docker is available), and opens separate terminal windows for backend and frontend dev servers.
+On first Pandoc installation, if `pandoc` is not immediately available in the current PATH, the script now continues with a warning instead of stopping the full development startup.
+
+Additional utility scripts in project root:
+
+- `check_update.bat` - standalone update check for Windows.
+- `check_update.sh` - standalone update check for macOS/Linux.
+- `start_windows.bat` - production-like Docker startup for Windows.
+- `start_mac_linux.sh` - production-like Docker startup for macOS/Linux.
+- `run_tests_windows.bat` - runs backend tests on Windows.
+- `run_tests_mac_linux.sh` - runs backend tests on macOS/Linux.
+
+Run backend tests from project root:
+
+```bash
+# macOS / Linux
+bash run_tests_mac_linux.sh
+```
+
+```bat
+:: Windows
+run_tests_windows.bat
+```
 
 **Backend:**
 Ensure Python 3.12+ and `uv` are installed.

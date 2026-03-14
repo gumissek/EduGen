@@ -13,8 +13,10 @@ from fastapi.responses import JSONResponse
 
 from app.config import settings
 from app.database import SessionLocal
+from app.logging_config import configure_logging
 from app.models import *  # noqa: F401, F403 — register all models
 
+configure_logging()
 logger = logging.getLogger(__name__)
 
 

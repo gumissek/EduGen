@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
 # ── Sprawdzenie aktualnej gałęzi Git ─────────────────────────────────────────
 # Używamy || echo "", aby zapobiec przerwaniu skryptu przez 'set -e', gdy nie ma repozytorium
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
@@ -79,6 +82,18 @@ fi
 echo "[OK] Docker Desktop jest zainstalowany i uruchomiony."
 echo ""
 
+DOCKER_COMPOSE_CMD=""
+if docker compose version &>/dev/null; then
+    DOCKER_COMPOSE_CMD="docker compose"
+elif command -v docker-compose &>/dev/null; then
+    DOCKER_COMPOSE_CMD="docker-compose"
+else
+    echo "[BLAD] Brak polecenia docker compose oraz docker-compose."
+    echo "Zainstaluj plugin compose lub docker-compose i uruchom skrypt ponownie."
+    echo ""
+    exit 1
+fi
+
 # Sprawdz czy istnieje plik .env w glownym katalogu projektu
 if [ ! -f ".env" ]; then
     echo "[UWAGA] Brak pliku konfiguracyjnego .env"
@@ -99,14 +114,24 @@ if [ ! -f ".env" ]; then
     fi
 fi
 
+POSTGRES_PORT="$(grep -E '^POSTGRES_PORT=' .env 2>/dev/null | head -n1 | cut -d'=' -f2 || true)"
+POSTGRES_PORT="${POSTGRES_PORT:-5432}"
+
 echo "[OK] Plik konfiguracyjny .env istnieje."
 echo ""
+
+if ! command -v pandoc &>/dev/null; then
+    echo "[INFO] Pandoc nie jest dostepny w systemie hosta."
+    echo "[INFO] To nie blokuje trybu Docker; wymagane zaleznosci eksportu sa obslugiwane przez kontenery."
+    echo ""
+fi
+
 echo "Budowanie i uruchamianie aplikacji..."
 echo "(Pierwsze uruchomienie moze trwac kilka minut - trwa pobieranie obrazow)"
 echo ""
 
 # ── Obsluga CTRL+C: zatrzymaj kontenery przy wyjsciu ─────────────────────────
-trap 'echo ""; echo "Zatrzymywanie kontenerow..."; docker compose down; exit 0' INT TERM
+trap 'echo ""; echo "Zatrzymywanie kontenerow..."; ${DOCKER_COMPOSE_CMD} down; exit 0' INT TERM
 
 # ── Otworz przegladarke po 15 sekundach ─────────────────────────────────────
 (
@@ -125,6 +150,7 @@ echo "============================================"
 echo ""
 echo "  Frontend (interfejs):  http://localhost:3000"
 echo "  Backend  (API):        http://localhost:8000"
+echo "  Baza danych:           localhost:${POSTGRES_PORT}"
 echo ""
 
 # Red stop instructions
@@ -141,10 +167,11 @@ printf "${CYAN}  Jezeli przeglądarka nie otworzyla sie automatycznie,${NC}\n"
 printf "${CYAN}  odwiedz recznie ponizsze adresy:${NC}\n"
 printf "${CYAN}  http://localhost:3000  (interfejs aplikacji)${NC}\n"
 printf "${CYAN}  http://localhost:8000  (API backendu)${NC}\n"
+printf "${CYAN}  localhost:${POSTGRES_PORT}  (PostgreSQL)${NC}\n"
 echo ""
 
 # Uruchamianie w trybie interaktywnym (CTRL+C zatrzyma kontenery)
-docker compose up --build
+${DOCKER_COMPOSE_CMD} up --build
 
 echo ""
 echo "============================================"

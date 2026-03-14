@@ -209,7 +209,11 @@ def _build_free_form_prompt(
         '  "title": "Tytuł materiału",\n'
         '  "content_html": "<p>Treść w formacie HTML...</p>"\n'
         "}\n"
-        "Użyj tagów HTML: <h1>, <h2>, <h3>, <p>, <ul>, <ol>, <li>, <strong>, <em>, <br>. "
+        "Użyj tagów HTML: <h1>, <h2>, <h3>, <p>, <ul>, <ol>, <li>, <strong>, <em>, <br>, "
+        "<table>, <thead>, <tbody>, <tr>, <th>, <td>. "
+        "Jeśli treść naturalnie wymaga zestawienia tabelarycznego "
+        "(np. porównanie, tabela z danymi, harmonogram, zestawienie cech), "
+        "użyj <table> z nagłówkami <th> w <thead>. "
         "Nie używaj bloków kodu Markdown. Zwróć czyste HTML w polu content_html."
     )
 
@@ -299,9 +303,8 @@ def call_openrouter(
         raise
 
 
-import json as _json
-import logging as _logging
-_reprompt_logger = _logging.getLogger(__name__)
+import logging
+_reprompt_logger = logging.getLogger(__name__)
 
 
 def _normalize_reprompt_response(data: dict) -> dict:
@@ -349,7 +352,9 @@ def call_openrouter_reprompt_free_form(
                 f"Użytkownik prosi o modyfikację istniejącego dokumentu: {type_hint}. "
                 "Zwróć CAŁY zmodyfikowany materiał w formacie JSON:\n"
                 '{"title": "Tytuł materiału", "content_html": "<p>Treść w HTML...</p>"}\n'
-                "Użyj tagów HTML: <h1>, <h2>, <h3>, <p>, <ul>, <ol>, <li>, <strong>, <em>, <br>. "
+                "Użyj tagów HTML: <h1>, <h2>, <h3>, <p>, <ul>, <ol>, <li>, <strong>, <em>, <br>, "
+                "<table>, <thead>, <tbody>, <tr>, <th>, <td>. "
+                "Jeśli treść wymaga zestawienia tabelarycznego, użyj <table> z nagłówkami <th> w <thead>. "
                 "Nie używaj bloków kodu Markdown."
             ),
         },

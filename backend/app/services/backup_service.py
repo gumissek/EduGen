@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import zipfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -16,6 +17,7 @@ from app.database import Base
 from app.models.backup import Backup
 from app.models.diagnostic_log import DiagnosticLog
 
+logger = logging.getLogger(__name__)
 
 BACKUP_RETENTION_DAYS = 7
 

@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
+import { logger } from '@/lib/logger';
+
 // Public routes that don't require authentication
 const PUBLIC_ROUTES = ['/', '/about', '/login', '/register'];
 
@@ -20,14 +22,17 @@ export function proxy(request: NextRequest) {
   if (!isAuthenticated && !isPublicRoute) {
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('from', pathname);
+    logger.warn(`[middleware] Unauthenticated access to ${pathname} — redirecting to /login.`);
     return NextResponse.redirect(loginUrl);
   }
 
   // If authenticated and trying to access /login → redirect to /dashboard
   if (isAuthenticated && AUTH_ONLY_ROUTES.some((route) => pathname.startsWith(route))) {
+    logger.info(`[middleware] Authenticated user at ${pathname} — redirecting to /dashboard.`);
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
+  logger.info(`[middleware] ${request.method} ${pathname}`);
   return NextResponse.next();
 }
 
