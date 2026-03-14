@@ -41,13 +41,18 @@ class TestGenerationCreateSchema:
         gen = GenerationCreate(**self._VALID)
         assert gen.content_type == "test"
 
+    def test_difficulty_upper_bound_valid(self):
+        data = {**self._VALID, "difficulty": 5}
+        gen = GenerationCreate(**data)
+        assert gen.difficulty == 5
+
     def test_invalid_content_type(self):
         data = {**self._VALID, "content_type": "invalid_type"}
         with pytest.raises(ValidationError):
             GenerationCreate(**data)
 
     def test_difficulty_out_of_range(self):
-        data = {**self._VALID, "difficulty": 5}
+        data = {**self._VALID, "difficulty": 6}
         with pytest.raises(ValidationError):
             GenerationCreate(**data)
 

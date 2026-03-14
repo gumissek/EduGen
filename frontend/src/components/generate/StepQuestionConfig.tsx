@@ -4,15 +4,21 @@ import * as React from 'react';
 import { useFormContext, Controller } from 'react-hook-form';
 import Grid2 from '@mui/material/Grid2';
 import TextField from '@mui/material/TextField';
-import MenuItem from '@mui/material/MenuItem';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
+import Slider from '@mui/material/Slider';
 import Autocomplete, { createFilterOptions } from '@mui/material/Autocomplete';
 import { GenerationParamsForm } from '@/schemas/generation';
-import { DIFFICULTY_LEVELS } from '@/lib/constants';
 import { useTaskTypes } from '@/hooks/useTaskTypes';
 
 const filter = createFilterOptions<string>();
+const DIFFICULTY_MARKS = [
+  { value: 1, label: 'Bardzo łatwy' },
+  { value: 2, label: 'Łatwy' },
+  { value: 3, label: 'Średni' },
+  { value: 4, label: 'Trudny' },
+  { value: 5, label: 'Bardzo trudny' },
+];
 
 export default function StepQuestionConfig() {
   const { register, watch, control, formState: { errors } } = useFormContext<GenerationParamsForm>();
@@ -134,21 +140,32 @@ export default function StepQuestionConfig() {
         </Grid2>
 
         <Grid2 size={{xs:12, md:6}} >
-          <TextField
-            select
-            fullWidth
-            label="Poziom trudności AI"
-            error={!!errors.difficulty}
-            helperText={errors.difficulty?.message}
-            {...register('difficulty', { valueAsNumber: true })}
-            value={watch('difficulty')}
-          >
-            {DIFFICULTY_LEVELS.map((diff) => (
-              <MenuItem key={diff.value} value={diff.value}>
-                {diff.label}
-              </MenuItem>
-            ))}
-          </TextField>
+          <Controller
+            name="difficulty"
+            control={control}
+            render={({ field }) => (
+              <Box sx={{ px: 1, py: 1 }}>
+                <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 500 }}>
+                  Poziom trudności AI: {watch('difficulty')}
+                </Typography>
+                <Slider
+                  value={Number(field.value ?? 1)}
+                  onChange={(_, value) => field.onChange(value as number)}
+                  min={1}
+                  max={5}
+                  step={1}
+                  marks={DIFFICULTY_MARKS}
+                  valueLabelDisplay="auto"
+                  aria-label="Poziom trudności AI"
+                />
+                {errors.difficulty?.message && (
+                  <Typography variant="caption" color="error" sx={{ mt: 0.5, display: 'block' }}>
+                    {errors.difficulty.message}
+                  </Typography>
+                )}
+              </Box>
+            )}
+          />
         </Grid2>
 
         <Grid2 size={{xs:12, md:6}} >

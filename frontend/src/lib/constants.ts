@@ -12,10 +12,11 @@ export const EDUCATION_LEVELS = [
 ] as const;
 
 export const DIFFICULTY_LEVELS = [
-  { value: 1, label: 'Łatwy' },
-  { value: 2, label: 'Średni' },
-  { value: 3, label: 'Trudny' },
-  { value: 4, label: 'Bardzo trudny' },
+  { value: 1, label: 'Bardzo łatwy' },
+  { value: 2, label: 'Łatwy' },
+  { value: 3, label: 'Średni' },
+  { value: 4, label: 'Trudny' },
+  { value: 5, label: 'Bardzo trudny' },
 ] as const;
 
 export const LANGUAGE_LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'] as const;

@@ -19,10 +19,11 @@ OPENROUTER_TITLE = "EduGen Local"
 
 
 DIFFICULTY_LABELS = {
-    1: "łatwy",
-    2: "średni",
-    3: "trudny",
-    4: "bardzo trudny",
+    1: "bardzo łatwy",
+    2: "łatwy",
+    3: "średni",
+    4: "trudny",
+    5: "bardzo trudny",
 }
 
 # Maps frontend enum values → human-readable Polish labels.

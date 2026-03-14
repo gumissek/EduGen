@@ -12,7 +12,7 @@ export const GenerationParamsSchema = z.object({
   language_level: z.enum(['A1', 'A2', 'B1', 'B2', 'C1', 'C2']).nullable().optional(),
   topic: z.string().min(1, 'Temat jest wymagany').max(500),
   instructions: z.string().max(2000).optional(),
-  difficulty: z.number().int().min(1).max(4),
+  difficulty: z.number().int().min(1).max(5),
   total_questions: z.number().int().min(0).max(50),
   open_questions: z.number().int().min(0),
   closed_questions: z.number().int().min(0),

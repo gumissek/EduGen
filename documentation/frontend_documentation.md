@@ -223,7 +223,7 @@ Główny proces biznesowy to generowanie dokumentów. Elementy go wspierające:
   - Używa `react-hook-form` z `zodResolver`.
 - **`StepContentType.tsx`** — wybór typu materiału (kartkówka, sprawdzian, test, quiz, materiały lekcyjne). Karty w gridzie 3/2/1 kolumny z ikoną, etykietą i stanem zaznaczenia.
 - **`StepSubjectConfig.tsx`** — wybór przedmiotu (dropdown), poziomu edukacji i klasy (Autocomplete z możliwością dodawania niestandardowych wartości), poziomu językowego (opcjonalnie, tylko dla przedmiotów językowych). Możliwość usuwania niestandardowych poziomów.
-- **`StepQuestionConfig.tsx`** — definicja: łączna liczba pytań (0–50), pytania otwarte/zamknięte, typy zadań (Autocomplete multi-select z możliwością tworzenia nowych), stopień trudności (1–4), liczba wariantów (1–6), instrukcje (textarea, opcjonalne).
+- **`StepQuestionConfig.tsx`** — definicja: łączna liczba pytań (0–50), pytania otwarte/zamknięte, typy zadań (Autocomplete multi-select z możliwością tworzenia nowych), stopień trudności (slider 1–5), liczba wariantów (1–6), instrukcje (textarea, opcjonalne).
 - **`StepSourceFiles.tsx`** — lista plików z checkboxami do selekcji. Statusy plików: przetwarzanie (spinner), błąd (z podpowiedzią: NO_API_KEY, RATE_LIMIT), gotowy (podsumowanie + liczba stron). EmptyState jeśli brak plików.
 - **`StepReview.tsx`** — podsumowanie konfiguracji w komponencie Paper z sekcjami: typ materiału, przedmiot, poziom, konfiguracja pytań, pliki źródłowe (jako Chip).
 - **`GenerationStatusView.tsx`** — obsługa statusów zadania generacji:
@@ -316,7 +316,7 @@ Centralny moduł logowania dla całego frontendu:
 ### `src/lib/constants.ts`
 - Typy treści z polskimi etykietami: worksheet, test, quiz, exam, lesson_materials.
 - Poziomy edukacji z zakresem klas: primary, secondary.
-- Poziomy trudności: 1–4 (Łatwy → Bardzo trudny).
+- Poziomy trudności: 1–5 (Bardzo łatwy → Bardzo trudny).
 - Poziomy językowe: A1–C2.
 - Limit rozmiaru pliku: `MAX_FILE_SIZE_BYTES` = 10 MB.
 - Timeouty sesji: `SESSION_TIMEOUT_MS` = 15 min, `SESSION_WARNING_MS` = 14 min.

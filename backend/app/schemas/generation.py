@@ -15,7 +15,7 @@ class GenerationCreate(BaseModel):
     language_level: Optional[str] = None  # A1-C2
     topic: str
     instructions: Optional[str] = None
-    difficulty: int  # 1-4
+    difficulty: int  # 1-5
     total_questions: int
     open_questions: int
     closed_questions: int
@@ -68,8 +68,8 @@ class GenerationCreate(BaseModel):
     @field_validator('difficulty')
     @classmethod
     def validate_difficulty(cls, v: int) -> int:
-        if v < 1 or v > 4:
-            raise ValueError('Trudność musi być między 1 a 4')
+        if v < 1 or v > 5:
+            raise ValueError('Trudność musi być między 1 a 5')
         return v
 
     @field_validator('variants_count')

@@ -510,7 +510,7 @@ Schematy request/response zorganizowane w dedykowane pliki:
 
 - **`auth.py`** — `RegisterRequest`, `LoginRequest`, `LoginResponse`, `UserResponse`, `LogoutResponse`, `UpdateProfileRequest`, `ChangePasswordRequest`, `UserStatsResponse`, `RequestEmailChangeRequest/Response`, `ConfirmEmailChangeResponse`, `RequestPasswordChangeCodeRequest/Response`, `ConfirmPasswordChangeRequest/Response`.
 - **`admin.py`** — `AdminUserResponse`, `AdminUserListResponse`, `AdminUserUpdateRequest`, `AdminResetPasswordRequest`, `AdminSimpleMessageResponse`.
-- **`generation.py`** — `GenerationCreate` (z walidacją cross-field: `closed_questions`, `content_type` enum, `difficulty` 1–4, `variants_count` 1–6), `GenerationResponse`, `GenerationListResponse`.
+- **`generation.py`** — `GenerationCreate` (z walidacją cross-field: `closed_questions`, `content_type` enum, `difficulty` 1–5, `variants_count` 1–6), `GenerationResponse`, `GenerationListResponse`.
 - **`prototype.py`** — `PrototypeResponse`, `PrototypeUpdate`, `RepromptRequest`, `PrototypeListItemResponse`, `PrototypeListResponse`.
 - **`document.py`** — `DocumentResponse`, `DocumentDetailResponse`, `DocumentListItemResponse`, `DocumentUpdateRequest`, `DocumentListResponse`, `BulkDownloadRequest`, `MoveToDraftResponse`.
 - **`file.py`** — `FileResponse` (z `has_extracted_text`, `extraction_error`), `FileListResponse`.
