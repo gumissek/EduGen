@@ -90,6 +90,34 @@ def list_curriculum_documents(
     )
 
 
+@router.get("/documents/admin", response_model=CurriculumDocumentListResponse)
+def list_curriculum_documents_admin(
+    education_level: str | None = None,
+    subject_name: str | None = None,
+    status_filter: str | None = None,
+    db: DBSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+):
+    """List curriculum documents for admin (all statuses)."""
+    del current_user  # dependency enforces superuser access
+
+    query = db.query(CurriculumDocument)
+
+    if education_level:
+        query = query.filter(CurriculumDocument.education_level == education_level)
+    if subject_name:
+        query = query.filter(CurriculumDocument.subject_name == subject_name)
+    if status_filter:
+        query = query.filter(CurriculumDocument.status == status_filter)
+
+    documents = query.order_by(CurriculumDocument.created_at.desc()).all()
+
+    return CurriculumDocumentListResponse(
+        documents=[CurriculumDocumentResponse.model_validate(d) for d in documents],
+        total=len(documents),
+    )
+
+
 @router.get("/documents/{document_id}", response_model=CurriculumDocumentResponse)
 def get_curriculum_document(
     document_id: str,

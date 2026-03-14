@@ -177,7 +177,7 @@ Aplikacja korzysta z Next.js App Router. Wszystkie pliki `page.tsx` w folderach 
 - `/admin-panel` — panel administracyjny (wyłącznie dla superuserów) z kafelkami do sekcji zarządzania
   - `/admin-panel/users` — pełne zarządzanie użytkownikami (lista, edycja, usuwanie, reset hasła)
   - `/admin-panel/database` — pełny backup bazy (utworzenie zrzutu, pobranie, upload, restore)
-  - `/admin-panel/curriculum` — zarządzanie dokumentami Podstawy Programowej (upload PDF, status przetwarzania, usuwanie, reprocessing)
+  - `/admin-panel/curriculum` — zarządzanie dokumentami Podstawy Programowej (upload PDF, status przetwarzania, usuwanie, reprocessing). Upload i przetwarzanie wymagają aktywnego klucza API OpenRouter przypisanego do konta administratora (komunikat ostrzegawczy + blokada przycisku uploadu, gdy klucz nie jest skonfigurowany).
 
 #### Aktualny podział na `/dashboard`
 - Widok materiałów ma 2 zakładki:
@@ -194,7 +194,7 @@ Aplikacja korzysta z Next.js App Router. Wszystkie pliki `page.tsx` w folderach 
 - `/register` — ekran rejestracji nowego konta (email, imię, nazwisko, hasło, potwierdzenie hasła)
 - `/verify-email-change` — strona weryfikacji zmiany e-mail (przyjmuje `?token=...` z linku weryfikacyjnego, wywołuje `GET /api/auth/verify-email-change` i przekierowuje do `/email-change-succeeded`)
 - `/email-change-succeeded` — strona sukcesu po zmianie e-mail (komunikat + automatyczne wylogowanie i przekierowanie do `/login` po 10 sekundach)
-- `/state-documents/pp` — lista dokumentów Podstawy Programowej z chipami statusu, poziomu edukacji i przedmiotu, oraz możliwością pobrania pliku PDF; dla niezalogowanych renderowana jako strona publiczna, a dla zalogowanych wewnątrz `MainLayout` (z `Sidebar` + `TopBar`).
+- `/state-documents/pp` — lista gotowych dokumentów Podstawy Programowej (`status=ready`) renderowana jako wiersze dokumentów (nazwa pliku + chipy poziomu/przedmiotu/statusu + link źródłowy otwierany w nowej karcie + pobieranie PDF). Dla niezalogowanych renderowana jako strona publiczna, a dla zalogowanych wewnątrz `MainLayout` (z `Sidebar` + `TopBar`). Dokumenty `uploaded/processing/error` nie są tu pokazywane.
 - Publiczne strony korzystają z `PublicChrome` (stały topbar + stała stopka) i mają oddzielny topbar od strefy zalogowanej, z wyjątkiem `/state-documents/pp`, gdzie dla aktywnej sesji użytkownika publiczny chrome jest ukrywany.
 
 ---
@@ -436,6 +436,16 @@ Aplikacja korzysta z systemu breakpoints MUI (`xs / sm / md / lg`). Zasady stoso
 - **Przyciski akcji** w nagłówkach (dashboard, editor, documents) — `flexDirection: { xs: 'column', sm: 'row' }` i `width: { xs: '100%', sm: 'auto' }`.
 - **Diagnostics** — `TableContainer` z `overflowX: 'auto'` i kolumna Metadane ukryta na `xs`/`sm`.
 - **Sidebar** — na `xs`/`sm` tymczasowy `Drawer` (overlay), stały tylko od `md`.
+
+### Strona administracyjna `/admin-panel/curriculum`
+- Lista dokumentów jest pobierana z endpointu administracyjnego `GET /api/curriculum/documents/admin`, dzięki czemu administrator widzi wszystkie statusy (`uploaded`, `processing`, `ready`, `error`).
+- Upload dokumentu wysyła `FormData` bez ręcznego nadpisywania nagłówka `Content-Type`, aby przeglądarka mogła poprawnie dodać `multipart/form-data` boundary.
+- Walidacja po stronie UI przed wysyłką: tylko PDF oraz maksymalny rozmiar 50 MB (spójnie z backendem), a także wymagane pola `Poziom edukacji`, `Przedmiot` i `Link do źródła` (URL `http/https`, zapisywany w polu `description` API).
+- Obsługa błędów API normalizuje format `detail` z FastAPI (string/lista), dzięki czemu użytkownik widzi konkretną przyczynę `400/422` zamiast generycznego komunikatu.
+- Sekcja „Wgrane dokumenty" korzysta z listy wierszy (`CurriculumDocumentRow`) i pokazuje: nazwę pliku, chipy metadanych/statusu, klikalny link źródłowy, datę dodania, przycisk pobierania PDF oraz akcje admina (ponowne przetwarzanie/usuwanie).
+- W wariancie administratora `CurriculumDocumentRow` pokazuje pełne metadane: liczba stron (`page_count`), liczba chunków (`chunk_count`), data utworzenia (`created_at`), data modyfikacji (`updated_at`) oraz pełny `error_message` (jeśli występuje).
+- Układ wiersza jest zoptymalizowany mobilnie: akcje i metadane zawijają się na małych ekranach, a kluczowe CTA mają większy obszar kliku.
+- Strony `/state-documents/pp` i `/admin-panel/curriculum` używają theme-aware kolorów tekstu i powierzchni sekcji/wierszy opartych o tokeny MUI (`palette.mode`, `alpha`), aby zachować czytelność i kontrast w Light/Dark mode.
 
 ---
 

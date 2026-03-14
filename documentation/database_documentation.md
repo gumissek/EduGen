@@ -284,6 +284,8 @@ Tabela przechowująca fragmenty (chunki) tekstu z dokumentów PP wraz z embeddin
 | created_at | TEXT | NOT NULL (ISO 8601) |
 
 > - UniqueConstraint na `(document_id, chunk_index)`.
+> - `content_hash` to SHA-256 tekstu chunka (UTF-8) i klucz logiczny cache embeddingów między dokumentami.
+> - Podczas przetwarzania backend najpierw szuka istniejących embeddingów po `content_hash`; tylko brakujące hashe są wysyłane batchowo do API embeddingów.
 > - Indeks HNSW (cosine) na kolumnie `embedding` dla szybkiego wyszukiwania wektorowego: `m=16, ef_construction=64`.
 > - Wymaga rozszerzenia PostgreSQL `vector` (pgvector).
 
@@ -376,6 +378,7 @@ CREATE INDEX ix_curriculum_documents_status ON curriculum_documents(status);
 
 -- Curriculum chunks
 CREATE UNIQUE INDEX uq_curriculum_chunks_doc_index ON curriculum_chunks(document_id, chunk_index);
+CREATE INDEX ix_curriculum_chunks_content_hash ON curriculum_chunks(content_hash);
 CREATE INDEX ix_curriculum_chunks_embedding ON curriculum_chunks USING hnsw (embedding vector_cosine_ops) WITH (m = 16, ef_construction = 64);
 ```
 
@@ -390,6 +393,7 @@ CREATE INDEX ix_curriculum_chunks_embedding ON curriculum_chunks USING hnsw (emb
 - JWT zastępuje sesje serwerowe — tabela `sessions` została usunięta.
 - Soft delete dla plików (`source_files.deleted_at`) i dokumentów (`documents.deleted_at`).
 - Deduplikacja plików przez `file_content_cache` (klucz: SHA-256 hash pliku).
+- Deduplikacja embeddingów curriculum działa globalnie po `curriculum_chunks.content_hash`.
 - Klucze API szyfrowane AES przechowywane w tabeli `secret_keys` (wiele kluczy per użytkownik).
 - Preferencja modelu AI zapisana bezpośrednio w tabeli `users` (kolumna `default_model`).
 - Migracje schematu zarządzane przez **Alembic** (1 skonsolidowana migracja: `001_initial_schema.py`, zawierająca pełny aktualny schemat, w tym verification tokens, comments/compliance JSON oraz tabele curriculum + pgvector).

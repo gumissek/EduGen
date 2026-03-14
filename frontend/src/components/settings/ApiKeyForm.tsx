@@ -77,7 +77,7 @@ export default function ApiKeyForm() {
             Twoje klucze API
           </Typography>
           <Chip
-            label={secretKeys.length > 0 ? `${secretKeys.length} kluczy` : 'Brak kluczy'}
+            label={secretKeys.length > 0 ? `Liczba kluczy: ${secretKeys.length}` : 'Brak kluczy'}
             size="small"
             color={secretKeys.length > 0 ? 'success' : 'error'}
             variant="outlined"

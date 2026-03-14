@@ -144,7 +144,7 @@ export default function ModelSelector() {
             Twoje modele AI
           </Typography>
           <Chip
-            label={models.length > 0 ? `${models.length} modeli` : 'Brak modeli'}
+            label={models.length > 0 ? `Liczba modeli: ${models.length}` : 'Brak modeli'}
             size="small"
             color={models.length > 0 ? 'success' : 'error'}
             variant="outlined"

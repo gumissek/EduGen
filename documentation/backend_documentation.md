@@ -313,6 +313,13 @@ Serwis obsługujący pipeline wektorowej bazy Podstawy Programowej (RAG):
 - `search_similar_chunks(query_embedding, db, limit, threshold, edu_level, subject)` — wyszukiwanie najbardziej podobnych chunków za pomocą pgvector cosine similarity (raw SQL). Zwraca listę wyników z metadanymi dokumentu.
 - `check_compliance(generation_id, db, api_key)` — sprawdza zgodność pytań prototypu z Podstawą Programową: embeddingi pytań → search → ranking. Zapisuje JSON do `prototype.compliance_json`. Zwraca `ComplianceResponse`.
 - `_extract_requirement_code(text)` — regex extraction kodu wymagania z tekstu.
+- Serwis loguje kluczowe etapy przetwarzania (`Step 1/4`...`Step 4/4`) wraz z `document_id`, liczbą stron, ścieżką Markdown i statusem końcowym.
+- Mechanizm deduplikacji/cache chunków działa globalnie po `content_hash` (między dokumentami), a nie tylko w obrębie jednego dokumentu.
+- Dla każdego chunka logowany jest wynik cache lookup: `cache hit` (embedding skopiowany z istniejącego chunka) albo `cache miss` (chunk kolejkowany do batch embeddingu).
+- Podsumowanie deduplikacji jest raportowane w logach (`Chunk dedup summary`): liczba wszystkich chunków, `cache_hits`, `cache_misses` i `new_chunks`.
+- Gdy wszystkie chunki są obsłużone z cache, etap embeddingów jest pomijany i odnotowany (`all chunks served from cache`).
+- Wyszukiwanie semantyczne loguje parametry zapytania (`top_k`, `threshold`, filtry) i liczbę dopasowań.
+- W zapytaniach `text()` dla pgvector używany jest `CAST(:param AS vector)` zamiast składni `:param::vector`, aby zapewnić poprawne bindowanie parametrów przez SQLAlchemy + psycopg.
 - W skonsolidowanej migracji `001` kolumna `embedding vector(1536)` jest tworzona dla `curriculum_chunks`; indeks HNSW jest tworzony warunkowo. Na środowiskach pgvector z limitem 2000 wymiarów dla HNSW nad `vector`, migracja pomija indeks i kontynuuje start aplikacji (bez blokowania inicjalizacji backendu).
 
 ---
@@ -484,7 +491,8 @@ Architektura grupuje endpointy na moduły. Łącznie **58 endpointów** w 14 rou
 
 | Metoda | Ścieżka | Opis |
 |--------|---------|------|
-| GET | `/curriculum/documents` | Lista dokumentów PP. Publiczny. Filtry: `education_level`, `subject_name`. |
+| GET | `/curriculum/documents` | Lista dokumentów PP o statusie `ready` (publiczny). Filtry: `education_level`, `subject_name`. |
+| GET | `/curriculum/documents/admin` | Lista wszystkich dokumentów PP (superuser), niezależnie od statusu (`uploaded`, `processing`, `ready`, `error`). Filtry: `education_level`, `subject_name`, `status_filter`. |
 | POST | `/curriculum/documents` | Upload PDF (superuser). Metadata: `education_level`, `subject_name`, `description`. |
 | GET | `/curriculum/documents/{id}` | Szczegóły dokumentu PP (publiczny). |
 | GET | `/curriculum/documents/{id}/download` | Pobranie pliku PDF (publiczny). |
@@ -498,7 +506,7 @@ Architektura grupuje endpointy na moduły. Łącznie **58 endpointów** w 14 rou
 
 | Dependency | Routery |
 |---|---|
-| `get_current_superuser` | admin, backups, diagnostics, curriculum (upload/delete/status/reprocess) |
+| `get_current_superuser` | admin, backups, diagnostics, curriculum (admin list/upload/delete/status/reprocess) |
 | `get_current_user` | auth (większość), documents, files, generations, levels, prototypes, secret-keys, settings, subjects, user-ai-models, curriculum (search/compliance) |
 | Brak autoryzacji | `POST /auth/register`, `POST /auth/login`, `POST /auth/logout`, `GET /auth/verify-email-change`, task-types (wszystkie), curriculum (list/get/download) |
 
