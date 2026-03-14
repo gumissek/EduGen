@@ -42,7 +42,8 @@ services:
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
       - JWT_ALGORITHM=${JWT_ALGORITHM}
       - JWT_EXPIRATION_MINUTES=${JWT_EXPIRATION_MINUTES}
-    command: ["uv", "run", "sh", "-c", "python app/init_app.py && uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2"]
+      - BACKEND_RUN_TESTS_ON_STARTUP=${BACKEND_RUN_TESTS_ON_STARTUP:-true}
+    command: ["uv", "run", "sh", "-c", "if [ \"${BACKEND_RUN_TESTS_ON_STARTUP:-true}\" = \"true\" ]; then pytest tests/ --tb=short --no-header -q; fi && python app/init_app.py && uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2"]
     depends_on:
       postgres:
         condition: service_healthy
