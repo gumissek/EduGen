@@ -303,8 +303,98 @@ def search_similar_chunks(
     ]
 
 
+def _copy_chunks_from_document(db: DBSession, source_document_id: str, target_document_id: str) -> int:
+    """Copy all chunks (including embeddings) from source to target document.
+
+    Deletes any existing chunks for the target document first.
+    Returns the number of chunks copied.
+    """
+    source_count_row = db.execute(
+        text("SELECT COUNT(*) FROM curriculum_chunks WHERE document_id = :doc_id"),
+        {"doc_id": source_document_id},
+    ).scalar()
+    source_count = source_count_row or 0
+
+    logger.info(
+        "[curriculum] _copy_chunks: source_document_id=%s target_document_id=%s source_chunks=%d",
+        source_document_id,
+        target_document_id,
+        source_count,
+    )
+
+    # Remove any pre-existing chunks for the target document
+    deleted = db.execute(
+        text("DELETE FROM curriculum_chunks WHERE document_id = :doc_id"),
+        {"doc_id": target_document_id},
+    ).rowcount
+    if deleted > 0:
+        logger.info(
+            "[curriculum] _copy_chunks: cleared existing target chunks: target_document_id=%s deleted=%d",
+            target_document_id,
+            deleted,
+        )
+
+    if source_count == 0:
+        logger.warning(
+            "[curriculum] _copy_chunks: source document has no chunks — nothing to copy: source_document_id=%s",
+            source_document_id,
+        )
+        return 0
+
+    # Insert copies of all source chunks preserving their embeddings
+    result = db.execute(
+        text(
+            """
+            INSERT INTO curriculum_chunks (
+                id, document_id, chunk_index, content, content_hash,
+                heading_hierarchy, section_title, page_numbers, metadata_json,
+                embedding, created_at
+            )
+            SELECT
+                gen_random_uuid()::text,
+                :target_doc_id,
+                chunk_index,
+                content,
+                content_hash,
+                heading_hierarchy,
+                section_title,
+                page_numbers,
+                metadata_json,
+                embedding,
+                :now
+            FROM curriculum_chunks
+            WHERE document_id = :source_doc_id
+            ORDER BY chunk_index
+            """
+        ),
+        {
+            "target_doc_id": target_document_id,
+            "source_doc_id": source_document_id,
+            "now": datetime.now(timezone.utc).isoformat(),
+        },
+    )
+    copied = result.rowcount
+    db.flush()
+
+    logger.info(
+        "[curriculum] _copy_chunks: done: source_document_id=%s target_document_id=%s chunks_copied=%d",
+        source_document_id,
+        target_document_id,
+        copied,
+    )
+    return copied
+
+
 def process_curriculum_document(db: DBSession, document_id: str, api_key: str) -> None:
     """Full processing pipeline: PDF → Markdown → Chunks → Embeddings.
+
+    Caching strategy (two levels):
+      1. Document-level (Step 0): if another CurriculumDocument with the same
+         file_hash is already status='ready', copy all its chunks directly —
+         no PDF parsing or embedding API calls needed.
+      2. Content-hash level (Step 4): for each individual chunk, check whether
+         a chunk with the same content_hash already has an embedding in any
+         document. If yes, copy the embedding; otherwise call the embedding API.
 
     Runs as a background task.
     """
@@ -314,19 +404,71 @@ def process_curriculum_document(db: DBSession, document_id: str, api_key: str) -
         return
 
     try:
-        logger.info("[curriculum] Processing started: document_id=%s", document_id)
+        logger.info(
+            "[curriculum] Processing started: document_id=%s file_hash=%.12s original_filename=%s",
+            document_id,
+            document.file_hash,
+            document.original_filename,
+        )
 
         # Update status to processing
         document.status = "processing"
         document.updated_at = datetime.now(timezone.utc).isoformat()
         db.commit()
 
-        # Step 1: Get page count
+        # ── Step 0: Document-level cache ──────────────────────────────────────
+        logger.info(
+            "[curriculum] Step 0/4: document-level cache check: document_id=%s file_hash=%.12s",
+            document_id,
+            document.file_hash,
+        )
+        source_doc = (
+            db.query(CurriculumDocument)
+            .filter(
+                CurriculumDocument.file_hash == document.file_hash,
+                CurriculumDocument.id != document_id,
+                CurriculumDocument.status == "ready",
+            )
+            .first()
+        )
+
+        if source_doc:
+            logger.info(
+                "[curriculum] Step 0/4 cache HIT: document_id=%s reusing source_document_id=%s "
+                "source_chunk_count=%d — skipping full pipeline.",
+                document_id,
+                source_doc.id,
+                source_doc.chunk_count,
+            )
+            copied = _copy_chunks_from_document(db, source_doc.id, document_id)
+            document.page_count = source_doc.page_count
+            document.markdown_path = source_doc.markdown_path
+            document.chunk_count = copied
+            document.status = "ready"
+            document.error_message = None
+            document.updated_at = datetime.now(timezone.utc).isoformat()
+            db.commit()
+            logger.info(
+                "[curriculum] Processing finished via document-level cache: document_id=%s "
+                "status=ready chunks_copied=%d",
+                document_id,
+                copied,
+            )
+            return
+
+        logger.info(
+            "[curriculum] Step 0/4 cache MISS: document_id=%s — proceeding with full PDF pipeline.",
+            document_id,
+        )
+
+        # ── Step 1: Get page count ────────────────────────────────────────────
+        logger.info("[curriculum] Step 1/4: counting pages: document_id=%s file_path=%s", document_id, document.file_path)
         page_count = get_pdf_page_count(document.file_path)
         document.page_count = page_count
         logger.info("[curriculum] Step 1/4 done: document_id=%s page_count=%d", document_id, page_count)
 
-        # Step 2: Convert to Markdown
+        # ── Step 2: Convert PDF → Markdown ────────────────────────────────────
+        logger.info("[curriculum] Step 2/4: converting PDF to Markdown: document_id=%s", document_id)
         doc_dir = str(Path(document.file_path).parent)
         markdown_path = convert_pdf_to_markdown(document.file_path, doc_dir)
         document.markdown_path = markdown_path
@@ -336,7 +478,8 @@ def process_curriculum_document(db: DBSession, document_id: str, api_key: str) -
             markdown_path,
         )
 
-        # Step 3: Read markdown and chunk
+        # ── Step 3: Chunk the Markdown ────────────────────────────────────────
+        logger.info("[curriculum] Step 3/4: chunking markdown: document_id=%s", document_id)
         markdown_content = Path(markdown_path).read_text(encoding="utf-8")
         chunks_data = chunk_markdown(markdown_content)
         logger.info(
@@ -348,17 +491,42 @@ def process_curriculum_document(db: DBSession, document_id: str, api_key: str) -
         if not chunks_data:
             raise ValueError("No extractable text chunks from PDF")
 
-        # Step 4: Resolve per-chunk cache and generate missing embeddings.
+        # ── Step 4: Resolve content-hash cache and generate missing embeddings ─
+        logger.info(
+            "[curriculum] Step 4/4: resolving content-hash cache: document_id=%s total_chunks=%d",
+            document_id,
+            len(chunks_data),
+        )
+
         existing_doc_chunks = (
             db.query(CurriculumChunk)
             .filter(CurriculumChunk.document_id == document_id)
             .all()
         )
         existing_by_index = {chunk.chunk_index: chunk for chunk in existing_doc_chunks}
+        logger.info(
+            "[curriculum] Step 4/4: existing chunks in DB for this document: document_id=%s existing=%d",
+            document_id,
+            len(existing_doc_chunks),
+        )
 
+        # Compute content hashes for all incoming chunks
         content_hashes = [_compute_content_hash(chunk_data["content"]) for chunk_data in chunks_data]
         unique_content_hashes = list(dict.fromkeys(content_hashes))
+        logger.info(
+            "[curriculum] Step 4/4: content-hash stats: document_id=%s total=%d unique=%d",
+            document_id,
+            len(content_hashes),
+            len(unique_content_hashes),
+        )
 
+        # Query global cache: find any chunk (across all documents) that already
+        # has an embedding for each unique content_hash.
+        logger.info(
+            "[curriculum] Step 4/4: querying global content-hash cache: document_id=%s unique_hashes=%d",
+            document_id,
+            len(unique_content_hashes),
+        )
         cached_rows = db.execute(
             text(
                 """
@@ -375,6 +543,11 @@ def process_curriculum_document(db: DBSession, document_id: str, api_key: str) -
             {"content_hashes": unique_content_hashes},
         ).fetchall()
         cached_by_hash = {row[0]: {"id": row[1], "document_id": row[2]} for row in cached_rows}
+        logger.info(
+            "[curriculum] Step 4/4: global cache lookup result: document_id=%s hashes_with_cached_embedding=%d",
+            document_id,
+            len(cached_by_hash),
+        )
 
         pending_embeddings_by_hash: dict[str, dict[str, object]] = {}
         cache_copy_pairs: list[tuple[str, str]] = []
@@ -388,6 +561,12 @@ def process_curriculum_document(db: DBSession, document_id: str, api_key: str) -
 
             chunk_obj = existing_by_index.get(idx)
             if chunk_obj is None:
+                logger.debug(
+                    "[curriculum] Step 4/4: creating new chunk: document_id=%s chunk_index=%d hash=%.12s",
+                    document_id,
+                    idx,
+                    content_hash,
+                )
                 chunk_obj = CurriculumChunk(
                     id=str(uuid4()),
                     document_id=document_id,
@@ -400,34 +579,53 @@ def process_curriculum_document(db: DBSession, document_id: str, api_key: str) -
                 db.add(chunk_obj)
                 created_chunks += 1
             else:
+                logger.debug(
+                    "[curriculum] Step 4/4: updating existing chunk: document_id=%s chunk_index=%d "
+                    "old_hash=%.12s new_hash=%.12s chunk_id=%s",
+                    document_id,
+                    idx,
+                    chunk_obj.content_hash[:12] if chunk_obj.content_hash else "none",
+                    content_hash[:12],
+                    chunk_obj.id,
+                )
                 chunk_obj.content = content
                 chunk_obj.content_hash = content_hash
                 chunk_obj.heading_hierarchy = chunk_data.get("heading_hierarchy")
                 chunk_obj.section_title = chunk_data.get("section_title")
 
-            # Global cache lookup by content_hash (across all curriculum documents).
+            # Per-chunk content-hash cache lookup (global, across all documents)
             cached_source = cached_by_hash.get(content_hash)
 
             if cached_source:
                 cache_hits += 1
                 logger.info(
-                    "[curriculum] Chunk %d cache hit: hash=%s source_chunk_id=%s source_document_id=%s target_chunk_id=%s",
+                    "[curriculum] Step 4/4: chunk %d content-hash cache HIT: hash=%.12s "
+                    "source_chunk_id=%s source_document_id=%s target_chunk_id=%s",
                     idx,
                     content_hash[:12],
                     cached_source["id"],
                     cached_source["document_id"],
                     chunk_obj.id,
                 )
+                # Only schedule a copy when target and source are different rows
                 if cached_source["id"] != chunk_obj.id:
                     cache_copy_pairs.append((chunk_obj.id, cached_source["id"]))
+                else:
+                    logger.debug(
+                        "[curriculum] Step 4/4: chunk %d embedding already owned by this chunk — no copy needed: chunk_id=%s",
+                        idx,
+                        chunk_obj.id,
+                    )
             else:
                 cache_misses += 1
                 logger.info(
-                    "[curriculum] Chunk %d cache miss: hash=%s queued_for_embedding=true target_chunk_id=%s",
+                    "[curriculum] Step 4/4: chunk %d content-hash cache MISS: hash=%.12s "
+                    "queued_for_embedding=true target_chunk_id=%s",
                     idx,
                     content_hash[:12],
                     chunk_obj.id,
                 )
+                # Clear any stale embedding on existing chunks (no-op for brand-new chunks)
                 db.execute(
                     text("UPDATE curriculum_chunks SET embedding = NULL WHERE id = :id"),
                     {"id": chunk_obj.id},
@@ -439,10 +637,16 @@ def process_curriculum_document(db: DBSession, document_id: str, api_key: str) -
                         "target_ids": [chunk_obj.id],
                     }
                 else:
-                    pending["target_ids"].append(chunk_obj.id)
+                    pending["target_ids"].append(chunk_obj.id)  # type: ignore[union-attr]
 
         db.flush()
+        logger.info(
+            "[curriculum] Step 4/4: chunks flushed to DB: document_id=%s flushed=%d",
+            document_id,
+            len(chunks_data),
+        )
 
+        # Remove chunks whose index is no longer valid (document shrank)
         if len(existing_doc_chunks) > len(chunks_data):
             stale_chunks_removed = 0
             for stale_chunk in existing_doc_chunks:
@@ -451,39 +655,56 @@ def process_curriculum_document(db: DBSession, document_id: str, api_key: str) -
                     stale_chunks_removed += 1
             if stale_chunks_removed:
                 logger.info(
-                    "[curriculum] Removed stale chunks after reprocess: document_id=%s removed=%d",
+                    "[curriculum] Step 4/4: removed stale chunks (document shrank): "
+                    "document_id=%s removed=%d",
                     document_id,
                     stale_chunks_removed,
                 )
 
-        for target_id, source_id in cache_copy_pairs:
-            db.execute(
-                text(
-                    """
-                    UPDATE curriculum_chunks
-                    SET embedding = (SELECT embedding FROM curriculum_chunks WHERE id = :source_id)
-                    WHERE id = :target_id
-                    """
-                ),
-                {"target_id": target_id, "source_id": source_id},
+        # Apply embedding copies for content-hash cache hits
+        if cache_copy_pairs:
+            logger.info(
+                "[curriculum] Step 4/4: applying embedding copies for cache hits: "
+                "document_id=%s copy_pairs=%d",
+                document_id,
+                len(cache_copy_pairs),
             )
+            for target_id, source_id in cache_copy_pairs:
+                logger.debug(
+                    "[curriculum] Step 4/4: copying embedding: source_chunk_id=%s → target_chunk_id=%s",
+                    source_id,
+                    target_id,
+                )
+                db.execute(
+                    text(
+                        """
+                        UPDATE curriculum_chunks
+                        SET embedding = (SELECT embedding FROM curriculum_chunks WHERE id = :source_id)
+                        WHERE id = :target_id
+                        """
+                    ),
+                    {"target_id": target_id, "source_id": source_id},
+                )
 
         logger.info(
-            "[curriculum] Chunk dedup summary: document_id=%s total=%d cache_hits=%d cache_misses=%d new_chunks=%d",
+            "[curriculum] Step 4/4: content-hash cache summary: document_id=%s total=%d "
+            "cache_hits=%d cache_misses=%d new_chunks=%d copy_pairs=%d",
             document_id,
             len(chunks_data),
             cache_hits,
             cache_misses,
             created_chunks,
+            len(cache_copy_pairs),
         )
 
-        # Generate embeddings for new chunks
+        # Generate embeddings only for truly new/changed content
         hashes_to_embed = list(pending_embeddings_by_hash.keys())
         texts_to_embed = [pending_embeddings_by_hash[h]["content"] for h in hashes_to_embed]
 
         if texts_to_embed:
             logger.info(
-                "[curriculum] Step 4/4 started: document_id=%s embeddings_to_generate=%d unique_hashes=%d",
+                "[curriculum] Step 4/4: calling embedding API: document_id=%s "
+                "embeddings_to_generate=%d unique_hashes=%d",
                 document_id,
                 len(texts_to_embed),
                 len(hashes_to_embed),
@@ -493,6 +714,11 @@ def process_curriculum_document(db: DBSession, document_id: str, api_key: str) -
             for emb_idx, content_hash in enumerate(hashes_to_embed):
                 embedding_str = "[" + ",".join(str(x) for x in embeddings[emb_idx]) + "]"
                 target_ids = pending_embeddings_by_hash[content_hash]["target_ids"]
+                logger.debug(
+                    "[curriculum] Step 4/4: writing embedding: hash=%.12s target_chunk_ids=%s",
+                    content_hash[:12],
+                    target_ids,
+                )
                 for chunk_id in target_ids:
                     db.execute(
                         text("UPDATE curriculum_chunks SET embedding = CAST(:emb AS vector) WHERE id = :id"),
@@ -505,18 +731,19 @@ def process_curriculum_document(db: DBSession, document_id: str, api_key: str) -
             )
         else:
             logger.info(
-                "[curriculum] Step 4/4 skipped: document_id=%s all chunks served from cache",
+                "[curriculum] Step 4/4 skipped (all chunks served from cache): document_id=%s",
                 document_id,
             )
 
-        # Update document status
+        # Finalise document record
         document.chunk_count = len(chunks_data)
         document.status = "ready"
         document.error_message = None
         document.updated_at = datetime.now(timezone.utc).isoformat()
         db.commit()
         logger.info(
-            "[curriculum] Processing finished: document_id=%s status=ready chunks=%d cache_hits=%d cache_misses=%d new_chunks=%d",
+            "[curriculum] Processing finished: document_id=%s status=ready chunks=%d "
+            "cache_hits=%d cache_misses=%d new_chunks=%d",
             document_id,
             len(chunks_data),
             cache_hits,
