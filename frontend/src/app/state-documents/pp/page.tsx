@@ -13,8 +13,10 @@ import Grid2 from '@mui/material/Grid2';
 import DownloadIcon from '@mui/icons-material/Download';
 import DescriptionIcon from '@mui/icons-material/Description';
 import { useQuery } from '@tanstack/react-query';
+import Cookies from 'js-cookie';
 import api from '@/lib/api';
 import { CurriculumDocument } from '@/types';
+import MainLayout from '@/components/layout/MainLayout';
 
 interface CurriculumDocumentsResponse {
   documents: CurriculumDocument[];
@@ -22,6 +24,14 @@ interface CurriculumDocumentsResponse {
 }
 
 export default function CurriculumPublicPage() {
+  const [isMounted, setIsMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  const isAuthenticatedUser = isMounted ? Boolean(Cookies.get('edugen-auth')) : false;
+
   const { data, isLoading, isError } = useQuery<CurriculumDocumentsResponse>({
     queryKey: ['curriculum-documents-public'],
     queryFn: async () => {
@@ -39,14 +49,14 @@ export default function CurriculumPublicPage() {
     link.click();
   };
 
-  return (
+  const content = (
     <Box sx={{ maxWidth: 1200, mx: 'auto', p: { xs: 2, md: 4 } }}>
       <Typography variant="h4" fontWeight="bold" sx={{ mb: 1, fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
-        Podstawa Programowa — Źródła danych
+        Podstawa Programowa - Źródła danych
       </Typography>
       <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
         System EduGen wykorzystuje oficjalne dokumenty Podstawy Programowej MEN do weryfikacji zgodności
-        generowanych materiałów edukacyjnych z wymaganiami ministerialnymi.
+        generowanych materiałów edukacyjnych z wymaganiami Ministerstwa Edukacji Narodowej.
       </Typography>
 
       {isLoading && (
@@ -122,4 +132,10 @@ export default function CurriculumPublicPage() {
       </Grid2>
     </Box>
   );
+
+  if (isAuthenticatedUser) {
+    return <MainLayout>{content}</MainLayout>;
+  }
+
+  return content;
 }

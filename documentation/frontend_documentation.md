@@ -188,14 +188,14 @@ Aplikacja korzysta z Next.js App Router. Wszystkie pliki `page.tsx` w folderach 
     - Karty wersji roboczych mają akcję kopiowania (`POST /api/prototypes/{generation_id}/copy`).
 
 ### Ścieżki publiczne (w `src/app/`)
-- `/` — publiczna strona wejściowa (hero, karty funkcjonalności, CTA do logowania/rejestracji/about, placeholdery na przyszłe funkcje)
+- `/` — publiczna strona wejściowa (hero, karty funkcjonalności, CTA do logowania/rejestracji/about, sekcja z krótkim briefem o Podstawie Programowej i przejściem do `/state-documents/pp`, placeholdery na przyszłe funkcje)
 - `/about` — publiczna strona „O nas" z danymi zespołu
 - `/login` — ekran logowania (email + hasło, gradient background)
 - `/register` — ekran rejestracji nowego konta (email, imię, nazwisko, hasło, potwierdzenie hasła)
 - `/verify-email-change` — strona weryfikacji zmiany e-mail (przyjmuje `?token=...` z linku weryfikacyjnego, wywołuje `GET /api/auth/verify-email-change` i przekierowuje do `/email-change-succeeded`)
 - `/email-change-succeeded` — strona sukcesu po zmianie e-mail (komunikat + automatyczne wylogowanie i przekierowanie do `/login` po 10 sekundach)
-- `/state-documents/pp` — publiczna lista dokumentów Podstawy Programowej z chipami statusu, poziomu edukacji i przedmiotu, oraz możliwością pobrania pliku PDF
-- Publiczne strony korzystają z `PublicChrome` (stały topbar + stała stopka) i mają oddzielny topbar od strefy zalogowanej.
+- `/state-documents/pp` — lista dokumentów Podstawy Programowej z chipami statusu, poziomu edukacji i przedmiotu, oraz możliwością pobrania pliku PDF; dla niezalogowanych renderowana jako strona publiczna, a dla zalogowanych wewnątrz `MainLayout` (z `Sidebar` + `TopBar`).
+- Publiczne strony korzystają z `PublicChrome` (stały topbar + stała stopka) i mają oddzielny topbar od strefy zalogowanej, z wyjątkiem `/state-documents/pp`, gdzie dla aktywnej sesji użytkownika publiczny chrome jest ukrywany.
 
 ---
 
@@ -253,9 +253,9 @@ Główny proces biznesowy to generowanie dokumentów. Elementy go wspierające:
 ### `layout/`
 - **`MainLayout.tsx`** — główna struktura strefy zalogowanej: Sidebar (lewy panel) + TopBar (fixed u góry) + obszar treści (prawa strona). Na mobile Sidebar jako tymczasowy Drawer z toggle via TopBar. Tło: radialny gradient.
 - **`Sidebar.tsx`** — stały panel (260 px, desktop permanent / mobile temporary `Drawer`). Menu: Generuj, Materiały, Przedmioty i Pliki, Ustawienia, Mój profil. W dolnej sekcji: logo, kontakt e-mail, wersja aplikacji (`NEXT_PUBLIC_APP_NAME`, `NEXT_PUBLIC_APP_VERSION`, `NEXT_PUBLIC_APP_RELEASE_DATE`). Zmienne wstrzykiwane w czasie budowania — lokalnie z `.env.local`, w Dockerze jako build args.
-- **`TopBar.tsx`** — fixed, z blur backdrop, z-index ponad sidebarem. Po lewej: tytuł strony (kontekstowy). Po prawej: imię/nazwisko i email użytkownika, chip z api_quota (jeśli brak secret_keys), przycisk profilu, przycisk panelu admina (dla superuserów), globalny przycisk „Odśwież stronę", przełącznik motywu, przycisk wylogowania. Na mobile kolapsuje dane użytkownika.
+- **`TopBar.tsx`** — fixed, z blur backdrop, z-index ponad sidebarem. Po lewej: tytuł strony (kontekstowy, m.in. „Podstawa Programowa" dla `/state-documents/pp`). Po prawej: imię/nazwisko i email użytkownika, chip z api_quota (jeśli brak secret_keys), przycisk profilu, przycisk panelu admina (dla superuserów), globalny przycisk „Odśwież stronę", przełącznik motywu, przycisk wylogowania. Na mobile kolapsuje dane użytkownika.
 - **`PublicTopBar.tsx`** — topbar dla niezalogowanych: logo/link „EduGen", nawigacja (`Start`, `O nas`), przełącznik motywu, przyciski `Login`/`Register`. Stosuje bezpieczny dla hydracji render zależny od motywu (po montażu). Na `xs` krótsze etykiety CTA.
-- **`PublicChrome.tsx`** — warstwa layoutu dla publicznych tras. Renderuje `PublicTopBar` + `Toolbar` spacer + children + `AppFooter`. Ukrywa się na trasach zalogowanych. Utrzymuje stabilny markup SSR/CSR.
+- **`PublicChrome.tsx`** — warstwa layoutu dla publicznych tras. Renderuje `PublicTopBar` + `Toolbar` spacer + children + `AppFooter`. Ukrywa się na trasach zalogowanych oraz na `/state-documents/pp`, gdy wykryta jest aktywna sesja (`edugen-auth`), aby umożliwić render strefy zalogowanej (`MainLayout`). Utrzymuje stabilny markup SSR/CSR.
 - **`AppFooter.tsx`** — stopka: logo (`/logo.png`), branding „EduGen", kontakt e-mail. Prop `compact` steruje spacingiem.
 
 ### `documents/`

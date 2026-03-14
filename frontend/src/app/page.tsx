@@ -9,6 +9,7 @@ import Divider from '@mui/material/Divider';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import SchoolIcon from '@mui/icons-material/School';
 import DescriptionIcon from '@mui/icons-material/Description';
+import MenuBookIcon from '@mui/icons-material/MenuBook';
 
 export default function Home() {
   return (
@@ -60,6 +61,40 @@ export default function Home() {
       </Paper>
 
       <Grid2 container spacing={3}>
+        <Grid2 size={{ xs: 12 }}>
+          <Paper
+            variant="outlined"
+            sx={{
+              p: { xs: 2.5, md: 3.5 },
+              borderRadius: 3,
+              background: 'linear-gradient(135deg, rgba(1,72,131,0.08), rgba(1,72,131,0.03))',
+            }}
+          >
+            <Stack
+              direction={{ xs: 'column', md: 'row' }}
+              spacing={2}
+              justifyContent="space-between"
+              alignItems={{ xs: 'flex-start', md: 'center' }}
+            >
+              <Box>
+                <Stack direction="row" spacing={1.1} alignItems="center" sx={{ mb: 1 }}>
+                  <MenuBookIcon color="primary" />
+                  <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                    Podstawa Programowa
+                  </Typography>
+                </Stack>
+                <Typography color="text.secondary" sx={{ maxWidth: 760 }}>
+                  Przejrzyj oficjalne dokumenty MEN wykorzystywane przez EduGen do sprawdzania zgodności
+                  generowanych materiałów. W jednym miejscu zobaczysz listę źródeł i pobierzesz pliki PDF.
+                </Typography>
+              </Box>
+              <Button component="a" href="/state-documents/pp" variant="contained" sx={{ whiteSpace: 'nowrap' }}>
+                Podstawa Programowa
+              </Button>
+            </Stack>
+          </Paper>
+        </Grid2>
+
         <Grid2 size={{ xs: 12, md: 6 }}>
           <Paper variant="outlined" sx={{ p: 3, height: '100%', borderRadius: 3 }}>
             <Stack direction="row" spacing={1.25} alignItems="center" sx={{ mb: 1 }}>

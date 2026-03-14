@@ -38,6 +38,7 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
   if (pathname.includes('/dashboard')) title = 'Historia materiałów';
   if (pathname.includes('/generate')) title = 'Kreator materiałów';
   if (pathname.includes('/subjects')) title = 'Przedmioty i pliki';
+  if (pathname.includes('/state-documents/pp')) title = 'Podstawa Programowa';
   if (pathname.includes('/settings')) title = 'Ustawienia';
   if (pathname.includes('/diagnostics')) title = 'Diagnostyka';
   if (pathname.includes('/admin-panel')) title = 'Panel administracyjny';
