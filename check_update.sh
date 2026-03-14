@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # Celowo bez set -e - bledy sa obsługiwane recznie, aby nie zamykac terminala
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
 REPO_URL="https://github.com/gumissek/EduGen"
 REMOTE_VERSION_URL="https://raw.githubusercontent.com/gumissek/EduGen/master/.version"
 MASTER_BRANCH="master"
@@ -13,15 +16,15 @@ echo ""
 # Odczytaj lokalna wersje z pliku .version
 LOCAL_VERSION="unknown"
 if [ -f ".version" ]; then
-    LOCAL_VERSION=$(grep "^VERSION=" .version | cut -d'=' -f2 || echo "unknown")
+    LOCAL_VERSION=$(grep -m1 "^VERSION=" .version | cut -d'=' -f2 || echo "unknown")
 fi
 
 echo "Pobieranie informacji o repozytorium..."
 REMOTE_VERSION=""
 if command -v curl &>/dev/null; then
-    REMOTE_VERSION=$(curl -fsSL "$REMOTE_VERSION_URL" 2>/dev/null | grep "^VERSION=" | cut -d'=' -f2 || echo "")
+    REMOTE_VERSION=$(curl -fsSL "$REMOTE_VERSION_URL" 2>/dev/null | grep -m1 "^VERSION=" | cut -d'=' -f2 || echo "")
 elif command -v wget &>/dev/null; then
-    REMOTE_VERSION=$(wget -qO- "$REMOTE_VERSION_URL" 2>/dev/null | grep "^VERSION=" | cut -d'=' -f2 || echo "")
+    REMOTE_VERSION=$(wget -qO- "$REMOTE_VERSION_URL" 2>/dev/null | grep -m1 "^VERSION=" | cut -d'=' -f2 || echo "")
 else
     echo "[UWAGA] Brak narzedzia curl/wget - pomijam sprawdzanie aktualizacji."
     echo ""
