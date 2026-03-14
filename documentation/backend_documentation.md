@@ -140,6 +140,8 @@ Moduł zarządzania zmiennymi środowiskowymi przez `pydantic-settings` (`BaseSe
 
 > **Szablon konfiguracji:** Główny katalog projektu zawiera plik **`.env.example`**, który jest domyślnym szablonem konfiguracyjnym. Skrypty startowe (`start_windows.bat` / `start_mac_linux.sh`) automatycznie kopiują go do pliku `.env` w głównym katalogu, jeśli plik ten nie istnieje.
 
+> **Porty PostgreSQL (lokalny development):** `POSTGRES_PORT` oznacza port kontenera PostgreSQL (wewnątrz Docker), a `POSTGRES_HOST_PORT` oznacza port wystawiony na hoście. Lokalny backend uruchamiany poza Dockerem (np. przez `dev_windows.bat`) powinien łączyć się przez `localhost:POSTGRES_HOST_PORT`.
+
 ### `backend/app/database.py`
 Konfiguracja silnika SQLAlchemy (PostgreSQL):
 - `create_engine()` z `pool_pre_ping=True`, `echo=False`.
@@ -150,8 +152,14 @@ Konfiguracja silnika SQLAlchemy (PostgreSQL):
 ### `backend/app/init_app.py`
 Skrypt inicjalizacyjny uruchamiany przed startem serwera:
 - `create_database_if_not_exists()` — łączy się z bazą `postgres` (admin DB) i tworzy docelową bazę jeśli nie istnieje (`CREATE DATABASE`).
+	Obsługuje retry przy niedostępnym PostgreSQL i ustawia timeout połączenia, aby start nie „wisiał” bez logów.
 - `run_migrations()` — uruchamia Alembic `upgrade head` jeśli bieżąca rewizja różni się od head. Kończy z kodem 1 przy błędzie.
 - `ensure_directories()` — tworzy katalogi: `DATA_DIR`, `DATA_DIR/subjects`, `DATA_DIR/documents`, `DATA_DIR/backups`.
+
+Parametry środowiskowe dla inicjalizacji DB:
+- `INIT_DB_MAX_RETRIES` (domyślnie `30`)
+- `INIT_DB_RETRY_DELAY_SECONDS` (domyślnie `2.0`)
+- `INIT_DB_CONNECT_TIMEOUT_SECONDS` (domyślnie `5`)
 
 ### `docker-compose.yml`
 Definicja trzech serwisów, dwóch wolumenów i jednej sieci:

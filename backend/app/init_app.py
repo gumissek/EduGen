@@ -12,7 +12,9 @@ On migration failure the script exits with code 1 so the container restarts.
 from __future__ import annotations
 
 import logging
+import os
 import sys
+import time
 from pathlib import Path
 
 # Ensure the app package is importable when executed directly
@@ -24,6 +26,38 @@ configure_logging()
 logger = logging.getLogger(__name__)
 
 
+def _get_positive_int_env(name: str, default: int) -> int:
+    """Read a positive integer from env, falling back to default on invalid data."""
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    try:
+        value = int(raw)
+    except ValueError:
+        logger.warning("[init] Invalid %s=%r. Using default=%s.", name, raw, default)
+        return default
+    if value <= 0:
+        logger.warning("[init] Non-positive %s=%r. Using default=%s.", name, raw, default)
+        return default
+    return value
+
+
+def _get_positive_float_env(name: str, default: float) -> float:
+    """Read a positive float from env, falling back to default on invalid data."""
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    try:
+        value = float(raw)
+    except ValueError:
+        logger.warning("[init] Invalid %s=%r. Using default=%s.", name, raw, default)
+        return default
+    if value <= 0:
+        logger.warning("[init] Non-positive %s=%r. Using default=%s.", name, raw, default)
+        return default
+    return value
+
+
 def create_database_if_not_exists() -> None:
     """Create the database if it doesn't exist.
     
@@ -31,32 +65,64 @@ def create_database_if_not_exists() -> None:
     the target database if needed.
     """
     from sqlalchemy import create_engine, text
+    from sqlalchemy.engine.url import make_url
+    from sqlalchemy.exc import OperationalError
 
     from app.config import settings
 
-    # Parse the database URL to get connection details
+    retries = _get_positive_int_env("INIT_DB_MAX_RETRIES", 30)
+    retry_delay_seconds = _get_positive_float_env("INIT_DB_RETRY_DELAY_SECONDS", 2.0)
+    connect_timeout_seconds = _get_positive_int_env("INIT_DB_CONNECT_TIMEOUT_SECONDS", 5)
+
     db_url = settings.DATABASE_URL
-    # Replace the database name with 'postgres' to connect to the default database
-    admin_url = db_url.rsplit("/", 1)[0] + "/postgres"
+    parsed_url = make_url(db_url)
+    db_name = parsed_url.database
+    if not db_name:
+        logger.error("[database] DATABASE_URL does not contain database name: %s", db_url)
+        sys.exit(1)
+
+    admin_url = parsed_url.set(database="postgres").render_as_string(hide_password=False)
+    safe_db_name = db_name.replace('"', '""')
 
     try:
-        # Connect to the 'postgres' database as admin
-        engine = create_engine(admin_url, isolation_level="AUTOCOMMIT")
-        with engine.connect() as conn:
-            # Extract database name from the original URL
-            db_name = db_url.split("/")[-1]
-            
-            # Check if database exists
-            result = conn.execute(
-                text("SELECT 1 FROM pg_database WHERE datname = :db_name"),
-                {"db_name": db_name},
-            )
-            if not result.scalar():
-                logger.info("[database] Creating database: %s", db_name)
-                conn.execute(text(f'CREATE DATABASE "{db_name}"'))
-                logger.info("[database] Database created successfully.")
-            else:
-                logger.info("[database] Database already exists: %s", db_name)
+        logger.info(
+            "[database] Waiting for PostgreSQL (max retries=%s, delay=%.1fs, connect_timeout=%ss)...",
+            retries,
+            retry_delay_seconds,
+            connect_timeout_seconds,
+        )
+        engine = create_engine(
+            admin_url,
+            isolation_level="AUTOCOMMIT",
+            connect_args={"connect_timeout": connect_timeout_seconds},
+        )
+
+        for attempt in range(1, retries + 1):
+            try:
+                with engine.connect() as conn:
+                    result = conn.execute(
+                        text("SELECT 1 FROM pg_database WHERE datname = :db_name"),
+                        {"db_name": db_name},
+                    )
+                    if not result.scalar():
+                        logger.info("[database] Creating database: %s", db_name)
+                        conn.execute(text(f'CREATE DATABASE "{safe_db_name}"'))
+                        logger.info("[database] Database created successfully.")
+                    else:
+                        logger.info("[database] Database already exists: %s", db_name)
+                    break
+            except OperationalError as exc:
+                if attempt == retries:
+                    raise
+                logger.warning(
+                    "[database] PostgreSQL not ready (attempt %s/%s): %s. Retrying in %.1fs...",
+                    attempt,
+                    retries,
+                    exc,
+                    retry_delay_seconds,
+                )
+                time.sleep(retry_delay_seconds)
+        engine.dispose()
     except Exception:
         logger.exception("[database] Failed to create database — aborting.")
         sys.exit(1)
@@ -76,10 +142,15 @@ def run_migrations() -> None:
         alembic_cfg_path = Path(__file__).resolve().parent.parent / "alembic.ini"
         alembic_cfg = Config(str(alembic_cfg_path))
 
-        engine = create_engine(settings.DATABASE_URL)
+        connect_timeout_seconds = _get_positive_int_env("INIT_DB_CONNECT_TIMEOUT_SECONDS", 5)
+        engine = create_engine(
+            settings.DATABASE_URL,
+            connect_args={"connect_timeout": connect_timeout_seconds},
+        )
         with engine.connect() as conn:
             migration_ctx = MigrationContext.configure(conn)
             current_rev = migration_ctx.get_current_revision()
+        engine.dispose()
 
         script = ScriptDirectory.from_config(alembic_cfg)
         head_rev = script.get_current_head()
