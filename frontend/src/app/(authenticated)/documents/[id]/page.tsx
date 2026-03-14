@@ -5,7 +5,6 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
-import SaveIcon from '@mui/icons-material/Save';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import DescriptionIcon from '@mui/icons-material/Description';
 import KeyboardArrowLeftIcon from '@mui/icons-material/KeyboardArrowLeft';
@@ -14,7 +13,6 @@ import { useRouter } from 'next/navigation';
 import { useDocumentDetails } from '@/hooks/useDocuments';
 import dynamic from 'next/dynamic';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
-import { extractCommentsFromHtml } from '@/components/editor/TipTapEditor';
 
 const TipTapEditor = dynamic(() => import('@/components/editor/TipTapEditor'), {
   ssr: false,
@@ -31,8 +29,6 @@ export default function DocumentDetailsPage({ params }: { params: Promise<{ id: 
   const { 
     document, 
     isLoading, 
-    updateDocument, 
-    isUpdating, 
     exportPDF, 
     isExportingPDF, 
     exportWord, 
@@ -51,12 +47,6 @@ export default function DocumentDetailsPage({ params }: { params: Promise<{ id: 
       setContent(document.content ?? '');
     }
   }, [document, isEdited]);
-
-  const handleSave = async () => {
-    const commentsJson = extractCommentsFromHtml(content);
-    await updateDocument(content, commentsJson);
-    setIsEdited(false);
-  };
 
   const handleMoveToDraft = async () => {
     const result = await moveToDraft();

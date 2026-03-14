@@ -82,13 +82,16 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
   const { runCompliance, complianceData: mutationComplianceData, isLoading: complianceLoading } = useCurriculumCompliance(generationId);
 
   // Parse compliance from saved prototype or from fresh mutation result
-  const complianceData: ComplianceResult | null = React.useMemo(() => {
-    if (mutationComplianceData) return mutationComplianceData as ComplianceResult;
-    if (prototype?.compliance_json) {
-      try { return JSON.parse(prototype.compliance_json) as ComplianceResult; } catch { return null; }
+  let complianceData: ComplianceResult | null = null;
+  if (mutationComplianceData) {
+    complianceData = mutationComplianceData as ComplianceResult;
+  } else if (prototype?.compliance_json) {
+    try {
+      complianceData = JSON.parse(prototype.compliance_json) as ComplianceResult;
+    } catch {
+      complianceData = null;
     }
-    return null;
-  }, [mutationComplianceData, prototype?.compliance_json]);
+  }
 
   React.useEffect(() => {
     if (prototype && !isEdited) {

@@ -248,6 +248,7 @@ Główny proces biznesowy to generowanie dokumentów. Elementy go wspierające:
 - **`RepromptInput.tsx`** — pole AI renderowane jako `position: fixed`, przyklejone 50 px od dołu ekranu. Efekt glassmorphism z gradientem. Input z ikoną wysyłania, Enter wysyła, Shift+Enter nowa linia. Props: `onSend(prompt)`, `isLoading`.
 - Edytor prototypu (`/generate/[id]/editor`) zapisuje zmiany przyciskiem **„Zapisz wersję roboczą"** do tabeli `prototypes` (`PUT /api/prototypes/{generation_id}`).
 - **`ComplianceSidebar.tsx`** — wysuwany panel boczny (Drawer, 380 px) wyświetlający wyniki weryfikacji zgodności pytań z Podstawą Programową. Podsumowanie (progress bar, liczba dopasowanych pytań), akordeony per pytanie z chipami similarity (≥70% zielony, 50–70% żółty, <50% pomarańczowy), przycisk „Uruchom weryfikację" / „Uruchom ponownie". Widoczny tylko gdy `curriculum_compliance_enabled` dla generacji.
+- W `src/app/(authenticated)/generate/[id]/editor/page.tsx` dane zgodności (`complianceData`) są wyliczane bez `useMemo` (bezpośrednio w renderze), co eliminuje konflikt z regułą React Compiler `react-hooks/preserve-manual-memoization` i zachowuje tę samą logikę fallbacku: wynik mutacji -> zapisany `prototype.compliance_json` -> `null`.
 
 ### `layout/`
 - **`MainLayout.tsx`** — główna struktura strefy zalogowanej: Sidebar (lewy panel) + TopBar (fixed u góry) + obszar treści (prawa strona). Na mobile Sidebar jako tymczasowy Drawer z toggle via TopBar. Tło: radialny gradient.
