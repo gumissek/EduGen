@@ -1,36 +1,119 @@
-import { z } from 'zod';
+import { z } from "zod";
 
-export const TYPES_WITHOUT_QUESTIONS = ['worksheet', 'lesson_materials'] as const;
+export const TYPES_WITHOUT_QUESTIONS: readonly string[] = ["lessonmaterials"];
 
-export const GenerationParamsSchema = z.object({
-  content_type: z.enum(['worksheet', 'test', 'quiz', 'exam', 'lesson_materials']),
-  subject_id: z.string().uuid(),
-  // education_level accepts predefined values ('primary', 'secondary') or any custom string
-  education_level: z.string().min(1, 'Poziom edukacji jest wymagany'),
-  // class_level is a free-form string typed by the user (e.g. "Klasa 4", "Semestr 2", "Rok 1")
-  class_level: z.string().min(1, 'Klasa / semestr jest wymagana').max(100),
-  language_level: z.enum(['A1', 'A2', 'B1', 'B2', 'C1', 'C2']).nullable().optional(),
-  topic: z.string().min(1, 'Temat jest wymagany').max(500),
-  instructions: z.string().max(2000).optional(),
-  difficulty: z.number().int().min(1).max(5),
-  total_questions: z.number().int().min(0).max(50),
-  open_questions: z.number().int().min(0),
-  closed_questions: z.number().int().min(0),
-  variants_count: z.number().int().min(1).max(6),
-  task_types: z.array(z.string()).optional(),
-  source_file_ids: z.array(z.string().uuid()).optional(),
-  curriculum_compliance_enabled: z.boolean().optional(),
-}).refine(
-  (data) => {
-    if ((TYPES_WITHOUT_QUESTIONS as readonly string[]).includes(data.content_type)) return true;
-    
-    const hasTotal = data.total_questions > 0;
-    const hasOpen = data.open_questions > 0;
-    const hasTaskTypes = data.task_types && data.task_types.length > 0;
-    
-    return hasTotal || hasOpen || hasTaskTypes;
-  },
-  { message: 'Należy podać liczbę zadań, liczbę pytań otwartych lub wybrać typy zadań', path: ['total_questions'] }
-);
+const numberFromInput = (label: string, min: number, max: number) =>
+  z
+    .union([z.string(), z.number(), z.undefined(), z.null()])
+    .transform((value, ctx) => {
+      if (value === "" || value === null || value === undefined) {
+        ctx.addIssue({
+          code: "custom",
+          message: `${label} jest wymagane.`,
+        });
+        return z.NEVER;
+      }
 
-export type GenerationParamsForm = z.infer<typeof GenerationParamsSchema>;
+      const parsed = typeof value === "number" ? value : Number(value);
+
+      if (Number.isNaN(parsed)) {
+        ctx.addIssue({
+          code: "custom",
+          message: `${label} musi być liczbą.`,
+        });
+        return z.NEVER;
+      }
+
+      return parsed;
+    })
+    .pipe(
+      z
+        .number()
+        .int({ error: `${label} musi być liczbą całkowitą.` })
+        .min(min, { error: `${label} musi być większe lub równe ${min}.` })
+        .max(max, { error: `${label} musi być mniejsze lub równe ${max}.` }),
+    );
+
+export const generationParamsSchema = z
+  .object({
+    content_type: z.string().min(1, "Wybierz typ treści."),
+    subject_id: z.string().min(1, "Wybierz przedmiot."),
+    education_level: z.string().min(1, "Wybierz poziom edukacji."),
+    class_level: z.string().min(1, "Wybierz klasę lub semestr."),
+    topic: z
+      .string()
+      .trim()
+      .min(1, "Temat jest wymagany.")
+      .max(200, "Temat może mieć maksymalnie 200 znaków."),
+    total_questions: numberFromInput("Liczba zadań ogółem", 0, 50),
+    open_questions: numberFromInput("Liczba zadań otwartych", 0, 50),
+    closed_questions: numberFromInput("Liczba zadań zamkniętych", 0, 50),
+    difficulty: numberFromInput("Poziom trudności", 1, 5),
+    variants_count: numberFromInput("Liczba wariantów", 1, 6),
+    task_types: z.array(z.string().trim().min(1)).default([]),
+    source_file_ids: z.array(z.string()).default([]),
+    curriculum_compliance_enabled: z.boolean().default(false),
+    instructions: z
+      .string()
+      .max(2000, "Instrukcje mogą mieć maksymalnie 2000 znaków.")
+      .optional()
+      .or(z.literal("")),
+  })
+  .superRefine((data, ctx) => {
+    const isFreeForm = TYPES_WITHOUT_QUESTIONS.includes(data.content_type);
+
+    if (isFreeForm) {
+      return;
+    }
+
+    if (data.total_questions < 1) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["total_questions"],
+        message: "Liczba zadań ogółem musi być większa od 0.",
+      });
+    }
+
+    const assignedQuestions = data.open_questions + data.closed_questions;
+    const hasOpenOrClosed =
+      data.open_questions > 0 || data.closed_questions > 0;
+    const hasTaskTypes = data.task_types.length > 0;
+
+    if (assignedQuestions > data.total_questions) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["closed_questions"],
+        message:
+          "Suma zadań otwartych i zamkniętych nie może być większa niż liczba wszystkich zadań.",
+      });
+    }
+
+    if (!hasOpenOrClosed && !hasTaskTypes) {
+      const message =
+        "Dodaj co najmniej jedno zadanie otwarte lub jedno zadanie zamknięte, albo wybierz przynajmniej jeden typ zadania.";
+
+      ctx.addIssue({
+        code: "custom",
+        path: ["open_questions"],
+        message,
+      });
+
+      ctx.addIssue({
+        code: "custom",
+        path: ["closed_questions"],
+        message,
+      });
+
+      ctx.addIssue({
+        code: "custom",
+        path: ["task_types"],
+        message,
+      });
+    }
+  });
+
+export const GenerationParamsSchema = generationParamsSchema;
+
+export type GenerationParamsFormInput = z.input<typeof generationParamsSchema>;
+export type GenerationParamsForm = z.output<typeof generationParamsSchema>;
+export type GenerationParamsFormOutput = GenerationParamsForm;
