@@ -1028,7 +1028,7 @@ export default function StepQuestionConfig() {
                     multiline
                     minRows={5}
                     label="Materiały, instrukcje i uwagi dla AI"
-                    placeholder="Podaj temat i poziom ucznia; używaj prostego, zrozumiałego języka; dodaj krótkie wyjaśnienia i 1 praktyczne zadanie lub przykład związany z tematem; treść powinna być przystępna dla wskazanego poziomu."
+                    placeholder="np. używaj prostego, zrozumiałego języka; dodaj krótkie wyjaśnienia i 1 praktyczne zadanie lub przykład związany z tematem."
                     value={(field.value as string | undefined) ?? ""}
                     onChange={field.onChange}
                     onBlur={field.onBlur}

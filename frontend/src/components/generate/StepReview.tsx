@@ -8,6 +8,7 @@ import Paper from '@mui/material/Paper';
 import Grid2 from '@mui/material/Grid2'; 
 import Divider from '@mui/material/Divider';
 import Chip from '@mui/material/Chip';
+import Checkbox from '@mui/material/Checkbox';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Switch from '@mui/material/Switch';
 import SchoolIcon from '@mui/icons-material/School';
@@ -17,7 +18,7 @@ import { useSubjects } from '@/hooks/useSubjects';
 import { useFiles } from '@/hooks/useFiles';
 import { CONTENT_TYPES, DIFFICULTY_LEVELS } from '@/lib/constants';
 import { useLevels } from '@/hooks/useLevels';
-import { Subject, SourceFile } from '@/types';
+import { Subject, SourceFile, CurriculumDocument } from '@/types';
 import { useCurriculum } from '@/hooks/useCurriculum';
 
 export default function StepReview() {
@@ -39,10 +40,20 @@ export default function StepReview() {
   const isFreeForm = (TYPES_WITHOUT_QUESTIONS as readonly string[]).includes(values.content_type);
   const isWorksheet = values.content_type === 'worksheet';
 
+  const readyCurriculumDocs = curriculumDocs.filter((d: CurriculumDocument) => d.status === 'ready');
+
+  const handleToggleCurriculumDoc = (docId: string) => {
+    const current = values.curriculum_document_ids ?? [];
+    const next = current.includes(docId)
+      ? current.filter((id: string) => id !== docId)
+      : [...current, docId];
+    setValue('curriculum_document_ids', next);
+  };
+
   return (
     <Box>
       <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>Podsumowanie konfiguracji</Typography>
-      <Paper variant="outlined" sx={{ p: { xs: 3, md: 4 }, mb: 3, borderRadius: '24px', borderWidth: 1, borderColor: 'divider', bgcolor: 'rgba(1, 72, 131, 0.01)', boxShadow: '0 8px 32px rgba(0,0,0,0.04)' }}>
+      <Paper variant="outlined" sx={{ p: { xs: 3, md: 4 }, mb: 3, borderRadius: '24px', borderWidth: 1, borderColor: 'divider', bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.02)' : 'rgba(1, 72, 131, 0.01)', boxShadow: '0 8px 32px rgba(0,0,0,0.04)' }}>
         <Grid2 container spacing={2}>
           
           <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
@@ -161,13 +172,19 @@ export default function StepReview() {
       </Paper>
 
       {/* Curriculum compliance toggle */}
-      {curriculumDocs.length > 0 && !isFreeForm && (
+      {readyCurriculumDocs.length > 0 && !isFreeForm && (
         <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 }, mb: 3, borderRadius: '24px', borderColor: 'divider' }}>
           <FormControlLabel
             control={
               <Switch
                 checked={values.curriculum_compliance_enabled ?? false}
-                onChange={(e) => setValue('curriculum_compliance_enabled', e.target.checked)}
+                onChange={(e) => {
+                  setValue('curriculum_compliance_enabled', e.target.checked);
+                  if (!e.target.checked) {
+                    setValue('include_compliance_card', false);
+                    setValue('curriculum_document_ids', []);
+                  }
+                }}
                 color="primary"
               />
             }
@@ -177,14 +194,72 @@ export default function StepReview() {
                   Weryfikuj zgodność z Podstawą Programową
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
-                  System sprawdzi, czy wygenerowane pytania realizują wymagania ministerialne
+                  System sprawdzi, czy wygenerowane pytania realizują odpowiednie wymagania z Podstawy Programowej dla wybranego poziomu edukacji i przedmiotu.
                 </Typography>
               </Box>
             }
           />
+
+          {values.curriculum_compliance_enabled && (
+            <Box sx={{ mt: 2, pl: { xs: 0, sm: 2 } }}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={values.include_compliance_card ?? false}
+                    onChange={(e) => setValue('include_compliance_card', e.target.checked)}
+                    color="primary"
+                    size="small"
+                  />
+                }
+                label={
+                  <Box>
+                    <Typography variant="body2" fontWeight="medium">
+                      Dołącz metryczkę zgodności
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Na końcu dokumentu zostanie dodana tabela mapująca zadania do punktów Podstawy Programowej i materiałów źródłowych.
+                    </Typography>
+                  </Box>
+                }
+              />
+
+              <Divider sx={{ my: 2 }} />
+              <Typography variant="body2" fontWeight="medium" sx={{ mb: 1 }}>
+                Dokumenty Podstawy Programowej
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ mb: 1.5, display: 'block' }}>
+                Wybierz dokumenty, na podstawie których system będzie weryfikować zgodność. Jeśli nie wybierzesz żadnego, zostaną użyte wszystkie dostępne.
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, maxHeight: 200, overflowY: 'auto' }}>
+                {readyCurriculumDocs.map((doc: CurriculumDocument) => (
+                  <FormControlLabel
+                    key={doc.id}
+                    control={
+                      <Checkbox
+                        checked={(values.curriculum_document_ids ?? []).includes(doc.id)}
+                        onChange={() => handleToggleCurriculumDoc(doc.id)}
+                        size="small"
+                      />
+                    }
+                    label={
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
+                        <Typography variant="body2">{doc.original_filename}</Typography>
+                        {doc.education_level && (
+                          <Chip label={doc.education_level} size="small" variant="outlined" color="primary" />
+                        )}
+                        {doc.subject_name && (
+                          <Chip label={doc.subject_name} size="small" variant="outlined" color="secondary" />
+                        )}
+                      </Box>
+                    }
+                  />
+                ))}
+              </Box>
+            </Box>
+          )}
         </Paper>
       )}
-      {curriculumDocs.length === 0 && !isFreeForm && (
+      {readyCurriculumDocs.length === 0 && !isFreeForm && (
         <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
           Weryfikacja zgodności z PP niedostępna — brak dokumentów Podstawy Programowej w systemie.
         </Typography>

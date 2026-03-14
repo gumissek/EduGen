@@ -16,6 +16,7 @@ class CurriculumDocumentResponse(BaseModel):
     education_level: str | None
     subject_name: str | None
     description: str | None
+    curriculum_year: str | None
     status: str
     error_message: str | None
     page_count: int | None

@@ -72,6 +72,7 @@ def _get_api_key(db: DBSession, user_id: str) -> str:
 def list_curriculum_documents(
     education_level: str | None = None,
     subject_name: str | None = None,
+    curriculum_year: str | None = None,
     db: DBSession = Depends(get_db),
 ):
     """List all curriculum documents with status='ready' (public)."""
@@ -84,6 +85,8 @@ def list_curriculum_documents(
         query = query.filter(CurriculumDocument.education_level == education_level)
     if subject_name:
         query = query.filter(CurriculumDocument.subject_name == subject_name)
+    if curriculum_year:
+        query = query.filter(CurriculumDocument.curriculum_year == curriculum_year)
 
     documents = query.order_by(CurriculumDocument.created_at.desc()).all()
 
@@ -172,6 +175,7 @@ async def upload_curriculum_document(
     education_level: str | None = Form(None),
     subject_name: str | None = Form(None),
     description: str | None = Form(None),
+    curriculum_year: str | None = Form(None),
     db: DBSession = Depends(get_db),
     current_user: User = Depends(get_current_superuser),
 ):
@@ -228,6 +232,7 @@ async def upload_curriculum_document(
         existing.education_level = education_level
         existing.subject_name = subject_name
         existing.description = description
+        existing.curriculum_year = curriculum_year
         existing.uploaded_by = current_user.id
         existing.is_active = True
         existing.updated_at = now
@@ -279,6 +284,7 @@ async def upload_curriculum_document(
         education_level=education_level,
         subject_name=subject_name,
         description=description,
+        curriculum_year=curriculum_year,
         status="uploaded",
         is_active=True,
         uploaded_by=current_user.id,

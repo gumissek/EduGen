@@ -49,6 +49,7 @@ export interface CurriculumDocument {
   education_level: string | null;
   subject_name: string | null;
   description: string | null;
+  curriculum_year: string | null;
   status: string;
   error_message: string | null;
   page_count: number | null;

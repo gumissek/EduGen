@@ -66,6 +66,9 @@ const defaultValues: GenerationParamsFormInput = {
   task_types: [],
   source_file_ids: [],
   curriculum_compliance_enabled: false,
+  include_compliance_card: false,
+  curriculum_document_ids: [],
+  language_level: "",
   instructions: "",
 };
 
@@ -626,9 +629,8 @@ export default function GenerationWizard() {
 
         <DialogContent>
           <DialogContentText>
-            Czy na pewno chcesz wygenerować materiał? Operacja wykorzysta tokeny
-            OpenRouter i może zająć kilkanaście sekund. Po potwierdzeniu nastąpi
-            przekierowanie do strony statusu generowania.
+            Czy na pewno chcesz wygenerować materiał? Operacja może zająć kilkanaście sekund. Po potwierdzeniu nastąpi
+            przekierowanie do strony generowania.
           </DialogContentText>
         </DialogContent>
 

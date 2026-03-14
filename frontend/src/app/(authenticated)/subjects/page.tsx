@@ -55,7 +55,7 @@ function SubjectsContent() {
 
   return (
     <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <Typography variant="h4" fontWeight="bold" gutterBottom sx={{ fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
+      <Typography variant="h4" fontWeight="bold" gutterBottom sx={{ fontSize: { xs: '1.5rem', sm: '2.125rem' } }} color='text.primary'>
         Przedmioty i materiały źródłowe
       </Typography>
       

@@ -44,7 +44,7 @@ export default function CurriculumDocumentRow({
     <Paper
       variant="outlined"
       sx={{
-        p: { xs: 1.25, sm: 1.75, md: 2 },
+        p: { xs: 2, sm: 1.75, md: 2 },
         borderRadius: 2,
         backgroundColor: isDark
           ? alpha(theme.palette.background.paper, 0.7)
@@ -62,37 +62,65 @@ export default function CurriculumDocumentRow({
       }}
     >
       <Stack spacing={1.25}>
-        <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} alignItems={{ xs: 'flex-start', md: 'center' }}>
+        {/* Desktop: horizontal row; Mobile: vertical card */}
+        <Stack
+          direction={{ xs: 'column', md: 'row' }}
+          spacing={1.5}
+          alignItems={{ xs: 'stretch', md: 'center' }}
+        >
           <Box sx={{ flexGrow: 1, minWidth: 0, width: '100%' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-            <DescriptionIcon color="primary" fontSize="small" />
-            <Typography variant="subtitle1" fontWeight={600} noWrap title={document.original_filename} sx={{ color: 'text.primary' }}>
-              {document.original_filename}
-            </Typography>
-          </Box>
+            {/* Filename with icon */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+              <DescriptionIcon color="primary" fontSize="small" />
+              <Typography
+                variant="subtitle1"
+                fontWeight={600}
+                title={document.original_filename}
+                sx={{
+                  color: 'text.primary',
+                  // On mobile: wrap text; on desktop: truncate
+                  overflow: { xs: 'visible', md: 'hidden' },
+                  textOverflow: { md: 'ellipsis' },
+                  whiteSpace: { xs: 'normal', md: 'nowrap' },
+                  wordBreak: { xs: 'break-word', md: 'normal' },
+                }}
+              >
+                {document.original_filename}
+              </Typography>
+            </Box>
 
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 1 }}>
-            {document.education_level && (
-              <Chip
-                label={document.education_level}
-                size="small"
-                color="primary"
-                variant="outlined"
-                sx={{ borderColor: alpha(theme.palette.primary.main, isDark ? 0.55 : 0.35) }}
-              />
-            )}
-            {document.subject_name && (
-              <Chip
-                label={document.subject_name}
-                size="small"
-                color="secondary"
-                variant="outlined"
-                sx={{ borderColor: alpha(theme.palette.secondary.main, isDark ? 0.55 : 0.35) }}
-              />
-            )}
-            <Chip label={statusProps.label} size="small" color={statusProps.color} />
-          </Box>
+            {/* Chips: education level, subject, status */}
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 1 }}>
+              {document.education_level && (
+                <Chip
+                  label={document.education_level}
+                  size="small"
+                  color="primary"
+                  variant="outlined"
+                  sx={{ borderColor: alpha(theme.palette.primary.main, isDark ? 0.55 : 0.35) }}
+                />
+              )}
+              {document.subject_name && (
+                <Chip
+                  label={document.subject_name}
+                  size="small"
+                  color="secondary"
+                  variant="outlined"
+                  sx={{ borderColor: alpha(theme.palette.secondary.main, isDark ? 0.55 : 0.35) }}
+                />
+              )}
+              {document.curriculum_year && (
+                <Chip
+                  label={document.curriculum_year}
+                  size="small"
+                  variant="outlined"
+                  sx={{ borderColor: alpha(theme.palette.info.main, isDark ? 0.55 : 0.35) }}
+                />
+              )}
+              <Chip label={statusProps.label} size="small" color={statusProps.color} />
+            </Box>
 
+            {/* Source link */}
             {hasSourceLink ? (
               <Link
                 href={document.description as string}
@@ -103,6 +131,7 @@ export default function CurriculumDocumentRow({
                   wordBreak: 'break-all',
                   display: 'inline-block',
                   color: isDark ? theme.palette.info.light : theme.palette.info.dark,
+                  fontSize: { xs: '0.8rem', md: '0.875rem' },
                 }}
               >
                 {document.description}
@@ -113,6 +142,7 @@ export default function CurriculumDocumentRow({
               </Typography>
             )}
 
+            {/* Admin metadata */}
             {showAdminMetadata && (
               <Stack spacing={0.5} sx={{ mt: 1 }}>
                 <Typography variant="caption" color="text.secondary">
@@ -133,12 +163,19 @@ export default function CurriculumDocumentRow({
             )}
           </Box>
 
+          {/* Actions column: full-width buttons on mobile, right-aligned on desktop */}
           <Stack
-            direction={{ xs: 'row', sm: 'row', md: 'column' }}
+            direction={{ xs: 'row', md: 'column' }}
             spacing={1}
             alignItems={{ xs: 'stretch', md: 'flex-end' }}
             justifyContent={{ xs: 'flex-start', md: 'center' }}
-            sx={{ width: { xs: '100%', md: 'auto' }, flexWrap: 'wrap' }}
+            sx={{
+              width: { xs: '100%', md: 'auto' },
+              flexWrap: 'wrap',
+              mt: { xs: 1, md: 0 },
+              pt: { xs: 1, md: 0 },
+              borderTop: { xs: `1px solid ${alpha(theme.palette.divider, 0.5)}`, md: 'none' },
+            }}
           >
             {showDate && (
               <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
@@ -152,7 +189,7 @@ export default function CurriculumDocumentRow({
                 size="small"
                 startIcon={<DownloadIcon />}
                 onClick={() => onDownload(document.id, document.original_filename)}
-                sx={{ whiteSpace: 'nowrap', minHeight: 36 }}
+                sx={{ whiteSpace: 'nowrap', minHeight: 36, flex: { xs: 1, md: 'none' } }}
               >
                 Pobierz PDF
               </Button>
@@ -161,7 +198,6 @@ export default function CurriculumDocumentRow({
             {actions}
           </Stack>
         </Stack>
-
       </Stack>
     </Paper>
   );

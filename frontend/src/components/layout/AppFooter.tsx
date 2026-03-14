@@ -7,20 +7,24 @@ import Button from '@mui/material/Button';
 import Stack from '@mui/material/Stack';
 import Divider from '@mui/material/Divider';
 import Image from 'next/image';
+import { useColorMode } from '@/theme/ColorModeContext';
 
 interface AppFooterProps {
   compact?: boolean;
 }
 
 export default function AppFooter({ compact = false }: AppFooterProps) {
+  const { mode } = useColorMode();
+
   return (
     <Box
       component="footer"
       sx={{
         mt: compact ? 3 : 5,
         borderTop: '1px solid',
-        borderColor: 'divider',
-        bgcolor: 'background.paper',
+        borderColor: mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+        bgcolor: mode === 'dark' ? 'rgba(15, 23, 42, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+        transition: 'all 0.3s ease',
       }}
     >
       <Box
@@ -41,7 +45,16 @@ export default function AppFooter({ compact = false }: AppFooterProps) {
             <Box sx={{ width: 28, height: 28, position: 'relative', borderRadius: 1, overflow: 'hidden' }}>
               <Image src="/logo.png" alt="EduGen logo" fill sizes="28px" />
             </Box>
-            <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+            <Typography
+              variant="subtitle2"
+              sx={{
+              fontWeight: 700,
+              color: (theme) =>
+                theme.palette.mode === 'dark'
+                ? "rgba(255,255,255,0.85)"
+                : "rgba(0,0,0,0.85)",
+              }}
+            >
               EduGen
             </Typography>
           </Box>
@@ -51,7 +64,10 @@ export default function AppFooter({ compact = false }: AppFooterProps) {
         </Stack>
 
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.2}>
-          <Button component="a" href="mailto:bilinski.piotr89@gmail.com" size="small" variant="text">
+          <Button component="a" href="mailto:bilinski.piotr89@gmail.com" size="small" variant="text" sx={{color: (theme) =>
+                theme.palette.mode === 'dark'
+                ? "rgba(255,255,255,0.85)"
+                : "rgba(0,0,0,0.85)",}}>
             Napisz do nas
           </Button>
         </Stack>

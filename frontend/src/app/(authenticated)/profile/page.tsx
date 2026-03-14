@@ -20,6 +20,7 @@ import LockIcon from '@mui/icons-material/Lock';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import SaveIcon from '@mui/icons-material/Save';
 import EmailIcon from '@mui/icons-material/Email';
+import { alpha } from '@mui/material/styles';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
@@ -276,7 +277,7 @@ export default function ProfilePage() {
     mb: { xs: 2, sm: 3 },
     borderRadius: { xs: '16px', sm: '24px' },
     borderColor: 'divider',
-    boxShadow: '0 4px 24px rgba(0,0,0,0.02)',
+    boxShadow: (theme: import('@mui/material/styles').Theme) => `0 4px 24px ${alpha(theme.palette.common.black, 0.02)}`,
   };
 
   return (
@@ -287,6 +288,7 @@ export default function ProfilePage() {
           fontWeight="800"
           gutterBottom
           sx={{ fontSize: { xs: '1.4rem', sm: '2rem', md: '2.125rem' } }}
+          color="text.primary"
         >
           Mój profil
         </Typography>

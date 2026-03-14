@@ -78,6 +78,7 @@ export default function AdminCurriculumPage() {
   const [educationLevel, setEducationLevel] = React.useState('');
   const [subjectName, setSubjectName] = React.useState('');
   const [sourceUrl, setSourceUrl] = React.useState('');
+  const [curriculumYear, setCurriculumYear] = React.useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const [pendingDeleteId, setPendingDeleteId] = React.useState<string | null>(null);
   const hasSecretKeys = Boolean(user?.has_secret_keys);
@@ -115,6 +116,7 @@ export default function AdminCurriculumPage() {
       const trimmedEducationLevel = educationLevel.trim();
       const trimmedSubjectName = subjectName.trim();
       const trimmedSourceUrl = sourceUrl.trim();
+      const trimmedCurriculumYear = curriculumYear.trim();
 
       if (!trimmedEducationLevel) {
         throw new Error('Pole "Poziom edukacji" jest wymagane.');
@@ -124,6 +126,10 @@ export default function AdminCurriculumPage() {
       }
       if (!trimmedSourceUrl) {
         throw new Error('Pole "Link do źródła" jest wymagane.');
+      }
+
+      if (!trimmedCurriculumYear) {
+        throw new Error('Pole "Rok podstawy programowej" jest wymagane.');
       }
 
       let parsedSourceUrl: URL;
@@ -143,6 +149,7 @@ export default function AdminCurriculumPage() {
       formData.append('subject_name', trimmedSubjectName);
       // Backend stores this field in "description", so we keep the API key name.
       formData.append('description', trimmedSourceUrl);
+      formData.append('curriculum_year', trimmedCurriculumYear);
 
       const res = await api.post('/api/curriculum/documents', formData, { timeout: 120_000 });
       return res.data;
@@ -153,6 +160,7 @@ export default function AdminCurriculumPage() {
       setEducationLevel('');
       setSubjectName('');
       setSourceUrl('');
+      setCurriculumYear('');
       queryClient.invalidateQueries({ queryKey: ['admin-curriculum-documents'] });
     },
     onError: (err: unknown) => {
@@ -343,6 +351,22 @@ export default function AdminCurriculumPage() {
                 },
               }}
             />
+            <TextField
+              label="Rok podstawy programowej"
+              size="small"
+              value={curriculumYear}
+              onChange={(e) => setCurriculumYear(e.target.value)}
+              placeholder="np. 2025/2026"
+              required
+              fullWidth
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: isDark
+                    ? alpha(theme.palette.background.default, 0.22)
+                    : alpha(theme.palette.background.default, 0.7),
+                },
+              }}
+            />
             <Button
               variant="contained"
               onClick={() => uploadMutation.mutate()}
@@ -351,6 +375,7 @@ export default function AdminCurriculumPage() {
                 !educationLevel.trim() ||
                 !subjectName.trim() ||
                 !sourceUrl.trim() ||
+                !curriculumYear.trim() ||
                 uploadMutation.isPending ||
                 !hasSecretKeys ||
                 isUserLoading

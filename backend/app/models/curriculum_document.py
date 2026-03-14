@@ -24,6 +24,7 @@ class CurriculumDocument(Base):
     education_level: Mapped[str | None] = mapped_column(String(50), nullable=True)
     subject_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    curriculum_year: Mapped[str | None] = mapped_column(String(20), nullable=True)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="uploaded")
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     page_count: Mapped[int | None] = mapped_column(Integer, nullable=True)

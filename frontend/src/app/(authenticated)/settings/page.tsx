@@ -18,6 +18,7 @@ export default function SettingsPage() {
           fontWeight="800"
           gutterBottom
           sx={{ fontSize: { xs: '1.4rem', sm: '2rem', md: '2.125rem' } }}
+          color='text.primary'
         >
           Ustawienia aplikacji
         </Typography>

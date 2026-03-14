@@ -1,7 +1,7 @@
 ﻿'use client';
 
 import * as React from 'react';
-import { useFormContext, Controller } from 'react-hook-form';
+import { useFormContext, Controller, useWatch } from 'react-hook-form';
 import Grid2 from '@mui/material/Grid2';
 import TextField from '@mui/material/TextField';
 import MenuItem from '@mui/material/MenuItem';
@@ -35,7 +35,7 @@ const filterEduOptions   = createFilterOptions<EduLevelOption>();
 const filterClassOptions = createFilterOptions<ClassOption>();
 
 export default function StepSubjectConfig() {
-  const { register, watch, setValue, control, formState: { errors } } = useFormContext<GenerationParamsForm>();
+  const { register, setValue, control, formState: { errors } } = useFormContext<GenerationParamsForm>();
   const { subjects, isLoading } = useSubjects();
   const {
     educationLevels,
@@ -48,8 +48,9 @@ export default function StepSubjectConfig() {
     deleteClassLevel,
   } = useLevels();
 
-  const selectedEducationLevel = watch('education_level');
-  const selectedSubjectId      = watch('subject_id');
+  const selectedEducationLevel = useWatch({ control, name: 'education_level' });
+  const selectedSubjectId      = useWatch({ control, name: 'subject_id' });
+  const languageLevelValue     = useWatch({ control, name: 'language_level' });
 
   // Build education level options from CSV data
   const eduOptions: EduLevelOption[] = React.useMemo(
@@ -68,8 +69,10 @@ export default function StepSubjectConfig() {
   }, [classLevels, selectedEducationLevel]);
 
   const selectedSubject   = subjects.find((s: Subject) => s.id === selectedSubjectId);
-  const isLanguageSubject = selectedSubject?.name.toLowerCase().includes('jez') ||
-                            selectedSubject?.name.toLowerCase().includes('j.');
+  const isLanguageSubject = React.useMemo(() => {
+    const name = selectedSubject?.name.toLowerCase() ?? '';
+    return name.includes('język') || name.includes('jezyk') || name.includes('j.');
+  }, [selectedSubject?.name]);
 
   React.useEffect(() => {
     if (!selectedSubjectId && subjects.length > 0) {
@@ -307,7 +310,7 @@ export default function StepSubjectConfig() {
               error={!!errors.language_level}
               helperText={errors.language_level?.message}
               {...register('language_level')}
-              value={watch('language_level') || ''}
+              value={languageLevelValue || ''}
             >
               <MenuItem value="">Brak skali</MenuItem>
               {LANGUAGE_LEVELS.map((lvl) => (

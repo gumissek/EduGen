@@ -361,7 +361,7 @@ export default function DashboardPage() {
     <Box sx={{ flexGrow: 1 }}>
       {/* Header */}
       <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2, mb: 3 }}>
-        <Typography variant="h4" fontWeight="bold" sx={{ fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
+        <Typography variant="h4" fontWeight="bold" sx={{ fontSize: { xs: '1.5rem', sm: '2.125rem' } }} color='text.primary'>
           Moje materiały
         </Typography>
         <Button

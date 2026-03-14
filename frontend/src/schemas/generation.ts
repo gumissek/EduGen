@@ -51,8 +51,11 @@ export const generationParamsSchema = z
     difficulty: numberFromInput("Poziom trudności", 1, 5),
     variants_count: numberFromInput("Liczba wariantów", 1, 6),
     task_types: z.array(z.string().trim().min(1)).default([]),
+    language_level: z.string().optional().or(z.literal("")),
     source_file_ids: z.array(z.string()).default([]),
     curriculum_compliance_enabled: z.boolean().default(false),
+    include_compliance_card: z.boolean().default(false),
+    curriculum_document_ids: z.array(z.string()).default([]),
     instructions: z
       .string()
       .max(2000, "Instrukcje mogą mieć maksymalnie 2000 znaków.")
