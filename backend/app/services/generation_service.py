@@ -118,8 +118,26 @@ def generate_prototype_task(db: DBSession, generation_id: str) -> None:
             if sf.extracted_text and sf.deleted_at is None:
                 source_texts.append(sf.extracted_text)
 
+        # Retrieve curriculum context if enabled
+        curriculum_context = None
+        if getattr(generation, "curriculum_compliance_enabled", False):
+            try:
+                from app.services.curriculum_service import search_similar_chunks, generate_embedding
+                topic_embedding = generate_embedding(generation.topic, api_key)
+                curriculum_context = search_similar_chunks(
+                    db,
+                    topic_embedding,
+                    top_k=10,
+                    education_level=generation.education_level,
+                )
+                if not curriculum_context:
+                    curriculum_context = None
+            except Exception as e:
+                logger.warning("[generation] Failed to retrieve curriculum context: %s", e)
+                curriculum_context = None
+
         # Build prompt and call OpenRouter
-        system_prompt = build_system_prompt(generation, source_texts)
+        system_prompt = build_system_prompt(generation, source_texts, curriculum_context)
         result = call_openrouter(db, generation, system_prompt, api_key, model)
 
         # Create prototype

@@ -65,7 +65,7 @@ def _format_education_label(education_level: str, class_level: str | None) -> st
     return edu
 
 
-def build_system_prompt(generation: Generation, source_texts: list[str]) -> str:
+def build_system_prompt(generation: Generation, source_texts: list[str], curriculum_context: list[dict] | None = None) -> str:
     """Build the system prompt for AI generation."""
     content_label = CONTENT_TYPE_LABELS.get(generation.content_type, generation.content_type)
     difficulty_label = DIFFICULTY_LABELS.get(generation.difficulty, "średni")
@@ -95,6 +95,26 @@ def build_system_prompt(generation: Generation, source_texts: list[str]) -> str:
     if source_texts:
         combined = "\n\n---\n\n".join(source_texts)
         prompt_parts.append(f"Materiał źródłowy:\n{combined}")
+
+    # Inject curriculum context from RAG if available
+    if curriculum_context:
+        curriculum_parts = []
+        for ctx in curriculum_context:
+            chunk = ctx.get("chunk", {})
+            section = chunk.get("section_title", "")
+            content = chunk.get("content", "")
+            doc_name = ctx.get("document_filename", "")
+            if section:
+                curriculum_parts.append(f"[{doc_name} — {section}]\n{content}")
+            else:
+                curriculum_parts.append(f"[{doc_name}]\n{content}")
+        curriculum_text = "\n\n---\n\n".join(curriculum_parts)
+        prompt_parts.append(
+            f"PODSTAWA PROGRAMOWA (wymagania ministerialne):\n{curriculum_text}\n\n"
+            "Upewnij się, że generowane pytania realizują powyższe wymagania programowe. "
+            "Dla każdego pytania w odpowiedzi JSON dodaj opcjonalne pole \"curriculum_ref\" "
+            "(string lub null) z kodem wymagania, które dane pytanie realizuje."
+        )
 
     prompt_parts.append(
         f"Wygeneruj dokładnie {generation.total_questions} pytań: "

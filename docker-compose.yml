@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:16
+    image: pgvector/pgvector:pg16
     container_name: edugen-postgres
     restart: unless-stopped
     stop_grace_period: 5s # natychmiastowe ubijanie kontenera

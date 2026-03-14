@@ -177,6 +177,7 @@ def ensure_directories() -> None:
         Path(settings.DATA_DIR) / "subjects",
         Path(settings.DATA_DIR) / "documents",
         Path(settings.DATA_DIR) / "backups",
+        Path(settings.DATA_DIR) / "curriculum",
     ]
     for d in dirs:
         d.mkdir(parents=True, exist_ok=True)

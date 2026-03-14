@@ -113,7 +113,7 @@ def health_check():
 
 
 # Register routers
-from app.routers import auth, settings as settings_router, subjects, files, generations, prototypes, documents, backups, diagnostics, levels, task_types, secret_keys, user_ai_models as user_ai_models_router, admin  # noqa: E402
+from app.routers import auth, settings as settings_router, subjects, files, generations, prototypes, documents, backups, diagnostics, levels, task_types, secret_keys, user_ai_models as user_ai_models_router, admin, curriculum  # noqa: E402
 
 app.include_router(auth.router, prefix="/api")
 app.include_router(settings_router.router, prefix="/api")
@@ -129,3 +129,4 @@ app.include_router(task_types.router, prefix="/api")
 app.include_router(secret_keys.router, prefix="/api")
 app.include_router(user_ai_models_router.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
+app.include_router(curriculum.router, prefix="/api")

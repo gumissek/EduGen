@@ -29,7 +29,9 @@ backend/
 │   │   ├── file_content_cache.py
 │   │   ├── generation_source_file.py
 │   │   ├── verification_token.py
-│   │   └── user_ai_model.py
+│   │   ├── user_ai_model.py
+│   │   ├── curriculum_document.py
+│   │   └── curriculum_chunk.py
 │   ├── routers/
 │   │   ├── admin.py
 │   │   ├── auth.py
@@ -44,7 +46,8 @@ backend/
 │   │   ├── settings.py
 │   │   ├── subjects.py
 │   │   ├── task_types.py
-│   │   └── user_ai_models.py
+│   │   ├── user_ai_models.py
+│   │   └── curriculum.py
 │   ├── schemas/
 │   │   ├── admin.py
 │   │   ├── auth.py
@@ -57,7 +60,8 @@ backend/
 │   │   ├── secret_key.py
 │   │   ├── settings.py
 │   │   ├── subject.py
-│   │   └── user_ai_model.py
+│   │   ├── user_ai_model.py
+│   │   └── curriculum.py
 │   └── services/
 │       ├── ai_service.py
 │       ├── auth_service.py
@@ -67,14 +71,16 @@ backend/
 │       ├── email_service.py
 │       ├── file_service.py
 │       ├── generation_service.py
-│       └── verification_service.py
+│       ├── verification_service.py
+│       └── curriculum_service.py
 ├── alembic/
 │   ├── env.py
 │   ├── script.py.mako
 │   └── versions/
 │       ├── 001_initial_schema.py
 │       ├── 002_add_verification_tokens.py
-│       └── 003_add_comments_json_to_prototypes.py
+│       ├── 003_add_comments_json_to_prototypes.py
+│       └── 004_add_curriculum_tables.py
 ├── alembic.ini
 ├── Dockerfile
 └── pyproject.toml
@@ -296,6 +302,17 @@ Stub do wysyłki e-maili weryfikacyjnych:
 ### `diagnostic_service.py`
 - `get_logs(db, level, page, per_page)` — paginowane pobieranie logów diagnostycznych z opcjonalnym filtrem `level`. Zwraca `(logs, total_count)`.
 
+### `curriculum_service.py`
+Serwis obsługujący pipeline wektorowej bazy Podstawy Programowej (RAG):
+- `convert_pdf_to_markdown(pdf_path)` — konwersja PDF → HTML (PyMuPDF) → Markdown (markdownify). Zwraca string Markdown.
+- `chunk_markdown(markdown_text)` — Dzielenie Markdown na chunki: najpierw `MarkdownHeaderTextSplitter` (wg nagłówków H1–H3), potem `RecursiveCharacterTextSplitter` (1000 znaków, 200 overlap). Zwraca listę `(content, metadata)`.
+- `generate_embedding(text, api_key)` — generacja embeddingu (3072 wymiarów) przez OpenRouter API (`openai/text-embedding-3-large`). Zwraca `list[float]`.
+- `generate_embeddings_batch(texts, api_key, batch_size=20)` — batch generacja embeddingów.
+- `process_curriculum_document(document_id, db, api_key)` — background pipeline: PDF → Markdown → Chunki → Embeddingi → zapis do bazy. Aktualizuje status dokumentu (`processing` → `ready` / `error`).
+- `search_similar_chunks(query_embedding, db, limit, threshold, edu_level, subject)` — wyszukiwanie najbardziej podobnych chunków za pomocą pgvector cosine similarity (raw SQL). Zwraca listę wyników z metadanymi dokumentu.
+- `check_compliance(generation_id, db, api_key)` — sprawdza zgodność pytań prototypu z Podstawą Programową: embeddingi pytań → search → ranking. Zapisuje JSON do `prototype.compliance_json`. Zwraca `ComplianceResponse`.
+- `_extract_requirement_code(text)` — regex extraction kodu wymagania z tekstu.
+
 ---
 
 ## 7. Endpointy i Routery (`app/routers/`)
@@ -461,13 +478,27 @@ Architektura grupuje endpointy na moduły. Łącznie **58 endpointów** w 14 rou
 | DELETE | `/admin/users/{user_id}` | Usunięcie użytkownika (blokada usunięcia własnego konta → 400). |
 | POST | `/admin/users/{user_id}/reset-password` | Reset hasła użytkownika (min 8 znaków). Czyszczenie tokenów i reset `failed_login_attempts`. |
 
+#### Curriculum (`/api/curriculum`) — mixed auth
+
+| Metoda | Ścieżka | Opis |
+|--------|---------|------|
+| GET | `/curriculum/documents` | Lista dokumentów PP. Publiczny. Filtry: `education_level`, `subject_name`. |
+| POST | `/curriculum/documents` | Upload PDF (superuser). Metadata: `education_level`, `subject_name`, `description`. |
+| GET | `/curriculum/documents/{id}` | Szczegóły dokumentu PP (publiczny). |
+| GET | `/curriculum/documents/{id}/download` | Pobranie pliku PDF (publiczny). |
+| DELETE | `/curriculum/documents/{id}` | Usunięcie dokumentu i chunków (superuser). |
+| GET | `/curriculum/documents/{id}/status` | Status przetwarzania (superuser). |
+| POST | `/curriculum/documents/{id}/reprocess` | Ponowne przetworzenie PDF (superuser). |
+| POST | `/curriculum/search` | Wyszukiwanie semantyczne w chunkach PP (zalogowany). |
+| POST | `/curriculum/compliance/{generation_id}` | Sprawdzenie zgodności pytań generacji z PP (zalogowany). |
+
 ### Uprawnienia — podsumowanie
 
 | Dependency | Routery |
 |---|---|
-| `get_current_superuser` | admin, backups, diagnostics |
-| `get_current_user` | auth (większość), documents, files, generations, levels, prototypes, secret-keys, settings, subjects, user-ai-models |
-| Brak autoryzacji | `POST /auth/register`, `POST /auth/login`, `POST /auth/logout`, `GET /auth/verify-email-change`, task-types (wszystkie) |
+| `get_current_superuser` | admin, backups, diagnostics, curriculum (upload/delete/status/reprocess) |
+| `get_current_user` | auth (większość), documents, files, generations, levels, prototypes, secret-keys, settings, subjects, user-ai-models, curriculum (search/compliance) |
+| Brak autoryzacji | `POST /auth/register`, `POST /auth/login`, `POST /auth/logout`, `GET /auth/verify-email-change`, task-types (wszystkie), curriculum (list/get/download) |
 
 ---
 
@@ -487,6 +518,7 @@ Schematy request/response zorganizowane w dedykowane pliki:
 - **`settings.py`** — `SettingsResponse`, `SettingsUpdate`.
 - **`backup.py`** — `BackupResponse`, `BackupListResponse`.
 - **`diagnostic.py`** — `DiagnosticLogResponse`, `DiagnosticListResponse`.
+- **`curriculum.py`** — `CurriculumDocumentResponse`, `CurriculumDocumentListResponse`, `CurriculumChunkResponse`, `CurriculumSearchRequest/Result/Response`, `ComplianceQuestionResult`, `ComplianceResponse`, `CurriculumStatusResponse`.
 
 ---
 
@@ -551,7 +583,7 @@ Testy backendu uruchamiane są ręcznie z katalogu głównego projektu dedykowan
 
 **Projekt:** `edugen-backend` v0.1.0, Python ≥ 3.12, build system: Hatchling.
 
-### Zależności produkcyjne (21 pakietów)
+### Zależności produkcyjne (23 pakiety)
 
 | Pakiet | Wersja |
 |--------|--------|
@@ -576,6 +608,8 @@ Testy backendu uruchamiane są ręcznie z katalogu głównego projektu dedykowan
 | `pypandoc` | ≥1.14 |
 | `beautifulsoup4` | ≥4.12.0 |
 | `xhtml2pdf` | ≥0.2.17 |
+| `langchain-text-splitters` | ≥0.2.0 |
+| `pgvector` | ≥0.3.0 |
 
 ### Zależności testowe (extra `test`)
 
@@ -586,7 +620,7 @@ Testy backendu uruchamiane są ręcznie z katalogu głównego projektu dedykowan
 
 ### Pakiety systemowe (Dockerfile, `python:3.12-slim`)
 
-`curl`, `build-essential`, `pkg-config`, `libcairo2-dev`, `libmagic1`, `pandoc`, `fontconfig`, `fonts-dejavu-core`
+`curl`, `build-essential`, `pkg-config`, `libcairo2-dev`, `libmagic1`, `pandoc`, `fontconfig`, `fonts-dejavu-core`, `poppler-utils`
 
 ### Zasoby kopiowane do obrazu backendu
 
