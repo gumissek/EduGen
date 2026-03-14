@@ -214,7 +214,27 @@ printf "${CYAN}  localhost:${POSTGRES_HOST_PORT}  (PostgreSQL)${NC}\n"
 echo ""
 
 # Uruchamianie w trybie interaktywnym (CTRL+C zatrzyma kontenery)
+set +e
 ${DOCKER_COMPOSE_CMD} up --build
+APP_EXIT_CODE=$?
+set -e
+
+if [ "${APP_EXIT_CODE}" -ne 0 ]; then
+    echo ""
+    echo "============================================"
+    echo " [BLAD] Uruchamianie aplikacji nie powiodlo sie."
+    echo "============================================"
+    echo ""
+    echo "Najczestsza przyczyna: blad kompilacji frontend/backend podczas builda kontenerow."
+    echo "W logach powyzej odszukaj PIERWSZY blad (np. TypeScript, lint, testy, brakujaca zmienna env)."
+    echo ""
+    echo "Szybka diagnostyka:"
+    echo "  1) ${DOCKER_COMPOSE_CMD} build --no-cache frontend"
+    echo "  2) Popraw wskazany plik i linie bledu z logu"
+    echo "  3) Uruchom ponownie: bash start_mac_linux.sh"
+    echo ""
+    exit "${APP_EXIT_CODE}"
+fi
 
 echo ""
 echo "============================================"

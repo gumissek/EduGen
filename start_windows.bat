@@ -48,6 +48,7 @@ echo ============================================
 echo.
 
 set "POSTGRES_PORT=5432"
+set "POSTGRES_HOST_PORT="
 
 :: Sprawdz czy istnieje plik .env (root — wymagany przez Docker Compose)
 if not exist ".env" (
@@ -75,6 +76,9 @@ if not exist ".env" (
 )
 
 for /f "tokens=2 delims==" %%p in ('findstr /r /b /c:"POSTGRES_PORT=" ".env" 2^>nul') do set "POSTGRES_PORT=%%p"
+for /f "tokens=2 delims==" %%p in ('findstr /r /b /c:"POSTGRES_HOST_PORT=" ".env" 2^>nul') do set "POSTGRES_HOST_PORT=%%p"
+
+if not defined POSTGRES_HOST_PORT set "POSTGRES_HOST_PORT=%POSTGRES_PORT%"
 
 echo [OK] Plik konfiguracyjny .env istnieje.
 echo.
@@ -164,24 +168,34 @@ echo ============================================
 echo.
 echo   Frontend (interfejs):  http://localhost:3000
 echo   Backend  (API):        http://localhost:8000
-echo   Baza danych:           localhost:%POSTGRES_PORT%
+echo   Baza danych:           localhost:%POSTGRES_HOST_PORT%
 echo.
 powershell -Command "Write-Host '============================================' -ForegroundColor Red ; Write-Host '  JAK WYLACZYC APLIKACJE:' -ForegroundColor Red ; Write-Host '  Nacisnij CTRL + C w tym oknie,' -ForegroundColor Red ; Write-Host '  a nastepnie wpisz T i zatwierdz Enterem.' -ForegroundColor Red ; Write-Host '============================================' -ForegroundColor Red"
-powershell -Command "Write-Host '' ; Write-Host '  Jezeli przegladarka nie otworzyla sie automatycznie,' -ForegroundColor Cyan ; Write-Host '  odwiedz recznie ponizsze adresy:' -ForegroundColor Cyan ; Write-Host '  http://localhost:3000  (interfejs aplikacji)' -ForegroundColor Cyan ; Write-Host '  http://localhost:8000  (API backendu)' -ForegroundColor Cyan ; Write-Host '  localhost:%POSTGRES_PORT%  (PostgreSQL)' -ForegroundColor Cyan ; Write-Host ''"
+powershell -Command "Write-Host '' ; Write-Host '  Jezeli przegladarka nie otworzyla sie automatycznie,' -ForegroundColor Cyan ; Write-Host '  odwiedz recznie ponizsze adresy:' -ForegroundColor Cyan ; Write-Host '  http://localhost:3000  (interfejs aplikacji)' -ForegroundColor Cyan ; Write-Host '  http://localhost:8000  (API backendu)' -ForegroundColor Cyan ; Write-Host '  localhost:%POSTGRES_HOST_PORT%  (PostgreSQL)' -ForegroundColor Cyan ; Write-Host ''"
 echo.
 echo Czekanie na logi kontenerow...
 echo.
 
 :: Uruchamianie kontenerow w trybie interaktywnym (CTRL+C zatrzyma kontenery)
 %DOCKER_COMPOSE_CMD% up --build
+set "APP_EXIT_CODE=%ERRORLEVEL%"
 
-if %ERRORLEVEL% NEQ 0 (
+if not "%APP_EXIT_CODE%"=="0" (
     echo.
     echo ============================================
-    echo  Aplikacja zostala zatrzymana pomyslnie.
+    echo  [BLAD] Uruchamianie aplikacji nie powiodlo sie.
     echo ============================================
+    echo.
+    echo Najczestsza przyczyna: blad kompilacji aplikacji frontend/backend.
+    echo W logach powyzej odszukaj PIERWSZY blad ^(np. TypeScript, lint, testy, brakujaca zmienna env^).
+    echo.
+    echo Szybka diagnostyka:
+    echo   1. Uruchom ponownie: %DOCKER_COMPOSE_CMD% build --no-cache frontend
+    echo   2. Sprawdz wskazany plik i linie bledu z logu kompilacji
+    echo   3. Po poprawce uruchom ponownie start_windows.bat
     pause
-    exit /b 1
+    popd
+    exit /b %APP_EXIT_CODE%
 )
 
 powershell -Command "Write-Host '' ; Write-Host '============================================' -ForegroundColor Yellow ; Write-Host '  Aplikacja zostala zatrzymana.' -ForegroundColor Yellow ; Write-Host '============================================' -ForegroundColor Yellow"
@@ -192,3 +206,4 @@ echo   %DOCKER_COMPOSE_CMD% stop postgres
 echo.
 pause
 popd
+exit /b 0

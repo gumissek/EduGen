@@ -102,8 +102,8 @@ Additional utility scripts in project root:
 
 - `check_update.bat` - standalone update check for Windows.
 - `check_update.sh` - standalone update check for macOS/Linux.
-- `start_windows.bat` - production-like Docker startup for Windows; if an existing Compose stack is detected, it is removed (`down --remove-orphans --rmi local`) before a fresh rebuild.
-- `start_mac_linux.sh` - production-like Docker startup for macOS/Linux; if an existing Compose stack is detected, it is removed (`down --remove-orphans --rmi local`) before a fresh rebuild.
+- `start_windows.bat` - production-like Docker startup for Windows; if an existing Compose stack is detected, it is removed (`down --remove-orphans --rmi local`) before a fresh rebuild. When `docker compose up --build` fails (for example on TypeScript compile errors), the script now prints explicit diagnostics and exits with the original non-zero code instead of showing a misleading success message.
+- `start_mac_linux.sh` - production-like Docker startup for macOS/Linux; if an existing Compose stack is detected, it is removed (`down --remove-orphans --rmi local`) before a fresh rebuild. When `docker compose up --build` fails (for example on TypeScript compile errors), the script now prints explicit diagnostics and exits with the original non-zero code.
 - `reset_images_volumes.bat` - destructive hard reset on Windows; first stops the full stack from `docker-compose.yml` (if detected), then removes EduGen Docker containers, volumes, and images after explicit confirmation (`USUN_DANE`).
 - `reset_images_volumes.sh` - destructive hard reset on macOS/Linux; first stops the full stack from `docker-compose.yml` (if detected), then removes EduGen Docker containers, volumes, and images after explicit confirmation (`USUN_DANE`).
 - `hard_reset_app.app` - macOS launcher that opens Terminal and runs `reset_images_volumes.sh` (with the same destructive confirmation flow).

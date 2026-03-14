@@ -53,6 +53,7 @@ const defaultValues: Partial<GenerationParamsForm> = {
   variants_count: 1,
   task_types: [],
   source_file_ids: [],
+  curriculum_compliance_enabled: false,
 };
 
 export default function GenerationWizard() {

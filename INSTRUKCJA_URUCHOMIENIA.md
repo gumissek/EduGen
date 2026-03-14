@@ -179,9 +179,9 @@ Po otwarciu przeglądarki pod adresem **http://localhost:3000** zostaniesz przek
 
 W głównym katalogu projektu dostępne są poniższe skrypty:
 
-- **`start_windows.bat`** – standardowe uruchomienie aplikacji na Windows (Docker Compose). Jeśli wykryje istniejący stack Compose, usuwa go (`down --remove-orphans --rmi local`) i buduje aplikację od nowa.
+- **`start_windows.bat`** – standardowe uruchomienie aplikacji na Windows (Docker Compose). Jeśli wykryje istniejący stack Compose, usuwa go (`down --remove-orphans --rmi local`) i buduje aplikację od nowa. Gdy `docker compose up --build` zakończy się błędem (np. błąd kompilacji TypeScript), skrypt wyświetla czytelny komunikat diagnostyczny i kończy się kodem błędu zamiast pokazywać mylący komunikat o powodzeniu.
 - **`check_update.bat`** – sprawdzenie i opcjonalna aktualizacja wersji na Windows.
-- **`start_mac_linux.sh`** – standardowe uruchomienie aplikacji na macOS/Linux (Docker Compose). Jeśli wykryje istniejący stack Compose, usuwa go (`down --remove-orphans --rmi local`) i buduje aplikację od nowa.
+- **`start_mac_linux.sh`** – standardowe uruchomienie aplikacji na macOS/Linux (Docker Compose). Jeśli wykryje istniejący stack Compose, usuwa go (`down --remove-orphans --rmi local`) i buduje aplikację od nowa. Gdy `docker compose up --build` zakończy się błędem (np. błąd kompilacji TypeScript), skrypt wyświetla czytelny komunikat diagnostyczny i kończy się oryginalnym kodem błędu.
 - **`check_update.sh`** – sprawdzenie i opcjonalna aktualizacja wersji na macOS/Linux.
 - **`dev_windows.bat`** – tryb deweloperski na Windows (backend i frontend w osobnych oknach, PostgreSQL lokalnie przez Docker jeśli dostępny). Przed startem synchronizuje `common_filles` z katalogu głównego do `backend/common_filles`. Uruchomienie backendu realizuje `backend/start_backend_dev.bat` (najpierw `init_app.py`, potem `uvicorn`) z czytelnym komunikatem błędu i kodem zakończenia.
 - **`launch_app.app`** – launcher macOS uruchamiający w Terminalu skrypt `start_mac_linux.sh`.
@@ -245,6 +245,11 @@ Skrypty startowe automatycznie tworzą plik `.env` z szablonu `.env.example`, je
 - Oznacza to konflikt: port `5432` jest już zajęty na hoście.
 - W pliku `.env` ustaw `POSTGRES_HOST_PORT=55432` (lub inny wolny port) i uruchom aplikację ponownie.
 - Skrypt `start_mac_linux.sh` próbuje automatycznie dobrać wolny port hosta PostgreSQL, ale ustawienie ręczne w `.env` ma pierwszeństwo.
+
+### Błąd kompilacji podczas `docker compose up --build` (np. TypeScript)
+- Jeśli build kontenera zakończy się błędem, skrypty startowe wypiszą teraz blok diagnostyczny zamiast komunikatu sugerującego sukces.
+- Kluczowe jest znalezienie **pierwszego** błędu w logach (najczęściej wskazany plik i linia, np. w frontendzie).
+- Po poprawce kodu uruchom skrypt startowy ponownie.
 
 ### Nic nie pomaga? Ostateczność: hard reset danych Docker
 - Jeśli żadne kroki z tej sekcji nie pomagają, możesz użyć skryptu hard reset:

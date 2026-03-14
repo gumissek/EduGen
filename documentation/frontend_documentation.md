@@ -354,7 +354,7 @@ Główne interfejsy TypeScript:
 ### `src/schemas/`
 Walidacja formularzy realizowana przez **Zod** we współpracy z **React Hook Form**:
 - `auth.ts` — `LoginRequestSchema` (email + hasło), `RegisterRequestSchema` (email, imię opcjonalne, nazwisko opcjonalne, hasło min 8, potwierdzenie hasła z refine), `LoginResponseSchema` (access_token + token_type).
-- `generation.ts` — `GenerationParamsSchema` z walidacją warunkową: total_questions LUB open_questions LUB task_types wymagane (z wyjątkiem typów free-form: worksheet, lesson_materials — zdefiniowane w `TYPES_WITHOUT_QUESTIONS`).
+- `generation.ts` — `GenerationParamsSchema` z walidacją warunkową: total_questions LUB open_questions LUB task_types wymagane (z wyjątkiem typów free-form: worksheet, lesson_materials — zdefiniowane w `TYPES_WITHOUT_QUESTIONS`). Pole `curriculum_compliance_enabled` jest opcjonalne w schemacie, a domyślna wartość `false` jest ustawiana w stanie formularza kreatora (`GenerationWizard`).
 - `document.ts` — `DocumentSchema`: id (UUID), generation_id, subject_id, title, content_type, education_level, class_level, content, comments_json (nullable), filename, variants_count, created_at, updated_at.
 - `file.ts` — `SourceFileSchema`: id, subject_id, filename, file_type, file_size, summary (nullable), has_extracted_text, extraction_error (nullable/optional), page_count (nullable).
 - `subject.ts` — `SubjectSchema` (id UUID, name, is_custom, created_at), `CreateSubjectSchema` (name: min 2, max 255, regex dla polskich znaków).
