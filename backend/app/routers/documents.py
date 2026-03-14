@@ -51,9 +51,11 @@ def _build_detail(document: Document, db: DBSession) -> DocumentDetailResponse:
     subject = db.query(Subject).filter(Subject.id == generation.subject_id).first() if generation else None
 
     content = ""
+    comments_json = None
     updated_at = document.created_at
     if prototype:
         content = prototype.edited_content or prototype.original_content or ""
+        comments_json = prototype.comments_json
         updated_at = prototype.updated_at
 
     return DocumentDetailResponse(
@@ -66,6 +68,7 @@ def _build_detail(document: Document, db: DBSession) -> DocumentDetailResponse:
         education_level=(generation.education_level or "") if generation else "",
         class_level=str(generation.class_level).strip() if generation and generation.class_level else "",
         content=content,
+        comments_json=comments_json,
         filename=document.filename,
         variants_count=document.variants_count,
         created_at=document.created_at,
@@ -158,6 +161,8 @@ def update_document(
     prototype = db.query(Prototype).filter(Prototype.generation_id == document.generation_id).first()
     if prototype:
         prototype.edited_content = body.content
+        if body.comments_json is not None:
+            prototype.comments_json = body.comments_json
         prototype.updated_at = datetime.now(timezone.utc).isoformat()
         db.commit()
 
@@ -462,6 +467,7 @@ def copy_document(
         edited_content=prototype.edited_content,
         answer_key=prototype.answer_key,
         raw_questions_json=prototype.raw_questions_json,
+        comments_json=prototype.comments_json,
         created_at=now_iso,
         updated_at=now_iso,
     )

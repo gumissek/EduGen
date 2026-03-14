@@ -914,6 +914,23 @@ function EditorGlobalStyles() {
 
 const QUESTION_NUMBER_REGEX = /^(\s*(?:<[^>]+>)?\s*)\d+\.\s/;
 
+/**
+ * Extract comment marks from an HTML string as a JSON string.
+ * Each entry contains the comment text and the highlighted text.
+ */
+export function extractCommentsFromHtml(html: string): string | null {
+  if (typeof window === "undefined") return null;
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, "text/html");
+  const marks = doc.querySelectorAll("mark.tiptap-comment");
+  if (marks.length === 0) return null;
+  const comments = Array.from(marks).map((mark) => ({
+    comment: mark.getAttribute("data-comment") || "",
+    highlighted_text: mark.textContent || "",
+  }));
+  return JSON.stringify(comments);
+}
+
 function renumberQuestions(html: string): string {
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, "text/html");
@@ -1197,6 +1214,8 @@ export default function TipTapEditor({
             bgcolor: "background.paper",
             position: "relative",
             px: 0.4,
+            // Zapas na dole, żeby fixed RepromptInput nie przykrył ostatniego wiersza
+            pb: !readOnly ? "110px" : undefined,
           }}
         >
           {!readOnly && (

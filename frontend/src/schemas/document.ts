@@ -10,6 +10,7 @@ export const DocumentSchema = z.object({
   education_level: z.string().optional().default(''),
   class_level: z.string().optional().default(''),
   content: z.string().optional(),
+  comments_json: z.string().nullable().optional(),
   filename: z.string(),
   variants_count: z.number(),
   created_at: z.string(),

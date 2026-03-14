@@ -139,6 +139,8 @@ def update_prototype(
     prototype = _get_user_prototype(db, generation_id, current_user.id)
 
     prototype.edited_content = body.edited_content
+    if body.comments_json is not None:
+        prototype.comments_json = body.comments_json
     prototype.updated_at = datetime.now(timezone.utc).isoformat()
     db.commit()
     db.refresh(prototype)
@@ -353,6 +355,7 @@ def copy_prototype_draft(
         edited_content=prototype.edited_content,
         answer_key=prototype.answer_key,
         raw_questions_json=prototype.raw_questions_json,
+        comments_json=prototype.comments_json,
         created_at=now_iso,
         updated_at=now_iso,
     )

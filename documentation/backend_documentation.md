@@ -139,7 +139,7 @@ Definicja trzech serwisów:
 Kod dzieli się na dedykowane pliki modelowe oparte na `DeclarativeBase`. Kluczowe encje:
 - **`user.py`** — Multi-user: `email` (unikalne, indeksowane), `first_name`, `last_name`, `is_active`, `is_superuser`, `premium_level`, `api_quota`, `api_quota_reset`, `is_email_verified`, `email_verification_token`, `reset_password_token`, `last_password_change`, `failed_login_attempts`, `default_model`. Relacje do `SecretKey`, `Subject`, `Generation`, `SourceFile`, `Document`, `Prototype`.
 - **`secret_key.py`** — Przechowywanie zewnętrznych kluczy API (platform, key_name, secret_key_hash, is_active, last_used_at). FK → `users.id`.
-- **`generation.py`** & **`prototype.py`** — Logika zadań AI: parametry generacji a zrenderowane rezultaty docelowe JSON/HTML. Pole `user_id` (FK → `users.id`, NOT NULL) zapewnia izolację danych per użytkownik.
+- **`generation.py`** & **`prototype.py`** — Logika zadań AI: parametry generacji a zrenderowane rezultaty docelowe JSON/HTML. Pole `user_id` (FK → `users.id`, NOT NULL) zapewnia izolację danych per użytkownik. Pole `comments_json` (TEXT, nullable) przechowuje strukturyzowany JSON z komentarzami użytkownika z edytora TipTap (wyodrębnione z HTML `<mark class="tiptap-comment" data-comment="...">`).
 - **`source_file.py`** & **`document.py`** — Przetwarzanie dokumentów dostarczanych przez użytkownika. Oba zawierają `user_id` (FK → `users.id`, NOT NULL).
 - **`ai_request.py`** — Logi zapytań do modeli AI (OpenRouter). `user_id` (FK → `users.id`, nullable).
 - **`subject.py`** — Przedmioty edukacyjne. `user_id` (FK → `users.id`, nullable — predefinowane przedmioty nie mają właściciela).

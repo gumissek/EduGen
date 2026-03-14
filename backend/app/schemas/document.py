@@ -44,6 +44,7 @@ class DocumentDetailResponse(BaseModel):
     education_level: str
     class_level: str
     content: str
+    comments_json: Optional[str] = None
     filename: str
     variants_count: int
     created_at: str
@@ -132,6 +133,7 @@ class DocumentListItemResponse(BaseModel):
 
 class DocumentUpdateRequest(BaseModel):
     content: str
+    comments_json: Optional[str] = None
 
     @field_validator('content', mode='before')
     @classmethod

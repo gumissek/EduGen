@@ -162,6 +162,7 @@ Wersja prototypowa dokumentu do edycji w WYSIWYG.
 | edited_content | TEXT | NULL |
 | answer_key | TEXT | NOT NULL |
 | raw_questions_json | TEXT | NULL |
+| comments_json | TEXT | NULL |
 | created_at | TEXT | NOT NULL DEFAULT (aktualna data ISO 8601) |
 | updated_at | TEXT | NOT NULL DEFAULT (aktualna data ISO 8601) |
 

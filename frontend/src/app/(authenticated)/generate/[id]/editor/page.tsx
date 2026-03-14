@@ -14,6 +14,7 @@ import api from '@/lib/api';
 import { useSnackbar } from '@/components/ui/SnackbarProvider';
 import dynamic from 'next/dynamic';
 import RepromptInput from '@/components/editor/RepromptInput';
+import { extractCommentsFromHtml } from '@/components/editor/TipTapEditor';
 
 // Lazy load TipTap to avoid SSR issues
 const TipTapEditor = dynamic(() => import('@/components/editor/TipTapEditor'), {
@@ -72,7 +73,11 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
 
   const saveMutation = useMutation({
     mutationFn: async (htmlContent: string) => {
-      await api.put(`/api/prototypes/${id}`, { edited_content: htmlContent });
+      const commentsJson = extractCommentsFromHtml(htmlContent);
+      await api.put(`/api/prototypes/${id}`, {
+        edited_content: htmlContent,
+        comments_json: commentsJson ?? undefined,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['prototype', id] });
@@ -216,36 +221,31 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
         </Box>
       </Box>
 
-      {/* Kontener dla edytora i sticky inputu */}
-      <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', position: 'relative' }}>
-        
-        {/* Kontener edytora */}
-        <Box sx={{ flexGrow: 1, pb: 4 }}>
-          <TipTapEditor 
-            initialContent={content} 
-            onChange={handleEditorChange} 
-          />
-        </Box>
-        
-        {/* Sticky wrapper kontrolujący pozycję Inputu */}
-        <Box 
-          sx={{ 
-            position: 'sticky', 
-            bottom: { xs: 16, md: 24 }, 
-            zIndex: 50, // Podbity z-index, aby przysłaniał test za nim podczas scrolla
-            display: 'flex',
-            justifyContent: 'center',
-            width: '100%',
-            px: { xs: 2, md: 0 }, // Zabezpieczenie na mobile, żeby input nie przyklejał się do krawędzi ekranu
-            mt: 2
-          }}
-        >
-          <RepromptInput 
-            onSend={async (p) => { await repromptMutation.mutateAsync(p); }} 
-            isLoading={repromptMutation.isPending} 
-          />
-        </Box>
+      {/* Kontener edytora */}
+      <Box sx={{ flexGrow: 1 }}>
+        <TipTapEditor 
+          initialContent={content} 
+          onChange={handleEditorChange} 
+        />
+      </Box>
 
+      {/* Fixed bar – zawsze przyklejony do dołu viewportu, z odstępem od krawędzi */}
+      <Box 
+        sx={{ 
+          position: 'fixed', 
+          bottom: { xs: 20, md: 28 },
+          left: { xs: 0, md: '260px' },
+          right: 0,
+          zIndex: 1200,
+          display: 'flex',
+          justifyContent: 'center',
+          px: { xs: 2, md: 4 },
+        }}
+      >
+        <RepromptInput 
+          onSend={async (p) => { await repromptMutation.mutateAsync(p); }} 
+          isLoading={repromptMutation.isPending} 
+        />
       </Box>
     </Box>
   );
