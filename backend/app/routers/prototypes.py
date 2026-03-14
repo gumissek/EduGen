@@ -33,7 +33,7 @@ from app.schemas.prototype import (
     PrototypeListResponse,
 )
 from app.services.ai_service import call_openrouter_reprompt, call_openrouter_reprompt_free_form, TYPES_WITHOUT_QUESTIONS
-from app.services.generation_service import _render_content_html, _build_answer_key
+from app.services.generation_service import render_content_html, build_answer_key
 
 router = APIRouter(prefix="/prototypes", tags=["prototypes"])
 
@@ -251,8 +251,8 @@ async def reprompt(
         )
 
         # Update prototype
-        new_content = _render_content_html(result, generation.content_type)
-        new_answer_key = _build_answer_key(result)
+        new_content = render_content_html(result, generation.content_type)
+        new_answer_key = build_answer_key(result)
 
         prototype.edited_content = new_content
         prototype.answer_key = new_answer_key

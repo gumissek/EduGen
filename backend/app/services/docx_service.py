@@ -7,7 +7,6 @@ and pypandoc (Pandoc) to produce DOCX and PDF output files.
 from __future__ import annotations
 
 import copy
-import io
 import json
 import logging
 import random

@@ -21,7 +21,7 @@ from app.services.ai_service import build_system_prompt, call_openrouter, TYPES_
 logger = logging.getLogger(__name__)
 
 
-def _render_content_html(data: dict, content_type: str = "") -> str:
+def render_content_html(data: dict, content_type: str = "") -> str:
     """Render AI-generated JSON into HTML content for the WYSIWYG editor."""
     if not isinstance(data, dict):
         return "<p><em>Błąd renderowania: nieprawidłowy format danych AI.</em></p>"
@@ -61,7 +61,7 @@ def _render_content_html(data: dict, content_type: str = "") -> str:
     return "\n".join(html_parts)
 
 
-def _build_answer_key(data: dict) -> str:
+def build_answer_key(data: dict) -> str:
     """Build an answer key from the AI response."""
     if not isinstance(data, dict):
         return "Klucz odpowiedzi: (brak danych)"
@@ -124,8 +124,8 @@ def generate_prototype_task(db: DBSession, generation_id: str) -> None:
 
         # Create prototype
         is_free_form = generation.content_type in TYPES_WITHOUT_QUESTIONS
-        original_content = _render_content_html(result, generation.content_type)
-        answer_key = "" if is_free_form else _build_answer_key(result)
+        original_content = render_content_html(result, generation.content_type)
+        answer_key = "" if is_free_form else build_answer_key(result)
         # For free-form types, don't store raw questions JSON (there are none)
         raw_json = None if is_free_form else json.dumps(result, ensure_ascii=False)
 

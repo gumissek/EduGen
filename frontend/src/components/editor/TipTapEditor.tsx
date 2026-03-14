@@ -134,7 +134,7 @@ function TableBubbleMenu({ editor }: { editor: Editor }) {
     <BubbleMenu
       pluginKey="tableBubbleMenu"
       editor={editor}
-      shouldShow={({ editor, state }) => {
+      shouldShow={({ state }) => {
         if (state.selection instanceof CellSelection) return true;
         // Check both ends of selection for table context
         for (const pos of [state.selection.$from, state.selection.$to]) {
@@ -426,7 +426,7 @@ function CommentBubbleMenu({ editor }: { editor: Editor }) {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
       e.preventDefault();
-      isEditing ? handleEditConfirm() : handleConfirm();
+      if (isEditing) { handleEditConfirm(); } else { handleConfirm(); }
     }
     if (e.key === "Escape") {
       if (isEditing) {

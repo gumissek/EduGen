@@ -6,7 +6,6 @@ import base64
 import hashlib
 import json
 import mimetypes
-import os
 import requests as http_requests
 from datetime import datetime, timezone
 from pathlib import Path

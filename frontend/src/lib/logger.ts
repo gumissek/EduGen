@@ -26,19 +26,15 @@ function log(level: LogLevel, ...args: unknown[]): void {
   const prefix = `${timestamp()} ${formatLevel(level)}`;
   switch (level) {
     case 'DEBUG':
-      // eslint-disable-next-line no-console
       console.debug(prefix, ...args);
       break;
     case 'INFO':
-      // eslint-disable-next-line no-console
       console.info(prefix, ...args);
       break;
     case 'WARN':
-      // eslint-disable-next-line no-console
       console.warn(prefix, ...args);
       break;
     case 'ERROR':
-      // eslint-disable-next-line no-console
       console.error(prefix, ...args);
       break;
   }
