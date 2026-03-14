@@ -75,7 +75,10 @@ def list_curriculum_documents(
     db: DBSession = Depends(get_db),
 ):
     """List all curriculum documents with status='ready' (public)."""
-    query = db.query(CurriculumDocument).filter(CurriculumDocument.status == "ready")
+    query = db.query(CurriculumDocument).filter(
+        CurriculumDocument.status == "ready",
+        CurriculumDocument.is_active == True,
+    )
 
     if education_level:
         query = query.filter(CurriculumDocument.education_level == education_level)
@@ -98,10 +101,10 @@ def list_curriculum_documents_admin(
     db: DBSession = Depends(get_db),
     current_user: User = Depends(get_current_superuser),
 ):
-    """List curriculum documents for admin (all statuses)."""
+    """List curriculum documents for admin (active documents only)."""
     del current_user  # dependency enforces superuser access
 
-    query = db.query(CurriculumDocument)
+    query = db.query(CurriculumDocument).filter(CurriculumDocument.is_active == True)
 
     if education_level:
         query = query.filter(CurriculumDocument.education_level == education_level)
@@ -124,7 +127,11 @@ def get_curriculum_document(
     db: DBSession = Depends(get_db),
 ):
     """Get single curriculum document details (public)."""
-    document = db.query(CurriculumDocument).filter(CurriculumDocument.id == document_id).first()
+    document = (
+        db.query(CurriculumDocument)
+        .filter(CurriculumDocument.id == document_id, CurriculumDocument.is_active == True)
+        .first()
+    )
     if not document:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dokument nie znaleziony")
     return CurriculumDocumentResponse.model_validate(document)
@@ -136,7 +143,11 @@ def download_curriculum_document(
     db: DBSession = Depends(get_db),
 ):
     """Download original PDF file (public)."""
-    document = db.query(CurriculumDocument).filter(CurriculumDocument.id == document_id).first()
+    document = (
+        db.query(CurriculumDocument)
+        .filter(CurriculumDocument.id == document_id, CurriculumDocument.is_active == True)
+        .first()
+    )
     if not document:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dokument nie znaleziony")
 
@@ -185,26 +196,79 @@ async def upload_curriculum_document(
 
     # Check for duplicate by file hash
     file_hash = hashlib.sha256(file_bytes).hexdigest()
+    original_filename = file.filename or "document.pdf"
+    safe_filename = "original.pdf"
+    now = datetime.now(timezone.utc).isoformat()
+
     existing = db.query(CurriculumDocument).filter(CurriculumDocument.file_hash == file_hash).first()
-    if existing:
+
+    if existing and existing.is_active:
+        # Active record — reject as duplicate
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Ten plik został już wgrany wcześniej.",
         )
 
-    # Save file to disk
+    if existing and not existing.is_active:
+        # Soft-deleted record with same hash — reactivate and reuse embeddings
+        logger.info(
+            "[curriculum] Re-upload of soft-deleted document: document_id=%s file_hash=%.12s",
+            existing.id,
+            file_hash,
+        )
+        doc_dir = _get_curriculum_dir() / existing.id
+        doc_dir.mkdir(parents=True, exist_ok=True)
+        file_path = doc_dir / safe_filename
+        file_path.write_bytes(file_bytes)
+
+        existing.filename = safe_filename
+        existing.original_filename = original_filename
+        existing.file_path = str(file_path)
+        existing.file_size = len(file_bytes)
+        existing.education_level = education_level
+        existing.subject_name = subject_name
+        existing.description = description
+        existing.uploaded_by = current_user.id
+        existing.is_active = True
+        existing.updated_at = now
+
+        # If chunks + embeddings already exist, skip full reprocessing
+        if existing.chunk_count > 0 and existing.status == "ready":
+            logger.info(
+                "[curriculum] Reactivated document with existing embeddings — skipping pipeline: "
+                "document_id=%s chunks=%d",
+                existing.id,
+                existing.chunk_count,
+            )
+        else:
+            # Chunks were lost or document was never fully processed — reprocess
+            logger.info(
+                "[curriculum] Reactivated document needs reprocessing: document_id=%s status=%s chunks=%d",
+                existing.id,
+                existing.status,
+                existing.chunk_count,
+            )
+            existing.status = "uploaded"
+            existing.chunk_count = 0
+            existing.error_message = None
+            api_key = _get_api_key(db, current_user.id)
+            db.commit()
+            db.refresh(existing)
+            background_tasks.add_task(process_curriculum_document, db, existing.id, api_key)
+            return CurriculumDocumentResponse.model_validate(existing)
+
+        db.commit()
+        db.refresh(existing)
+        return CurriculumDocumentResponse.model_validate(existing)
+
+    # Brand-new document — save file and kick off full pipeline
     doc_id = str(uuid4())
     doc_dir = _get_curriculum_dir() / doc_id
     doc_dir.mkdir(parents=True, exist_ok=True)
 
-    original_filename = file.filename or "document.pdf"
-    # Sanitize filename
-    safe_filename = "original.pdf"
     file_path = doc_dir / safe_filename
     file_path.write_bytes(file_bytes)
 
-    # Create document record
-    now = datetime.now(timezone.utc).isoformat()
     document = CurriculumDocument(
         id=doc_id,
         filename=safe_filename,
@@ -216,6 +280,7 @@ async def upload_curriculum_document(
         subject_name=subject_name,
         description=description,
         status="uploaded",
+        is_active=True,
         uploaded_by=current_user.id,
         created_at=now,
         updated_at=now,
@@ -224,7 +289,6 @@ async def upload_curriculum_document(
     db.commit()
     db.refresh(document)
 
-    # Get API key and start background processing
     api_key = _get_api_key(db, current_user.id)
     background_tasks.add_task(process_curriculum_document, db, doc_id, api_key)
 
@@ -237,20 +301,43 @@ def delete_curriculum_document(
     db: DBSession = Depends(get_db),
     current_user: User = Depends(get_current_superuser),
 ):
-    """Delete curriculum document and all its chunks (admin only)."""
-    document = db.query(CurriculumDocument).filter(CurriculumDocument.id == document_id).first()
+    """Soft-delete a curriculum document (admin only).
+
+    The physical PDF file is removed from disk, but the DB record and all
+    associated chunks (including embeddings) are retained with is_active=False.
+    This allows embedding reuse if the same document is re-uploaded later.
+    """
+    document = (
+        db.query(CurriculumDocument)
+        .filter(CurriculumDocument.id == document_id, CurriculumDocument.is_active == True)
+        .first()
+    )
     if not document:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dokument nie znaleziony")
 
-    # Remove files from disk
+    logger.info(
+        "[curriculum] Soft-deleting document: document_id=%s original_filename=%s",
+        document_id,
+        document.original_filename,
+    )
+
+    # Remove physical files from disk (keep DB record + chunks for embedding reuse)
+    import shutil
     doc_dir = Path(document.file_path).parent
     if doc_dir.exists():
-        import shutil
         shutil.rmtree(str(doc_dir), ignore_errors=True)
+        logger.info("[curriculum] Removed document directory from disk: path=%s", doc_dir)
+    else:
+        logger.warning("[curriculum] Document directory not found on disk: path=%s", doc_dir)
 
-    # Delete from DB (cascade removes chunks)
-    db.delete(document)
+    document.is_active = False
+    document.updated_at = datetime.now(timezone.utc).isoformat()
     db.commit()
+    logger.info(
+        "[curriculum] Soft-delete complete: document_id=%s chunks_preserved=%d",
+        document_id,
+        document.chunk_count,
+    )
 
 
 @router.get("/documents/{document_id}/status", response_model=CurriculumStatusResponse)
@@ -260,7 +347,11 @@ def get_document_status(
     current_user: User = Depends(get_current_superuser),
 ):
     """Poll processing status (admin only)."""
-    document = db.query(CurriculumDocument).filter(CurriculumDocument.id == document_id).first()
+    document = (
+        db.query(CurriculumDocument)
+        .filter(CurriculumDocument.id == document_id, CurriculumDocument.is_active == True)
+        .first()
+    )
     if not document:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dokument nie znaleziony")
 
@@ -279,7 +370,11 @@ def reprocess_curriculum_document(
     current_user: User = Depends(get_current_superuser),
 ):
     """Re-run processing pipeline (admin only)."""
-    document = db.query(CurriculumDocument).filter(CurriculumDocument.id == document_id).first()
+    document = (
+        db.query(CurriculumDocument)
+        .filter(CurriculumDocument.id == document_id, CurriculumDocument.is_active == True)
+        .first()
+    )
     if not document:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dokument nie znaleziony")
 

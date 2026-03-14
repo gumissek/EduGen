@@ -20,6 +20,7 @@ class CurriculumDocumentResponse(BaseModel):
     error_message: str | None
     page_count: int | None
     chunk_count: int
+    is_active: bool
     created_at: str
     updated_at: str
 

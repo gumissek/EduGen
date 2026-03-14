@@ -12,6 +12,11 @@ import IconButton from '@mui/material/IconButton';
 import TextField from '@mui/material/TextField';
 import Stack from '@mui/material/Stack';
 import Tooltip from '@mui/material/Tooltip';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
+import DialogActions from '@mui/material/DialogActions';
 import { alpha, useTheme } from '@mui/material/styles';
 import DeleteIcon from '@mui/icons-material/Delete';
 import RefreshIcon from '@mui/icons-material/Refresh';
@@ -73,6 +78,8 @@ export default function AdminCurriculumPage() {
   const [educationLevel, setEducationLevel] = React.useState('');
   const [subjectName, setSubjectName] = React.useState('');
   const [sourceUrl, setSourceUrl] = React.useState('');
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = React.useState<string | null>(null);
   const hasSecretKeys = Boolean(user?.has_secret_keys);
 
   const { data, isLoading } = useQuery<CurriculumDocumentsResponse>({
@@ -178,6 +185,23 @@ export default function AdminCurriculumPage() {
       showError('Błąd podczas ponownego przetwarzania');
     },
   });
+
+  const openDeleteDialog = React.useCallback((docId: string) => {
+    setPendingDeleteId(docId);
+    setDeleteDialogOpen(true);
+  }, []);
+
+  const closeDeleteDialog = React.useCallback(() => {
+    setDeleteDialogOpen(false);
+    setPendingDeleteId(null);
+  }, []);
+
+  const confirmDelete = React.useCallback(() => {
+    if (pendingDeleteId) {
+      deleteMutation.mutate(pendingDeleteId);
+    }
+    closeDeleteDialog();
+  }, [pendingDeleteId, deleteMutation, closeDeleteDialog]);
 
   if (isAuthLoading) {
     return (
@@ -376,11 +400,7 @@ export default function AdminCurriculumPage() {
                     <IconButton
                       size="small"
                       color="error"
-                      onClick={() => {
-                        if (confirm('Czy na pewno chcesz usunąć ten dokument?')) {
-                          deleteMutation.mutate(doc.id);
-                        }
-                      }}
+                      onClick={() => openDeleteDialog(doc.id)}
                     >
                       <DeleteIcon fontSize="small" />
                     </IconButton>
@@ -391,6 +411,33 @@ export default function AdminCurriculumPage() {
           ))}
         </Stack>
       )}
+
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={closeDeleteDialog}
+        aria-labelledby="delete-curriculum-dialog-title"
+        aria-describedby="delete-curriculum-dialog-description"
+      >
+        <DialogTitle id="delete-curriculum-dialog-title">Usuń dokument</DialogTitle>
+        <DialogContent>
+          <DialogContentText id="delete-curriculum-dialog-description">
+            Czy na pewno chcesz usunąć ten dokument? Plik zostanie usunięty z dysku.
+            Osadzone embeddingi zostaną zachowane w bazie danych i będą mogły być
+            ponownie wykorzystane, jeśli ten sam dokument zostanie wgrany ponownie.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeDeleteDialog}>Anuluj</Button>
+          <Button
+            onClick={confirmDelete}
+            color="error"
+            variant="contained"
+            autoFocus
+          >
+            Usuń
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
