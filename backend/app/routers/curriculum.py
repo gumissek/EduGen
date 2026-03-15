@@ -568,11 +568,24 @@ def run_compliance_check(
 
     api_key = _get_api_key(db, current_user.id)
 
+    selected_document_ids: list[str] | None = None
+    if generation.curriculum_document_ids:
+        try:
+            parsed_ids = json.loads(generation.curriculum_document_ids)
+            if isinstance(parsed_ids, list):
+                selected_document_ids = [str(doc_id) for doc_id in parsed_ids if str(doc_id).strip()]
+        except Exception:
+            selected_document_ids = None
+
+    subject_name = generation.subject.name if generation.subject and generation.subject.name else None
+
     compliance_result = check_compliance(
         db,
         questions,
         api_key,
         education_level=generation.education_level,
+        subject_name=subject_name,
+        document_ids=selected_document_ids,
     )
 
     # Store compliance_json in prototype

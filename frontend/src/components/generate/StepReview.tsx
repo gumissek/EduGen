@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { useFormContext } from 'react-hook-form';
+import { useWatch } from 'react-hook-form';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Paper from '@mui/material/Paper';
@@ -26,8 +27,8 @@ import { Subject, SourceFile, CurriculumDocument } from '@/types';
 import { useCurriculum } from '@/hooks/useCurriculum';
 
 export default function StepReview() {
-  const { getValues, setValue } = useFormContext<GenerationParamsForm>();
-  const values = getValues();
+  const { control, setValue } = useFormContext<GenerationParamsForm>();
+  const values = useWatch({ control }) as GenerationParamsForm;
   const { subjects } = useSubjects();
   const { documents: curriculumDocs } = useCurriculum();
 
@@ -69,7 +70,7 @@ export default function StepReview() {
     const next = current.includes(docId)
       ? current.filter((id: string) => id !== docId)
       : [...current, docId];
-    setValue('curriculum_document_ids', next);
+    setValue('curriculum_document_ids', next, { shouldDirty: true, shouldTouch: true });
   };
 
   return (
@@ -201,10 +202,13 @@ export default function StepReview() {
               <Switch
                 checked={values.curriculum_compliance_enabled ?? false}
                 onChange={(e) => {
-                  setValue('curriculum_compliance_enabled', e.target.checked);
+                  setValue('curriculum_compliance_enabled', e.target.checked, {
+                    shouldDirty: true,
+                    shouldTouch: true,
+                  });
                   if (!e.target.checked) {
-                    setValue('include_compliance_card', false);
-                    setValue('curriculum_document_ids', []);
+                    setValue('include_compliance_card', false, { shouldDirty: true, shouldTouch: true });
+                    setValue('curriculum_document_ids', [], { shouldDirty: true, shouldTouch: true });
                   }
                 }}
                 color="primary"
@@ -228,7 +232,12 @@ export default function StepReview() {
                 control={
                   <Checkbox
                     checked={values.include_compliance_card ?? false}
-                    onChange={(e) => setValue('include_compliance_card', e.target.checked)}
+                    onChange={(e) =>
+                      setValue('include_compliance_card', e.target.checked, {
+                        shouldDirty: true,
+                        shouldTouch: true,
+                      })
+                    }
                     color="primary"
                     size="small"
                   />

@@ -38,6 +38,8 @@ export interface GenerationParams {
   source_file_ids?: string[];
   task_types?: string[];
   curriculum_compliance_enabled?: boolean;
+  include_compliance_card?: boolean;
+  curriculum_document_ids?: string[];
 }
 
 export interface CurriculumDocument {

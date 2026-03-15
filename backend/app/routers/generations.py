@@ -43,6 +43,8 @@ def create_generation(
         variants_count=body.variants_count,
         task_types=json.dumps(body.task_types) if body.task_types else None,
         curriculum_compliance_enabled=body.curriculum_compliance_enabled,
+        include_compliance_card=body.include_compliance_card,
+        curriculum_document_ids=json.dumps(body.curriculum_document_ids) if body.curriculum_document_ids else None,
         status="processing",
     )
     db.add(generation)

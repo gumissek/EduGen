@@ -1,5 +1,12 @@
 # Schemat bazy danych — EduGen (PostgreSQL)
 
+## Aktualizacja 2026-03-15
+
+- Tabela `generations` została rozszerzona o kolumny:
+	- `include_compliance_card` (BOOLEAN, NOT NULL, domyślnie `false`),
+	- `curriculum_document_ids` (TEXT, nullable; przechowuje JSON listy ID dokumentów PP).
+- Zmiana wprowadzona migracją Alembic: `005_generation_compliance_options`.
+
 > **Uwaga techniczna:** Backend używa PostgreSQL 16 jako silnika bazy danych (SQLAlchemy ORM). Typy danych są mapowane przez SQLAlchemy na typy PostgreSQL. Daty/czas przechowywane jako TEXT (ISO 8601), klucze UUID jako VARCHAR(36), wartości boolowskie jako BOOLEAN. Migracje zarządzane przez Alembic.
 
 ## 1. Lista tabel z kolumnami, typami danych i ograniczeniami
@@ -138,6 +145,9 @@ Reprezentuje proces generowania materiału dydaktycznego.
 | updated_at | TEXT | NOT NULL DEFAULT (aktualna data ISO 8601) |
 | status | VARCHAR(20) | NOT NULL DEFAULT 'draft', INDEX |
 | error_message | TEXT | NULL |
+| curriculum_compliance_enabled | BOOLEAN | NOT NULL DEFAULT FALSE |
+| include_compliance_card | BOOLEAN | NOT NULL DEFAULT FALSE |
+| curriculum_document_ids | TEXT | NULL (JSON array jako string) |
 
 ### generation_source_files
 

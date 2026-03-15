@@ -13,11 +13,12 @@ import Paper from '@mui/material/Paper';
 interface RepromptInputProps {
   onSend: (prompt: string) => Promise<void>;
   isLoading: boolean;
+  hidden?: boolean;
 }
 
 const FIXED_BOTTOM_OFFSET = 30;
 
-export default function RepromptInput({ onSend, isLoading }: RepromptInputProps) {
+export default function RepromptInput({ onSend, isLoading, hidden = false }: RepromptInputProps) {
   const [prompt, setPrompt] = React.useState('');
   const [mounted, setMounted] = React.useState(false);
 
@@ -38,7 +39,7 @@ export default function RepromptInput({ onSend, isLoading }: RepromptInputProps)
     }
   };
 
-  if (!mounted) return null;
+  if (!mounted || hidden) return null;
 
   return createPortal(
     <Paper
@@ -54,7 +55,7 @@ export default function RepromptInput({ onSend, isLoading }: RepromptInputProps)
         left: '50%',
         bottom: FIXED_BOTTOM_OFFSET,
         transform: 'translateX(-50%)',
-        zIndex: 1300,
+        zIndex: 1190,
         bgcolor: muiTheme.palette.mode === 'dark' ? '#1c0b2b' : '#fdf5ff',
         border: '2px solid',
         borderColor: muiTheme.palette.mode === 'dark' ? '#702b9d' : '#e0b3ff',

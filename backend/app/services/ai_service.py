@@ -93,6 +93,12 @@ def build_system_prompt(generation: Generation, source_texts: list[str], curricu
     if generation.instructions:
         prompt_parts.append(f"Dodatkowe zalecenia: {generation.instructions}")
 
+    if getattr(generation, "curriculum_compliance_enabled", False) and getattr(generation, "include_compliance_card", False):
+        prompt_parts.append(
+            "Wygeneruj treść tak, aby możliwe było jednoznaczne mapowanie każdego pytania do wymagań "
+            "Podstawy Programowej (na potrzeby końcowej metryczki zgodności)."
+        )
+
     if source_texts:
         combined = "\n\n---\n\n".join(source_texts)
         prompt_parts.append(f"Materiał źródłowy:\n{combined}")

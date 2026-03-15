@@ -1,5 +1,18 @@
 # Struktura projektu EduGen (Frontend)
 
+## Aktualizacja 2026-03-15 — kreator i edytor PP
+
+- `StepReview` używa reaktywnego `useWatch` zamiast snapshotu `getValues()`, dzięki czemu:
+  - przełącznik „Weryfikuj zgodność z Podstawą Programową”,
+  - checkbox „Dołącz metryczkę zgodności”,
+  - wybór dokumentów PP
+  działają stabilnie i poprawnie zapisują się do formularza przed wysłaniem generacji.
+- Typ `GenerationParams` rozszerzono o `include_compliance_card` i `curriculum_document_ids`.
+- W edytorze:
+  - poprawiono responsywność panelu zgodności (Drawer: `temporary` na mobile, `persistent` na większych ekranach),
+  - pole reprompt nie zasłania już panelu zgodności (ukrywanie podczas otwartego panelu i niższy `z-index`),
+  - przyciski zapisu/finalizacji dopasowano wizualnie (mniejsze, lżejsze, spójne z layoutem).
+
 Podczas wprowadzania zmian w części frontendowej projektu, zawsze przestrzegaj poniższej struktury katalogów i konwencji. Projekt jest zbudowany w oparciu o framework Next.js 16 (App Router) i React 19.
 
 ## Struktura plików

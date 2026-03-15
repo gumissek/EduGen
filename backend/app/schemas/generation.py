@@ -23,6 +23,8 @@ class GenerationCreate(BaseModel):
     task_types: List[str] = []
     source_file_ids: List[str] = []
     curriculum_compliance_enabled: bool = False
+    include_compliance_card: bool = False
+    curriculum_document_ids: List[str] = []
 
     @field_validator('subject_id', mode='before')
     @classmethod
@@ -129,6 +131,8 @@ class GenerationResponse(BaseModel):
     variants_count: int
     task_types: List[str] = []
     curriculum_compliance_enabled: bool = False
+    include_compliance_card: bool = False
+    curriculum_document_ids: List[str] = []
     status: str
     error_message: Optional[str] = None
     created_at: str
@@ -141,6 +145,18 @@ class GenerationResponse(BaseModel):
             import json
             try:
                 return json.loads(v)
+            except Exception:
+                return []
+        return v or []
+
+    @field_validator('curriculum_document_ids', mode='before')
+    @classmethod
+    def parse_curriculum_document_ids(cls, v):
+        if isinstance(v, str):
+            import json
+            try:
+                parsed = json.loads(v)
+                return parsed if isinstance(parsed, list) else []
             except Exception:
                 return []
         return v or []

@@ -41,5 +41,7 @@ class Generation(Base):
     documents = relationship("Document", back_populates="generation", cascade="all, delete-orphan")
     ai_requests = relationship("AIRequest", back_populates="generation")
     curriculum_compliance_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    include_compliance_card: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    curriculum_document_ids: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     source_files = relationship("SourceFile", secondary="generation_source_files", back_populates="generations")

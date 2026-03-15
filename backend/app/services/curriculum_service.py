@@ -487,15 +487,17 @@ def search_similar_chunks(
     top_k: int = 10,
     education_level: str | None = None,
     subject_name: str | None = None,
+    document_ids: list[str] | None = None,
     similarity_threshold: float = 0.3,
 ) -> list[dict]:
     """Search for similar curriculum chunks using pgvector cosine similarity."""
     logger.info(
-        "[curriculum] Similarity search started: top_k=%d threshold=%.3f education_level=%s subject_name=%s",
+        "[curriculum] Similarity search started: top_k=%d threshold=%.3f education_level=%s subject_name=%s document_ids=%s",
         top_k,
         similarity_threshold,
         education_level,
         subject_name,
+        len(document_ids or []),
     )
 
     embedding_str = "[" + ",".join(str(x) for x in query_embedding) + "]"
@@ -503,13 +505,46 @@ def search_similar_chunks(
     where_clauses = ["cd.status = 'ready'"]
     params: dict = {"embedding": embedding_str, "top_k": top_k, "threshold": similarity_threshold}
 
+    # Apply education filter only when at least one ready document has this value.
+    # This avoids hard zero-results due to naming mismatches in metadata.
     if education_level:
-        where_clauses.append("cd.education_level = :education_level")
-        params["education_level"] = education_level
+        edu_count = db.execute(
+            text("SELECT COUNT(*) FROM curriculum_documents WHERE status = 'ready' AND education_level = :education_level"),
+            {"education_level": education_level},
+        ).scalar() or 0
+        if edu_count > 0:
+            where_clauses.append("cd.education_level = :education_level")
+            params["education_level"] = education_level
+        else:
+            logger.warning(
+                "[curriculum] No ready docs for education_level=%s; running search without this filter",
+                education_level,
+            )
 
+    # Apply subject filter only when there are matching ready documents.
     if subject_name:
-        where_clauses.append("cd.subject_name = :subject_name")
-        params["subject_name"] = subject_name
+        subj_count = db.execute(
+            text("SELECT COUNT(*) FROM curriculum_documents WHERE status = 'ready' AND subject_name = :subject_name"),
+            {"subject_name": subject_name},
+        ).scalar() or 0
+        if subj_count > 0:
+            where_clauses.append("cd.subject_name = :subject_name")
+            params["subject_name"] = subject_name
+        else:
+            logger.warning(
+                "[curriculum] No ready docs for subject_name=%s; running search without this filter",
+                subject_name,
+            )
+
+    if document_ids:
+        cleaned_ids = [str(doc_id).strip() for doc_id in document_ids if str(doc_id).strip()]
+        if cleaned_ids:
+            doc_placeholders = []
+            for idx, doc_id in enumerate(cleaned_ids):
+                key = f"doc_id_{idx}"
+                doc_placeholders.append(f":{key}")
+                params[key] = doc_id
+            where_clauses.append(f"cd.id IN ({', '.join(doc_placeholders)})")
 
     where_sql = " AND ".join(where_clauses)
 
@@ -1068,6 +1103,7 @@ def check_compliance(
     api_key: str,
     education_level: str | None = None,
     subject_name: str | None = None,
+    document_ids: list[str] | None = None,
 ) -> dict:
     """Run per-question compliance check against curriculum chunks.
 
@@ -1097,6 +1133,7 @@ def check_compliance(
             top_k=3,
             education_level=education_level,
             subject_name=subject_name,
+            document_ids=document_ids,
             similarity_threshold=0.3,
         )
 

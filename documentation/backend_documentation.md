@@ -1,5 +1,15 @@
 # Struktura projektu EduGen (Backend)
 
+## Aktualizacja 2026-03-15 — zgodność z Podstawą Programową
+
+- Dodano pełną obsługę pól generacji: `include_compliance_card` oraz `curriculum_document_ids` (schema, router, model, serializacja odpowiedzi).
+- Endpoint `POST /api/curriculum/compliance/{generation_id}` przekazuje teraz do sprawdzania zgodności:
+	- nazwę przedmiotu z relacji generacji (`subject_name`),
+	- wybrane przez użytkownika dokumenty PP (`curriculum_document_ids`).
+- `search_similar_chunks(...)` obsługuje filtr po konkretnych dokumentach (`document_ids`) oraz ma bezpieczny fallback:
+	- gdy brak dokumentów `ready` dla podanego `education_level` lub `subject_name`, wyszukiwanie działa bez tego filtra zamiast zwracać stale 0 wyników.
+- Finalizacja DOCX dodaje metryczkę zgodności tylko wtedy, gdy `include_compliance_card = true`.
+
 Podczas wprowadzania zmian w projekcie, zawsze przestrzegaj poniższej struktury katalogów i konwencji.
 
 ## Struktura plików

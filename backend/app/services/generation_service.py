@@ -124,11 +124,22 @@ def generate_prototype_task(db: DBSession, generation_id: str) -> None:
             try:
                 from app.services.curriculum_service import search_similar_chunks, generate_embedding
                 topic_embedding = generate_embedding(generation.topic, api_key)
+                selected_document_ids: list[str] | None = None
+                if getattr(generation, "curriculum_document_ids", None):
+                    try:
+                        parsed_ids = json.loads(generation.curriculum_document_ids)
+                        if isinstance(parsed_ids, list):
+                            selected_document_ids = [str(doc_id) for doc_id in parsed_ids if str(doc_id).strip()]
+                    except Exception:
+                        selected_document_ids = None
+
                 curriculum_context = search_similar_chunks(
                     db,
                     topic_embedding,
                     top_k=10,
                     education_level=generation.education_level,
+                    subject_name=(generation.subject.name if generation.subject else None),
+                    document_ids=selected_document_ids,
                 )
                 if not curriculum_context:
                     curriculum_context = None

@@ -231,7 +231,7 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
   }
 
   return (
-    <Box sx={{ minHeight: 'calc(100vh - 140px)', display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ minHeight: 'calc(100vh - 140px)', display: 'flex', flexDirection: 'column', pb: { xs: 14, md: 12 } }}>
       
       <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2, mb: 2 }}>
         <Typography variant="h5" fontWeight="bold" sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
@@ -243,7 +243,15 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
             startIcon={<SaveIcon />}
             onClick={handleSave}
             disabled={saveMutation.isPending}
-            sx={{ flex: { xs: 1, sm: 'none' } }}
+            size="small"
+            sx={{
+              flex: { xs: 1, sm: 'none' },
+              minHeight: 36,
+              px: 1.5,
+              borderRadius: 2,
+              textTransform: 'none',
+              fontWeight: 600,
+            }}
           >
             {saveMutation.isPending ? 'Zapisywanie...' : 'Zapisz wersję roboczą'}
           </Button>
@@ -253,7 +261,15 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
             startIcon={finalizeMutation.isPending ? <CircularProgress size={18} color="inherit" /> : <CheckIcon />}
             onClick={() => finalizeMutation.mutate()}
             disabled={finalizeMutation.isPending || saveMutation.isPending}
-            sx={{ flex: { xs: 1, sm: 'none' } }}
+            size="small"
+            sx={{
+              flex: { xs: 1, sm: 'none' },
+              minHeight: 36,
+              px: 1.5,
+              borderRadius: 2,
+              textTransform: 'none',
+              fontWeight: 700,
+            }}
           >
             {finalizeMutation.isPending ? 'Finalizowanie...' : 'Finalizuj i Dodaj do Bazy'}
           </Button>
@@ -276,24 +292,11 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
         />
       </Box>
 
-      {/* Fixed bar – zawsze przyklejony do dołu viewportu, z odstępem od krawędzi */}
-      <Box 
-        sx={{ 
-          position: 'fixed', 
-          bottom: { xs: 20, md: 28 },
-          left: { xs: 0, md: '260px' },
-          right: 0,
-          zIndex: 1200,
-          display: 'flex',
-          justifyContent: 'center',
-          px: { xs: 2, md: 4 },
-        }}
-      >
-        <RepromptInput 
-          onSend={async (p) => { await repromptMutation.mutateAsync(p); }} 
-          isLoading={repromptMutation.isPending} 
-        />
-      </Box>
+      <RepromptInput
+        onSend={async (p) => { await repromptMutation.mutateAsync(p); }}
+        isLoading={repromptMutation.isPending}
+        hidden={complianceOpen}
+      />
     </Box>
   );
 }

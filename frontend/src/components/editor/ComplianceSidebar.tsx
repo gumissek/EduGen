@@ -13,6 +13,8 @@ import LinearProgress from '@mui/material/LinearProgress';
 import Drawer from '@mui/material/Drawer';
 import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import { useTheme } from '@mui/material/styles';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import GavelIcon from '@mui/icons-material/Gavel';
 import CloseIcon from '@mui/icons-material/Close';
@@ -43,6 +45,9 @@ export default function ComplianceSidebar({
 }: ComplianceSidebarProps) {
   if (!isAvailable) return null;
 
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
   const summary = complianceData?.coverage_summary;
   const progress = summary
     ? (summary.matched_questions / Math.max(summary.total_questions, 1)) * 100
@@ -57,7 +62,13 @@ export default function ComplianceSidebar({
           size="small"
           startIcon={<GavelIcon />}
           onClick={onToggle}
-          sx={{ minWidth: 'auto' }}
+          sx={{
+            minWidth: 'auto',
+            borderRadius: 2,
+            px: 1.25,
+            textTransform: 'none',
+            fontWeight: 700,
+          }}
         >
           PP
         </Button>
@@ -68,12 +79,14 @@ export default function ComplianceSidebar({
         anchor="right"
         open={isOpen}
         onClose={onToggle}
-        variant="persistent"
+        variant={isMobile ? 'temporary' : 'persistent'}
+        ModalProps={{ keepMounted: true }}
         sx={{
           '& .MuiDrawer-paper': {
             width: { xs: '100%', sm: 380 },
             p: 2,
             pt: 10,
+            zIndex: 1200,
           },
         }}
       >

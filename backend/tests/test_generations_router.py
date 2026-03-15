@@ -95,6 +95,32 @@ class TestGenerationsRouter:
         })
         assert resp.status_code == 201
 
+    @patch("app.routers.generations.generate_prototype_task")
+    def test_create_generation_with_compliance_options(self, mock_task, client, db, test_user):
+        subject = self._seed_subject(db, test_user)
+        resp = client.post("/api/generations", json={
+            "subject_id": subject.id,
+            "content_type": "test",
+            "education_level": "primary",
+            "class_level": "Klasa 4",
+            "topic": "Fractions",
+            "difficulty": 2,
+            "total_questions": 6,
+            "open_questions": 2,
+            "closed_questions": 4,
+            "variants_count": 1,
+            "curriculum_compliance_enabled": True,
+            "include_compliance_card": True,
+            "curriculum_document_ids": [str(uuid4()), str(uuid4())],
+        })
+
+        assert resp.status_code == 201
+        data = resp.json()
+        assert data["curriculum_compliance_enabled"] is True
+        assert data["include_compliance_card"] is True
+        assert len(data["curriculum_document_ids"]) == 2
+        mock_task.assert_called_once()
+
     # ── GET ──
 
     def test_get_generation(self, client, db, test_user):

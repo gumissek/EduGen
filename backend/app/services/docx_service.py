@@ -618,7 +618,7 @@ def generate_docx(
         markdown = _html_to_markdown(clean_html)
 
     # ── Append compliance table if available ──────────────────────────────
-    if prototype.compliance_json:
+    if generation.include_compliance_card and prototype.compliance_json:
         try:
             compliance_data = json.loads(prototype.compliance_json)
             compliance_md = _build_compliance_markdown(compliance_data)
