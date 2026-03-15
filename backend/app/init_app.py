@@ -258,11 +258,34 @@ def ensure_directories() -> None:
         logger.info("[dirs] Ensured: %s", d)
 
 
+def run_zpe_scraper_startup() -> None:
+    """Run the ZPE curriculum scraper once during application startup.
+
+    Errors are logged but do NOT abort the startup — the application starts
+    even if the scraper cannot reach zpe.gov.pl (e.g. no network in dev).
+    """
+    if not _get_bool_env("RUN_SCRAPER_ON_STARTUP", False):
+        logger.info("[init] Skipping ZPE curriculum scraper startup run (disabled by env).")
+        return
+    try:
+        from app.database import SessionLocal
+        from app.services.zpe_scraper_service import run_zpe_scraper
+
+        logger.info("[init] Starting ZPE curriculum scraper (startup run)…")
+        run_zpe_scraper(SessionLocal)
+        logger.info("[init] ZPE curriculum scraper startup run complete.")
+    except Exception:
+        logger.exception(
+            "[init] ZPE curriculum scraper startup run failed — continuing startup."
+        )
+
+
 def main() -> None:
     logger.info("[init] Starting EduGen initialization...")
     create_database_if_not_exists()
     run_migrations()
     ensure_directories()
+    run_zpe_scraper_startup()
     logger.info("[init] Initialization complete.")
 
 

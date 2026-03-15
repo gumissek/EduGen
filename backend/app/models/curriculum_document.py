@@ -17,13 +17,16 @@ class CurriculumDocument(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
     filename: Mapped[str] = mapped_column(Text, nullable=False)
     original_filename: Mapped[str] = mapped_column(Text, nullable=False)
-    file_path: Mapped[str] = mapped_column(Text, nullable=False)
+    # Nullable — URL-only documents (scraped from ZPE) have no physical PDF file.
+    file_path: Mapped[str | None] = mapped_column(Text, nullable=True)
     markdown_path: Mapped[str | None] = mapped_column(Text, nullable=True)
     file_size: Mapped[int] = mapped_column(Integer, nullable=False)
     file_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
     education_level: Mapped[str | None] = mapped_column(String(50), nullable=True)
     subject_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # description kept for backward-compat; source_url is the canonical ZPE URL field.
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     curriculum_year: Mapped[str | None] = mapped_column(String(20), nullable=True)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="uploaded")
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)

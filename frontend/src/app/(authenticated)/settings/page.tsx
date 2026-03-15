@@ -26,7 +26,7 @@ export default function SettingsPage() {
           Zarządzaj kluczami API i modelem sztucznej inteligencji.
         </Typography>
         <Alert severity="info" sx={{ mt: { xs: 1.5, sm: 2 }, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
-          Nie mamy dostępu do Twoich kluczy API! Twój klucz jest szyfrowany i przechowywany bezpiecznie w bazie danych.
+          Nie mamy dostępu do Twoich kluczy API. Twój klucz jest szyfrowany i przechowywany bezpiecznie w bazie danych.
         </Alert>
       </Box>
 

@@ -16,11 +16,14 @@ class CurriculumDocumentResponse(BaseModel):
     education_level: str | None
     subject_name: str | None
     description: str | None
+    source_url: str | None
     curriculum_year: str | None
     status: str
     error_message: str | None
     page_count: int | None
     chunk_count: int
+    has_missing_embeddings: bool = False
+    embeddings_missing_count: int = 0
     is_active: bool
     created_at: str
     updated_at: str
@@ -79,3 +82,9 @@ class CurriculumStatusResponse(BaseModel):
     status: str
     chunk_count: int
     error_message: str | None
+
+
+class BulkEmbeddingsReprocessResponse(BaseModel):
+    queued_document_ids: list[str]
+    queued_count: int
+    message: str

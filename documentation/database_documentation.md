@@ -240,30 +240,36 @@ Tabela przechowująca tokeny/kody weryfikacyjne do zmiany adresu e-mail i zmiany
 
 ### curriculum_documents
 
-Tabela przechowująca metadane dokumentów Podstawy Programowej (PDF).
+Tabela przechowująca metadane dokumentów Podstawy Programowej (PDF lub URL ZPE).
 
 | Kolumna | Typ | Ograniczenia |
 |---|---|---|
 | id | VARCHAR(36) | PRIMARY KEY |
 | filename | VARCHAR(255) | NOT NULL |
 | original_filename | VARCHAR(255) | NOT NULL |
-| file_path | VARCHAR(500) | NOT NULL |
+| file_path | VARCHAR(500) | **NULL** (brak pliku dla dokumentów URL-only) |
 | markdown_path | VARCHAR(500) | NULL |
 | file_size | INTEGER | NOT NULL |
 | file_hash | VARCHAR(64) | NOT NULL UNIQUE |
 | education_level | VARCHAR(100) | NULL |
 | subject_name | VARCHAR(200) | NULL |
 | description | TEXT | NULL |
+| source_url | TEXT | NULL — adres ZPE: `https://zpe.gov.pl/podstawa-programowa/...` |
+| curriculum_year | VARCHAR(20) | NULL (np. `2025/2026`) |
 | status | VARCHAR(50) | NOT NULL DEFAULT 'uploaded' |
 | error_message | TEXT | NULL |
 | page_count | INTEGER | NULL |
 | chunk_count | INTEGER | NULL DEFAULT 0 |
+| is_active | BOOLEAN | NOT NULL DEFAULT true |
 | uploaded_by | VARCHAR(36) | NULL REFERENCES users(id) ON DELETE SET NULL |
 | created_at | TEXT | NOT NULL (ISO 8601) |
 | updated_at | TEXT | NOT NULL (ISO 8601) |
 
 > - `status` przyjmuje wartości: `uploaded`, `processing`, `ready`, `error`.
-> - `file_hash` (SHA-256) zapobiega duplikatom — ponowny upload tego samego PDF jest blokowany.
+> - `file_hash` (SHA-256 treści) zapobiega ponownemu przetwarzaniu niezmienionej zawartości.
+> - `file_path` jest NULL dla dokumentów tworzonych automatycznie przez scraper ZPE.
+> - `source_url` — URL strony ZPE; używany przez `parse_zpe_url_to_chunks` (HTML-first pipeline) oraz przez scraper jako klucz unikatowości dokumentu.
+> - `is_active = false` → soft-delete (rekordy i embeddingi zachowane do ponownego użycia).
 > - Kaskadowe usuwanie chunków przy usunięciu dokumentu.
 
 ### curriculum_chunks
@@ -396,7 +402,7 @@ CREATE INDEX ix_curriculum_chunks_embedding ON curriculum_chunks USING hnsw (emb
 - Deduplikacja embeddingów curriculum działa globalnie po `curriculum_chunks.content_hash`.
 - Klucze API szyfrowane AES przechowywane w tabeli `secret_keys` (wiele kluczy per użytkownik).
 - Preferencja modelu AI zapisana bezpośrednio w tabeli `users` (kolumna `default_model`).
-- Migracje schematu zarządzane przez **Alembic** (1 skonsolidowana migracja: `001_initial_schema.py`, zawierająca pełny aktualny schemat, w tym verification tokens, comments/compliance JSON oraz tabele curriculum + pgvector).
+- Migracje schematu zarządzane przez **Alembic** (4 migracje: `001_initial_schema.py`, `002_curriculum_document_soft_delete.py`, `003_curriculum_document_year.py`, `004_curriculum_source_url.py`). Migracja 004 dodaje kolumnę `source_url TEXT` i zmienia `file_path` na nullable.
 - Tabela `settings` (legacy) została usunięta — cala funkcjonalność przeniesiona do `users` i `secret_keys`.
 - Tabela `verification_tokens` obsługuje weryfikację zmiany e-mail (link, 24h) i zmiany hasła (kod 6-cyfrowy, 5 min). W trybie lokalnym e-maile nie są wysyłane — serwis loguje dane do konsoli.
 

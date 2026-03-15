@@ -42,6 +42,8 @@ services:
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
       - JWT_ALGORITHM=${JWT_ALGORITHM}
       - JWT_EXPIRATION_MINUTES=${JWT_EXPIRATION_MINUTES}
+      - FERNET_KEY=${FERNET_KEY}
+      - RUN_SCRAPER_ON_STARTUP=${RUN_SCRAPER_ON_STARTUP}
     command: ["uv", "run", "sh", "-c", "python app/init_app.py && uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2"]
     depends_on:
       postgres:

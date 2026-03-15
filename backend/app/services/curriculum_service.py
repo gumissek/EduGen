@@ -11,6 +11,7 @@ from pathlib import Path
 from uuid import uuid4
 
 import requests as http_requests
+from bs4 import BeautifulSoup
 from sqlalchemy import text
 from sqlalchemy.orm import Session as DBSession
 
@@ -23,6 +24,20 @@ logger = logging.getLogger(__name__)
 OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 EMBEDDING_MODEL = "openai/text-embedding-3-small"
 EMBEDDING_DIMENSIONS = 1536
+ZPE_URL_PREFIX = "https://zpe.gov.pl/podstawa-programowa"
+
+# ── ZPE HTML parser regexes ───────────────────────────────────────────────────
+_re_cele = re.compile(r"^Cele kształcenia.*wymagania ogólne", re.IGNORECASE)
+_re_tresci = re.compile(r"^Treści nauczania.*wymagania szczegółowe", re.IGNORECASE)
+_re_warunki = re.compile(r"^Warunki i sposób realizacji", re.IGNORECASE)
+_re_subkategoria = re.compile(
+    r"^(Zakres\s+.*|Klas[ya]\s+[IVX\-i\s]+|Podstawa\s+programowa.*|Etap\s+edukacyjny.*)",
+    re.IGNORECASE,
+)
+_re_roman = re.compile(r"^([IVX]+)\.\s+(.*)$")
+_re_num_dot = re.compile(r"^(\d+)\.\s+(.*)$")
+_re_num_bracket = re.compile(r"^(\d+)\)\s+(.*)$")
+_re_letter = re.compile(r"^([a-z])\)\s+(.*)$")
 
 
 def _compute_file_hash(file_bytes: bytes) -> str:
@@ -35,7 +50,169 @@ def _compute_content_hash(content: str) -> str:
     return hashlib.sha256(content.encode("utf-8")).hexdigest()
 
 
-def convert_pdf_to_markdown(pdf_path: str, output_dir: str) -> str:
+# ── ZPE HTML parser ───────────────────────────────────────────────────────────
+
+def parse_zpe_url_to_chunks(url: str, subject_name: str, education_level: str) -> list[dict]:
+    """Fetch a ZPE curriculum page and parse its HTML into chunk dicts.
+
+    Each paragraph (``akapit``) from the hierarchical parser becomes one chunk.
+    The embedding and cache key are derived from the ``akapit`` text only.
+
+    Returns an empty list when the page cannot be fetched or the expected
+    ``#cc-container`` element is absent (so callers can fall back to PDF).
+    """
+    logger.info("[curriculum] Fetching ZPE HTML: url=%s", url)
+    try:
+        resp = http_requests.get(url, timeout=30, headers={"User-Agent": "EduGen/1.0"})
+        resp.raise_for_status()
+        html_content = resp.text
+    except Exception as exc:
+        logger.warning("[curriculum] Failed to fetch ZPE URL: url=%s error=%s", url, exc)
+        return []
+
+    soup = BeautifulSoup(html_content, "html.parser")
+    container = soup.find("div", id="cc-container")
+    if not container:
+        logger.warning(
+            "[curriculum] #cc-container not found — HTML parsing skipped: url=%s", url
+        )
+        return []
+
+    structured: list[dict] = []
+
+    def _parse_children(parent_node, state: dict) -> None:  # noqa: ANN202
+        children = parent_node.find_all("div", recursive=False)
+        i = 0
+        while i < len(children):
+            child = children[i]
+            classes = child.get("class", [])
+
+            if "cc2_group-header" in classes:
+                text_el = child.find(class_="cc2_title") or child
+                header_text = text_el.get_text(separator=" ", strip=True)
+                next_state = state.copy()
+
+                if re.search(r"^Wstęp", header_text, re.IGNORECASE):
+                    next_state.update(
+                        kategoria="Wstęp",
+                        subkategoria=None, rozdzial=None,
+                        temat=None, punkt=None, podpunkt=None,
+                    )
+                elif _re_cele.match(header_text):
+                    next_state.update(
+                        kategoria="Cele kształcenia – wymagania ogólne",
+                        subkategoria=None, rozdzial=None,
+                        temat=None, punkt=None, podpunkt=None,
+                    )
+                elif _re_tresci.match(header_text):
+                    next_state.update(
+                        kategoria="Treści nauczania – wymagania szczegółowe",
+                        subkategoria=None, rozdzial=None,
+                        temat=None, punkt=None, podpunkt=None,
+                    )
+                elif _re_warunki.match(header_text):
+                    next_state.update(
+                        kategoria="Warunki i sposób realizacji",
+                        subkategoria=None, rozdzial=None,
+                        temat=None, punkt=None, podpunkt=None,
+                    )
+                elif _re_subkategoria.match(header_text):
+                    next_state.update(
+                        subkategoria=header_text,
+                        rozdzial=None, temat=None, punkt=None, podpunkt=None,
+                    )
+                else:
+                    m_roman = _re_roman.match(header_text)
+                    m_dot = _re_num_dot.match(header_text)
+                    if m_roman:
+                        next_state.update(rozdzial=header_text, temat=None, punkt=None, podpunkt=None)
+                    elif m_dot:
+                        next_state.update(temat=header_text, punkt=None, podpunkt=None)
+                    else:
+                        next_state.update(temat=header_text, punkt=None, podpunkt=None)
+
+                if (
+                    i + 1 < len(children)
+                    and "cc2_group-content" in children[i + 1].get("class", [])
+                ):
+                    _parse_children(children[i + 1], next_state)
+                    i += 2
+                else:
+                    i += 1
+
+            elif "cc2_node" in classes:
+                node_text = child.get_text(separator=" ", strip=True)
+                node_state = state.copy()
+                akapit_text = node_text
+
+                m_bracket = _re_num_bracket.match(node_text)
+                m_letter = _re_letter.match(node_text)
+                m_dot = _re_num_dot.match(node_text)
+
+                if m_bracket:
+                    node_state["punkt"] = m_bracket.group(0)
+                    akapit_text = m_bracket.group(2)
+                elif m_letter:
+                    node_state["podpunkt"] = m_letter.group(0)
+                    akapit_text = m_letter.group(2)
+                elif m_dot:
+                    node_state["temat"] = m_dot.group(0)
+                    akapit_text = m_dot.group(2)
+
+                if akapit_text.strip():
+                    hierarchy = [
+                        v for v in [
+                            node_state.get("kategoria"),
+                            node_state.get("subkategoria"),
+                            node_state.get("rozdzial"),
+                            node_state.get("temat"),
+                            node_state.get("punkt"),
+                            node_state.get("podpunkt"),
+                        ]
+                        if v
+                    ]
+                    section_title = (
+                        node_state.get("punkt")
+                        or node_state.get("temat")
+                        or node_state.get("rozdzial")
+                        or node_state.get("kategoria")
+                    )
+                    structured.append({
+                        "content": akapit_text.strip(),
+                        "heading_hierarchy": json.dumps(hierarchy, ensure_ascii=False),
+                        "section_title": section_title,
+                        "page_numbers": json.dumps([1]),
+                        "metadata_json": json.dumps(
+                            {
+                                "char_count": len(akapit_text),
+                                "word_count": len(akapit_text.split()),
+                                "subject": subject_name,
+                                "education_level": education_level,
+                                "source_url": url,
+                            },
+                            ensure_ascii=False,
+                        ),
+                    })
+                i += 1
+            else:
+                i += 1
+
+    _parse_children(
+        container,
+        {
+            "kategoria": "Wstęp",
+            "subkategoria": None,
+            "rozdzial": None,
+            "temat": None,
+            "punkt": None,
+            "podpunkt": None,
+        },
+    )
+
+    logger.info(
+        "[curriculum] ZPE HTML parsed: url=%s chunks=%d", url, len(structured)
+    )
+    return structured
     """Convert PDF to Markdown using PyMuPDF + markdownify fallback.
 
     Returns the path to the generated .md file.
@@ -88,16 +265,69 @@ def chunk_markdown(
     chunk_size: int = 1000,
     chunk_overlap: int = 200,
 ) -> list[dict]:
-    """Split Markdown content into chunks with heading hierarchy metadata.
+    """Split Markdown content into chunks with heading hierarchy metadata,
+    page numbers, and metadata.
 
-    Uses LangChain's MarkdownHeaderTextSplitter for structural splits,
-    then RecursiveCharacterTextSplitter for size-based splits.
+    Handles:
+    - Standard Markdown headers (``#``, ``##``, etc.) via LangChain splitters
+    - PDF page markers ``<!-- Page N -->`` for page-number annotation
+    - Bold-formatted section headings (``**I.**``, ``**1.**``, etc.)
     """
     from langchain_text_splitters import (
         MarkdownHeaderTextSplitter,
         RecursiveCharacterTextSplitter,
     )
 
+    # ── Page-position map ────────────────────────────────────────────────────
+    _page_marker_re = re.compile(r"<!--\s*Page\s+(\d+)\s*-->")
+    page_positions: list[tuple[int, int]] = [
+        (m.start(), int(m.group(1)))
+        for m in _page_marker_re.finditer(markdown_content)
+    ]
+
+    def _page_at(pos: int) -> int:
+        current = 1
+        for marker_pos, page_num in page_positions:
+            if marker_pos <= pos:
+                current = page_num
+            else:
+                break
+        return current
+
+    def _pages_for_chunk(start: int, end: int) -> list[int]:
+        pages: set[int] = {_page_at(start)}
+        for marker_pos, page_num in page_positions:
+            if start <= marker_pos < end:
+                pages.add(page_num)
+        return sorted(pages)
+
+    # ── Bold-heading event list ───────────────────────────────────────────────
+    # Matches  **I.**\n[blank lines]\nTitle  or  **1.**\n[blank lines]\nTitle
+    _bold_heading_re = re.compile(
+        r"\*\*([IVXLC]+\.| \d+\.)\*\*[ \t]*\n"
+        r"(?:[ \t]*\n)*"
+        r"([^\n<*]{3,150})",
+        re.MULTILINE,
+    )
+    heading_events: list[tuple[int, str, str]] = []
+    for m in _bold_heading_re.finditer(markdown_content):
+        marker = m.group(1).strip()
+        title_line = m.group(2).strip()
+        full_title = f"{marker} {title_line}" if title_line else marker
+        level = "h1" if re.match(r"^[IVXLC]+\.$", marker) else "h2"
+        heading_events.append((m.start(), level, full_title))
+
+    def _heading_context_at(pos: int) -> list[str]:
+        ctx: dict[str, str] = {}
+        for e_pos, level, title in heading_events:
+            if e_pos > pos:
+                break
+            ctx[level] = title
+            if level == "h1":
+                ctx.pop("h2", None)
+        return [ctx[k] for k in ("h1", "h2") if k in ctx]
+
+    # ── LangChain splitting ───────────────────────────────────────────────────
     headers_to_split_on = [
         ("#", "h1"),
         ("##", "h2"),
@@ -117,23 +347,47 @@ def chunk_markdown(
         separators=["\n\n", "\n", ". ", " ", ""],
     )
 
+    # ── Build chunk list ──────────────────────────────────────────────────────
     chunks = []
+    search_start = 0
+
     for doc in header_docs:
-        sub_docs = char_splitter.split_text(doc.page_content)
-        heading_hierarchy = []
-        for key in ("h1", "h2", "h3", "h4"):
-            if key in doc.metadata:
-                heading_hierarchy.append(doc.metadata[key])
+        sub_texts = char_splitter.split_text(doc.page_content)
+        lc_hierarchy: list[str] = [
+            doc.metadata[k] for k in ("h1", "h2", "h3", "h4") if k in doc.metadata
+        ]
 
-        section_title = heading_hierarchy[-1] if heading_hierarchy else None
-
-        for sub_text in sub_docs:
-            if len(sub_text.strip()) < 50:
+        for sub_text in sub_texts:
+            stripped = sub_text.strip()
+            if len(stripped) < 50:
                 continue  # Skip very short chunks
+
+            # Locate approximate position of this chunk in the original markdown
+            probe = stripped[:80]
+            found = markdown_content.find(probe, search_start)
+            if found == -1:
+                found = markdown_content.find(probe)
+            chunk_start = found if found != -1 else search_start
+            chunk_end = chunk_start + len(stripped)
+            if found != -1:
+                search_start = chunk_start
+
+            page_list = _pages_for_chunk(chunk_start, chunk_end)
+
+            # Prefer standard markdown headers; fall back to bold-heading context
+            hierarchy = lc_hierarchy if lc_hierarchy else _heading_context_at(chunk_start)
+            section_title = hierarchy[-1] if hierarchy else None
+
             chunks.append({
-                "content": sub_text.strip(),
-                "heading_hierarchy": json.dumps(heading_hierarchy, ensure_ascii=False) if heading_hierarchy else None,
+                "content": stripped,
+                "heading_hierarchy": json.dumps(hierarchy, ensure_ascii=False) if hierarchy else None,
                 "section_title": section_title,
+                "page_numbers": json.dumps(page_list),
+                "metadata_json": json.dumps({
+                    "char_count": len(stripped),
+                    "word_count": len(stripped.split()),
+                    "pages": page_list,
+                }, ensure_ascii=False),
             })
 
     logger.info(
@@ -386,15 +640,17 @@ def _copy_chunks_from_document(db: DBSession, source_document_id: str, target_do
 
 
 def process_curriculum_document(db: DBSession, document_id: str, api_key: str) -> None:
-    """Full processing pipeline: PDF → Markdown → Chunks → Embeddings.
+    """Full processing pipeline.
 
-    Caching strategy (two levels):
-      1. Document-level (Step 0): if another CurriculumDocument with the same
-         file_hash is already status='ready', copy all its chunks directly —
-         no PDF parsing or embedding API calls needed.
-      2. Content-hash level (Step 4): for each individual chunk, check whether
-         a chunk with the same content_hash already has an embedding in any
-         document. If yes, copy the embedding; otherwise call the embedding API.
+    Strategy:
+      1. If ``document.source_url`` is a ZPE URL, fetch & parse the HTML page
+         (``parse_zpe_url_to_chunks``).  Fall back to the PDF pipeline when the
+         HTML fetch fails or the page has no parseable content.
+      2. Otherwise run the legacy PDF → Markdown → LangChain pipeline.
+
+    Caching (two levels):
+      - Document-level (Step 0): same ``file_hash`` already ``ready`` → copy chunks.
+      - Content-hash level: per chunk, reuse existing embeddings across documents.
 
     Runs as a background task.
     """
@@ -405,10 +661,11 @@ def process_curriculum_document(db: DBSession, document_id: str, api_key: str) -
 
     try:
         logger.info(
-            "[curriculum] Processing started: document_id=%s file_hash=%.12s original_filename=%s",
+            "[curriculum] Processing started: document_id=%s file_hash=%.12s original_filename=%s source_url=%s",
             document_id,
             document.file_hash,
             document.original_filename,
+            document.source_url,
         )
 
         # Update status to processing
@@ -457,39 +714,78 @@ def process_curriculum_document(db: DBSession, document_id: str, api_key: str) -
             return
 
         logger.info(
-            "[curriculum] Step 0/4 cache MISS: document_id=%s — proceeding with full PDF pipeline.",
+            "[curriculum] Step 0/4 cache MISS: document_id=%s — proceeding with pipeline.",
             document_id,
         )
 
-        # ── Step 1: Get page count ────────────────────────────────────────────
-        logger.info("[curriculum] Step 1/4: counting pages: document_id=%s file_path=%s", document_id, document.file_path)
-        page_count = get_pdf_page_count(document.file_path)
-        document.page_count = page_count
-        logger.info("[curriculum] Step 1/4 done: document_id=%s page_count=%d", document_id, page_count)
+        # ── Step 1: Obtain chunks (HTML-first, PDF fallback) ──────────────────
+        chunks_data: list[dict] = []
+        used_html_parser = False
 
-        # ── Step 2: Convert PDF → Markdown ────────────────────────────────────
-        logger.info("[curriculum] Step 2/4: converting PDF to Markdown: document_id=%s", document_id)
-        doc_dir = str(Path(document.file_path).parent)
-        markdown_path = convert_pdf_to_markdown(document.file_path, doc_dir)
-        document.markdown_path = markdown_path
-        logger.info(
-            "[curriculum] Step 2/4 done: document_id=%s markdown_path=%s",
-            document_id,
-            markdown_path,
-        )
+        zpe_url = document.source_url
+        if zpe_url and zpe_url.startswith(ZPE_URL_PREFIX):
+            logger.info(
+                "[curriculum] Step 1/4: trying ZPE HTML parser: document_id=%s url=%s",
+                document_id,
+                zpe_url,
+            )
+            chunks_data = parse_zpe_url_to_chunks(
+                url=zpe_url,
+                subject_name=document.subject_name or "",
+                education_level=document.education_level or "",
+            )
+            if chunks_data:
+                used_html_parser = True
+                document.page_count = 1
+                logger.info(
+                    "[curriculum] Step 1/4: ZPE HTML parser succeeded: document_id=%s chunks=%d",
+                    document_id,
+                    len(chunks_data),
+                )
+            else:
+                logger.warning(
+                    "[curriculum] Step 1/4: ZPE HTML parser returned 0 chunks — falling back to PDF: document_id=%s",
+                    document_id,
+                )
 
-        # ── Step 3: Chunk the Markdown ────────────────────────────────────────
-        logger.info("[curriculum] Step 3/4: chunking markdown: document_id=%s", document_id)
-        markdown_content = Path(markdown_path).read_text(encoding="utf-8")
-        chunks_data = chunk_markdown(markdown_content)
-        logger.info(
-            "[curriculum] Step 3/4 done: document_id=%s chunk_candidates=%d",
-            document_id,
-            len(chunks_data),
-        )
+        if not used_html_parser:
+            if not document.file_path:
+                raise ValueError(
+                    "No source_url and no file_path — cannot process document."
+                )
+            # Legacy PDF pipeline
+            logger.info(
+                "[curriculum] Step 1/4: counting PDF pages: document_id=%s file_path=%s",
+                document_id,
+                document.file_path,
+            )
+            page_count = get_pdf_page_count(document.file_path)
+            document.page_count = page_count
+            logger.info("[curriculum] Step 1/4 done: document_id=%s page_count=%d", document_id, page_count)
+
+            # ── Step 2: Convert PDF → Markdown ────────────────────────────────────
+            logger.info("[curriculum] Step 2/4: converting PDF to Markdown: document_id=%s", document_id)
+            doc_dir = str(Path(document.file_path).parent)
+            markdown_path = convert_pdf_to_markdown(document.file_path, doc_dir)
+            document.markdown_path = markdown_path
+            logger.info(
+                "[curriculum] Step 2/4 done: document_id=%s markdown_path=%s",
+                document_id,
+                markdown_path,
+            )
+
+            # ── Step 3: Chunk the Markdown ────────────────────────────────────────
+            logger.info("[curriculum] Step 3/4: chunking markdown: document_id=%s", document_id)
+            markdown_content = Path(markdown_path).read_text(encoding="utf-8")
+            chunks_data = chunk_markdown(markdown_content)
+            logger.info(
+                "[curriculum] Step 3/4 done: document_id=%s chunk_candidates=%d",
+                document_id,
+                len(chunks_data),
+            )
 
         if not chunks_data:
-            raise ValueError("No extractable text chunks from PDF")
+            raise ValueError("No extractable text chunks from document")
 
         # ── Step 4: Resolve content-hash cache and generate missing embeddings ─
         logger.info(
@@ -575,6 +871,8 @@ def process_curriculum_document(db: DBSession, document_id: str, api_key: str) -
                     content_hash=content_hash,
                     heading_hierarchy=chunk_data.get("heading_hierarchy"),
                     section_title=chunk_data.get("section_title"),
+                    page_numbers=chunk_data.get("page_numbers"),
+                    metadata_json=chunk_data.get("metadata_json"),
                 )
                 db.add(chunk_obj)
                 created_chunks += 1
@@ -592,6 +890,8 @@ def process_curriculum_document(db: DBSession, document_id: str, api_key: str) -
                 chunk_obj.content_hash = content_hash
                 chunk_obj.heading_hierarchy = chunk_data.get("heading_hierarchy")
                 chunk_obj.section_title = chunk_data.get("section_title")
+                chunk_obj.page_numbers = chunk_data.get("page_numbers")
+                chunk_obj.metadata_json = chunk_data.get("metadata_json")
 
             # Per-chunk content-hash cache lookup (global, across all documents)
             cached_source = cached_by_hash.get(content_hash)

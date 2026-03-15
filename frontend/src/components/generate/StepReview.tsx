@@ -11,6 +11,10 @@ import Chip from '@mui/material/Chip';
 import Checkbox from '@mui/material/Checkbox';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Switch from '@mui/material/Switch';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import InputLabel from '@mui/material/InputLabel';
+import FormControl from '@mui/material/FormControl';
 import SchoolIcon from '@mui/icons-material/School';
 import PersonIcon from '@mui/icons-material/Person';
 import { GenerationParamsForm, TYPES_WITHOUT_QUESTIONS } from '@/schemas/generation';
@@ -41,6 +45,24 @@ export default function StepReview() {
   const isWorksheet = values.content_type === 'worksheet';
 
   const readyCurriculumDocs = curriculumDocs.filter((d: CurriculumDocument) => d.status === 'ready');
+
+  const [filterSubject, setFilterSubject] = React.useState('');
+  const [filterYear, setFilterYear] = React.useState('');
+
+  const availableSubjects = React.useMemo(
+    () => Array.from(new Set(readyCurriculumDocs.map((d: CurriculumDocument) => d.subject_name).filter(Boolean))) as string[],
+    [readyCurriculumDocs],
+  );
+  const availableYears = React.useMemo(
+    () => Array.from(new Set(readyCurriculumDocs.map((d: CurriculumDocument) => d.curriculum_year).filter(Boolean))) as string[],
+    [readyCurriculumDocs],
+  );
+
+  const filteredCurriculumDocs = readyCurriculumDocs.filter((d: CurriculumDocument) => {
+    if (filterSubject && d.subject_name !== filterSubject) return false;
+    if (filterYear && d.curriculum_year !== filterYear) return false;
+    return true;
+  });
 
   const handleToggleCurriculumDoc = (docId: string) => {
     const current = values.curriculum_document_ids ?? [];
@@ -230,8 +252,41 @@ export default function StepReview() {
               <Typography variant="caption" color="text.secondary" sx={{ mb: 1.5, display: 'block' }}>
                 Wybierz dokumenty, na podstawie których system będzie weryfikować zgodność. Jeśli nie wybierzesz żadnego, zostaną użyte wszystkie dostępne.
               </Typography>
+              {/* Filters */}
+              <Box sx={{ display: 'flex', gap: 1.5, mb: 1.5, flexWrap: 'wrap' }}>
+                {availableSubjects.length > 1 && (
+                  <FormControl size="small" sx={{ minWidth: 160 }}>
+                    <InputLabel>Przedmiot</InputLabel>
+                    <Select
+                      value={filterSubject}
+                      label="Przedmiot"
+                      onChange={(e) => setFilterSubject(e.target.value)}
+                    >
+                      <MenuItem value="">Wszystkie</MenuItem>
+                      {availableSubjects.map((s) => (
+                        <MenuItem key={s} value={s}>{s}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                )}
+                {availableYears.length > 1 && (
+                  <FormControl size="small" sx={{ minWidth: 140 }}>
+                    <InputLabel>Rok PP</InputLabel>
+                    <Select
+                      value={filterYear}
+                      label="Rok PP"
+                      onChange={(e) => setFilterYear(e.target.value)}
+                    >
+                      <MenuItem value="">Wszystkie</MenuItem>
+                      {availableYears.map((y) => (
+                        <MenuItem key={y} value={y}>{y}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                )}
+              </Box>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, maxHeight: 200, overflowY: 'auto' }}>
-                {readyCurriculumDocs.map((doc: CurriculumDocument) => (
+                {filteredCurriculumDocs.map((doc: CurriculumDocument) => (
                   <FormControlLabel
                     key={doc.id}
                     control={
@@ -250,10 +305,18 @@ export default function StepReview() {
                         {doc.subject_name && (
                           <Chip label={doc.subject_name} size="small" variant="outlined" color="secondary" />
                         )}
+                        {doc.curriculum_year && (
+                          <Chip label={doc.curriculum_year} size="small" variant="outlined" />
+                        )}
                       </Box>
                     }
                   />
                 ))}
+                {filteredCurriculumDocs.length === 0 && (
+                  <Typography variant="caption" color="text.secondary">
+                    Brak dokumentów pasujących do wybranych filtrów.
+                  </Typography>
+                )}
               </Box>
             </Box>
           )}

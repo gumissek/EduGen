@@ -117,6 +117,14 @@ export default function CurriculumDocumentRow({
                   sx={{ borderColor: alpha(theme.palette.info.main, isDark ? 0.55 : 0.35) }}
                 />
               )}
+              {showAdminMetadata && document.has_missing_embeddings && (
+                <Chip
+                  label="Brak embeddingów"
+                  size="small"
+                  color="warning"
+                  variant="filled"
+                />
+              )}
               <Chip label={statusProps.label} size="small" color={statusProps.color} />
             </Box>
 
@@ -146,7 +154,7 @@ export default function CurriculumDocumentRow({
             {showAdminMetadata && (
               <Stack spacing={0.5} sx={{ mt: 1 }}>
                 <Typography variant="caption" color="text.secondary">
-                  Strony: {document.page_count ?? '-'} | Fragmenty (chunki): {document.chunk_count}
+                  Strony: {document.page_count ?? '-'} | Fragmenty (chunki): {document.chunk_count} | Brakujace embeddingi: {document.embeddings_missing_count}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
                   Utworzono: {new Date(document.created_at).toLocaleString('pl-PL')}

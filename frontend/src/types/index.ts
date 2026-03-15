@@ -49,11 +49,14 @@ export interface CurriculumDocument {
   education_level: string | null;
   subject_name: string | null;
   description: string | null;
+  source_url: string | null;
   curriculum_year: string | null;
   status: string;
   error_message: string | null;
   page_count: number | null;
   chunk_count: number;
+  has_missing_embeddings: boolean;
+  embeddings_missing_count: number;
   created_at: string;
   updated_at: string;
 }

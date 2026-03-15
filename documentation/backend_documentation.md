@@ -72,12 +72,16 @@ backend/
 │       ├── file_service.py
 │       ├── generation_service.py
 │       ├── verification_service.py
-│       └── curriculum_service.py
+│       ├── curriculum_service.py
+│       └── zpe_scraper_service.py
 ├── alembic/
 │   ├── env.py
 │   ├── script.py.mako
 │   └── versions/
-│       └── 001_initial_schema.py
+│       ├── 001_initial_schema.py
+│       ├── 002_curriculum_document_soft_delete.py
+│       ├── 003_curriculum_document_year.py
+│       └── 004_curriculum_source_url.py
 ├── alembic.ini
 ├── Dockerfile
 └── pyproject.toml
@@ -138,6 +142,7 @@ Moduł zarządzania zmiennymi środowiskowymi przez `pydantic-settings` (`BaseSe
 - `JWT_SECRET_KEY` — klucz do podpisywania tokenów JWT (auto-generowany jeśli nie ustawiony w `.env`)
 - `JWT_ALGORITHM` — algorytm podpisu (domyślnie `HS256`)
 - `JWT_EXPIRATION_MINUTES` — czas życia tokena JWT (domyślnie `30` minut)
+- `FERNET_KEY` — klucz szyfrowania kluczy API (Fernet, opcjonalny). Jeśli nie ustawiony, klucz jest auto-generowany i zapisywany w `{DATA_DIR}/fernet.key`. **Zalecane ustawienie stałego klucza**, aby klucze API nie stały się nieodszyfrowalne po resecie wolumenu.
 - **Computed properties:** `cors_origins_list` (JSON-parsed z `CORS_ORIGINS`), `data_path` (Path z `DATA_DIR`), `max_file_size_bytes` (MB → bajty).
 - Eksportuje singleton `settings`.
 
@@ -305,22 +310,29 @@ Stub do wysyłki e-maili weryfikacyjnych:
 
 ### `curriculum_service.py`
 Serwis obsługujący pipeline wektorowej bazy Podstawy Programowej (RAG):
-- `convert_pdf_to_markdown(pdf_path)` — konwersja PDF → HTML (PyMuPDF) → Markdown (markdownify). Zwraca string Markdown.
-- `chunk_markdown(markdown_text)` — Dzielenie Markdown na chunki: najpierw `MarkdownHeaderTextSplitter` (wg nagłówków H1–H3), potem `RecursiveCharacterTextSplitter` (1000 znaków, 200 overlap). Zwraca listę `(content, metadata)`.
-- `generate_embedding(text, api_key)` — generacja embeddingu (1536 wymiarów) przez OpenRouter API (`openai/text-embedding-3-small`). Zwraca `list[float]`.
-- `generate_embeddings_batch(texts, api_key, batch_size=20)` — batch generacja embeddingów.
-- `process_curriculum_document(document_id, db, api_key)` — background pipeline: PDF → Markdown → Chunki → Embeddingi → zapis do bazy. Aktualizuje status dokumentu (`processing` → `ready` / `error`).
-- `search_similar_chunks(query_embedding, db, limit, threshold, edu_level, subject)` — wyszukiwanie najbardziej podobnych chunków za pomocą pgvector cosine similarity (raw SQL). Zwraca listę wyników z metadanymi dokumentu.
-- `check_compliance(generation_id, db, api_key)` — sprawdza zgodność pytań prototypu z Podstawą Programową: embeddingi pytań → search → ranking. Zapisuje JSON do `prototype.compliance_json`. Zwraca `ComplianceResponse`.
-- `_extract_requirement_code(text)` — regex extraction kodu wymagania z tekstu.
-- Serwis loguje kluczowe etapy przetwarzania (`Step 1/4`...`Step 4/4`) wraz z `document_id`, liczbą stron, ścieżką Markdown i statusem końcowym.
-- Mechanizm deduplikacji/cache chunków działa globalnie po `content_hash` (między dokumentami), a nie tylko w obrębie jednego dokumentu.
-- Dla każdego chunka logowany jest wynik cache lookup: `cache hit` (embedding skopiowany z istniejącego chunka) albo `cache miss` (chunk kolejkowany do batch embeddingu).
-- Podsumowanie deduplikacji jest raportowane w logach (`Chunk dedup summary`): liczba wszystkich chunków, `cache_hits`, `cache_misses` i `new_chunks`.
-- Gdy wszystkie chunki są obsłużone z cache, etap embeddingów jest pomijany i odnotowany (`all chunks served from cache`).
-- Wyszukiwanie semantyczne loguje parametry zapytania (`top_k`, `threshold`, filtry) i liczbę dopasowań.
-- W zapytaniach `text()` dla pgvector używany jest `CAST(:param AS vector)` zamiast składni `:param::vector`, aby zapewnić poprawne bindowanie parametrów przez SQLAlchemy + psycopg.
-- W skonsolidowanej migracji `001` kolumna `embedding vector(1536)` jest tworzona dla `curriculum_chunks`; indeks HNSW jest tworzony warunkowo. Na środowiskach pgvector z limitem 2000 wymiarów dla HNSW nad `vector`, migracja pomija indeks i kontynuuje start aplikacji (bez blokowania inicjalizacji backendu).
+- `parse_zpe_url_to_chunks(url, subject_name, education_level)` — **nowy**. Pobiera stronę `https://zpe.gov.pl/podstawa-programowa/...` i parsuje hierarchiczny HTML (`#cc-container`) na chunki. Każdy `akapit` (paragraf) staje się osobnym chunkiem; klucz cache = SHA-256 pola `akapit`. Zwraca `[]` gdy strona niedostępna lub brak `#cc-container` (fallback do PDF).
+- `convert_pdf_to_markdown(pdf_path)` — konwersja PDF → HTML (PyMuPDF) → Markdown (markdownify). Używana tylko gdy parser HTML zawiedzie lub brak `source_url`.
+- `chunk_markdown(markdown_text)` — `MarkdownHeaderTextSplitter` + `RecursiveCharacterTextSplitter`. Używana tylko dla ścieżki PDF.
+- `generate_embedding(text, api_key)` — generacja embeddingu (1536 wymiarów) przez OpenRouter API (`openai/text-embedding-3-small`).
+- `generate_embeddings_batch(texts, api_key, batch_size=50)` — batch generacja embeddingów.
+- `process_curriculum_document(document_id, db, api_key)` — background pipeline. **Nowa logika**: jeśli `document.source_url` zaczyna się od `https://zpe.gov.pl/podstawa-programowa/`, próbuje najpierw HTML parsera ZPE; w razie niepowodzenia fallback do PDF pipeline. Cache działa na poziomie dokumentu (file_hash) i chunka (content_hash = SHA-256 akapit).
+- `search_similar_chunks(query_embedding, db, ...)` — wyszukiwanie semantyczne pgvector cosine similarity.
+- `check_compliance(...)` — sprawdza zgodność pytań z PP, zapisuje do `prototype.compliance_json`.
+- `ZPE_URL_PREFIX = "https://zpe.gov.pl/podstawa-programowa"` — constanta używana do wykrywania URL-ów ZPE.
+
+### `zpe_scraper_service.py` (nowy)
+Automatyczny scraper Podstawy Programowej z portalu ZPE:
+- `run_zpe_scraper(db_factory)` — główny entry point. Crawluje dwa poziomy ZPE:
+  1. `https://zpe.gov.pl/podstawa-programowa` → etapy edukacyjne (divs `.stage-grid_item` z `<a class="card">`)
+  2. Każdy etap → strony przedmiotów (divs `.stage-grid_item` z `<a class="card card--xs">` lub pochodne)
+  3. Każda strona przedmiotu → parsowanie HTML → upsert do DB z embeddingami
+- Dokumenty są deduplikowane po `source_url`. Jeśli `file_hash` (SHA-256 sumy akapitów) się nie zmienił i status = `ready` → pomijane.
+- Klucz API pobierany jest dynamicznie z pierwszego aktywnego superużytkownika (`_get_admin_api_key`).
+- Gdy brak klucza API, chunki są wstawiane bez embeddingów (ostrzeżenie w logach).
+- Generowanie PDF dla stron ZPE używa Playwright z pojedynczą instancją przeglądarki i strony na cały przebieg scrapera (zamiast start/stop per dokument), co znacząco przyspiesza przetwarzanie większej liczby dokumentów.
+- Nazwa pobieranego pliku jest wymuszana z rozszerzeniem `.pdf`, aby uniknąć zapisu bez rozszerzenia po stronie przeglądarki.
+- Skraper jest uruchamiany: (a) jednorazowo w `init_app.py` przy starcie aplikacji, (b) codziennie przez APScheduler job w `main.py`.
+- `_STAGE_LABELS` — mapa slug → polska etykieta poziomu edukacji.
 
 ---
 
@@ -492,13 +504,14 @@ Architektura grupuje endpointy na moduły. Łącznie **58 endpointów** w 14 rou
 | Metoda | Ścieżka | Opis |
 |--------|---------|------|
 | GET | `/curriculum/documents` | Lista dokumentów PP o statusie `ready` (publiczny). Filtry: `education_level`, `subject_name`. |
-| GET | `/curriculum/documents/admin` | Lista wszystkich dokumentów PP (superuser), niezależnie od statusu (`uploaded`, `processing`, `ready`, `error`). Filtry: `education_level`, `subject_name`, `status_filter`. |
-| POST | `/curriculum/documents` | Upload PDF (superuser). Metadata: `education_level`, `subject_name`, `description`. |
+| GET | `/curriculum/documents/admin` | Lista wszystkich dokumentów PP (superuser), niezależnie od statusu (`uploaded`, `processing`, `ready`, `error`). Filtry: `education_level`, `subject_name`, `status_filter`. Dla każdego dokumentu zwracane są także pola: `has_missing_embeddings` i `embeddings_missing_count`. |
+| POST | `/curriculum/documents` | Upload PDF (superuser). Metadata: `education_level`, `subject_name`, `source_url` (musi zaczynać się od `https://zpe.gov.pl/podstawa-programowa/`), `curriculum_year`. Jeśli `source_url` jest poprawnym linkiem ZPE, pipeline próbuje HTML parser przed PDF. |
 | GET | `/curriculum/documents/{id}` | Szczegóły dokumentu PP (publiczny). |
 | GET | `/curriculum/documents/{id}/download` | Pobranie pliku PDF (publiczny). |
 | DELETE | `/curriculum/documents/{id}` | Usunięcie dokumentu i chunków (superuser). |
 | GET | `/curriculum/documents/{id}/status` | Status przetwarzania (superuser). |
 | POST | `/curriculum/documents/{id}/reprocess` | Ponowne przetworzenie PDF (superuser). |
+| POST | `/curriculum/documents/reprocess-missing-embeddings` | Hurtowe uruchomienie ponownego przetwarzania dokumentów `ready` z brakującymi embeddingami (superuser). Endpoint zwraca listę zakolejkowanych `document_id` oraz liczność. |
 | POST | `/curriculum/search` | Wyszukiwanie semantyczne w chunkach PP (zalogowany). |
 | POST | `/curriculum/compliance/{generation_id}` | Sprawdzenie zgodności pytań generacji z PP (zalogowany). |
 
@@ -528,7 +541,7 @@ Schematy request/response zorganizowane w dedykowane pliki:
 - **`settings.py`** — `SettingsResponse`, `SettingsUpdate`.
 - **`backup.py`** — `BackupResponse`, `BackupListResponse`.
 - **`diagnostic.py`** — `DiagnosticLogResponse`, `DiagnosticListResponse`.
-- **`curriculum.py`** — `CurriculumDocumentResponse`, `CurriculumDocumentListResponse`, `CurriculumChunkResponse`, `CurriculumSearchRequest/Result/Response`, `ComplianceQuestionResult`, `ComplianceResponse`, `CurriculumStatusResponse`.
+- **`curriculum.py`** — `CurriculumDocumentResponse` (w tym `has_missing_embeddings`, `embeddings_missing_count`), `CurriculumDocumentListResponse`, `CurriculumChunkResponse`, `CurriculumSearchRequest/Result/Response`, `ComplianceQuestionResult`, `ComplianceResponse`, `CurriculumStatusResponse`, `BulkEmbeddingsReprocessResponse`.
 
 ---
 
@@ -536,7 +549,7 @@ Schematy request/response zorganizowane w dedykowane pliki:
 
 - **JWT (JSON Web Tokens)** — bezstanowa autoryzacja, tokeny podpisywane `HS256`, czas życia 30 min.
 - **Izolacja danych** — każdy zasób filtrowany po `user_id`, brak dostępu między użytkownikami.
-- **Szyfrowanie kluczy API** — `app/encryption.py` używa Fernet (symetryczne szyfrowanie z biblioteki `cryptography`). Klucz zapisany w `{DATA_DIR}/fernet.key`, auto-generowany przy pierwszym użyciu. Lazy-loaded singleton.
+- **Szyfrowanie kluczy API** — `app/encryption.py` używa Fernet (symetryczne szyfrowanie z biblioteki `cryptography`). Priorytet: poprawna, niepusta wartość string w zmiennej środowiskowej `FERNET_KEY` → plik `{DATA_DIR}/fernet.key` (auto-generowany przy pierwszym użyciu). Niepoprawne lub puste wartości `FERNET_KEY` są ignorowane i uruchamiany jest fallback do pliku. Lazy-loaded singleton. **Ważne:** ustawienie `FERNET_KEY` w `.env` zapobiega utracie klucza po resecie wolumenów Dockera.
 - Hashowanie haseł via `bcrypt` z śledzeniem nieudanych prób logowania (`failed_login_attempts`).
 - Path Traversal Protection — operacje plikowe ograniczone do `DATA_DIR`.
 - Cookie `edugen-auth` z `SameSite=Lax`, `httponly=False` i 7-dniowym max-age.

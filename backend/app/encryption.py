@@ -17,7 +17,10 @@ def _get_fernet() -> Fernet:
     if _fernet is not None:
         return _fernet
 
-    if _KEY_FILE.exists():
+    configured_key = getattr(settings, "FERNET_KEY", None)
+    if isinstance(configured_key, str) and configured_key.strip():
+        key = configured_key.strip().encode()
+    elif _KEY_FILE.exists():
         key = _KEY_FILE.read_bytes().strip()
     else:
         key = Fernet.generate_key()

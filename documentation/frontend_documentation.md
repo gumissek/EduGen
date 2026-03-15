@@ -443,7 +443,10 @@ Aplikacja korzysta z systemu breakpoints MUI (`xs / sm / md / lg`). Zasady stoso
 - Walidacja po stronie UI przed wysyłką: tylko PDF oraz maksymalny rozmiar 50 MB (spójnie z backendem), a także wymagane pola `Poziom edukacji`, `Przedmiot` i `Link do źródła` (URL `http/https`, zapisywany w polu `description` API).
 - Obsługa błędów API normalizuje format `detail` z FastAPI (string/lista), dzięki czemu użytkownik widzi konkretną przyczynę `400/422` zamiast generycznego komunikatu.
 - Sekcja „Wgrane dokumenty" korzysta z listy wierszy (`CurriculumDocumentRow`) i pokazuje: nazwę pliku, chipy metadanych/statusu, klikalny link źródłowy, datę dodania, przycisk pobierania PDF oraz akcje admina (ponowne przetwarzanie/usuwanie).
-- W wariancie administratora `CurriculumDocumentRow` pokazuje pełne metadane: liczba stron (`page_count`), liczba chunków (`chunk_count`), data utworzenia (`created_at`), data modyfikacji (`updated_at`) oraz pełny `error_message` (jeśli występuje).
+- W wariancie administratora `CurriculumDocumentRow` pokazuje pełne metadane: liczba stron (`page_count`), liczba chunków (`chunk_count`), liczba brakujących embeddingów (`embeddings_missing_count`), data utworzenia (`created_at`), data modyfikacji (`updated_at`) oraz pełny `error_message` (jeśli występuje).
+- Jeśli dokument ma brakujące embeddingi, wiersz pokazuje dodatkowy chip ostrzegawczy „Brak embeddingów".
+- Nad listą dokumentów dostępny jest przycisk hurtowy „Pobierz embeddingi dla wszystkich", który uruchamia endpoint `POST /api/curriculum/documents/reprocess-missing-embeddings`.
+- Przed uruchomieniem operacji hurtowej UI pokazuje modal z informacją, że proces może potrwać i zużywa tokeny OpenRouter.
 - Układ wiersza jest zoptymalizowany mobilnie: akcje i metadane zawijają się na małych ekranach, a kluczowe CTA mają większy obszar kliku.
 - Strony `/state-documents/pp` i `/admin-panel/curriculum` używają theme-aware kolorów tekstu i powierzchni sekcji/wierszy opartych o tokeny MUI (`palette.mode`, `alpha`), aby zachować czytelność i kontrast w Light/Dark mode.
 

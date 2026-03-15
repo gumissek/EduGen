@@ -79,7 +79,7 @@ export default function ComplianceSidebar({
       >
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Typography variant="h6" fontWeight={600}>
-            Zgodność z PP
+            Zgodność z Podstawą Programową
           </Typography>
           <IconButton onClick={onToggle} size="small">
             <CloseIcon />
@@ -93,7 +93,7 @@ export default function ComplianceSidebar({
             </Typography>
             <Button
               variant="contained"
-              onClick={onRunCompliance}
+              onClick={() => { onRunCompliance().catch(() => undefined); }}
               startIcon={<GavelIcon />}
             >
               Uruchom weryfikację
@@ -185,7 +185,7 @@ export default function ComplianceSidebar({
             <Button
               variant="outlined"
               size="small"
-              onClick={onRunCompliance}
+              onClick={() => { onRunCompliance().catch(() => undefined); }}
               startIcon={<GavelIcon />}
               fullWidth
               sx={{ mt: 2 }}

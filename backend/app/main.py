@@ -44,18 +44,41 @@ def _start_backup_scheduler():
         return None
 
 
+def _start_zpe_scraper_scheduler():
+    """Register a daily ZPE curriculum scraper job with APScheduler."""
+    try:
+        from apscheduler.schedulers.background import BackgroundScheduler
+        from app.services.zpe_scraper_service import run_zpe_scraper
+
+        def _zpe_job():
+            from app.database import SessionLocal as _SL
+            run_zpe_scraper(_SL)
+
+        scheduler = BackgroundScheduler()
+        scheduler.add_job(_zpe_job, "interval", days=30, id="daily_zpe_scraper")
+        scheduler.start()
+        logger.info("[main] ZPE scraper daily scheduler started (interval=30d).")
+        return scheduler
+    except Exception:
+        logger.exception("[main] Failed to start ZPE scraper scheduler.")
+        return None
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan: startup and shutdown."""
     # Startup — migrations and directories are handled by app/init_app.py
     # which runs as a separate process before uvicorn is started.
-    scheduler = _start_backup_scheduler()
+    backup_scheduler = _start_backup_scheduler()
+    zpe_scheduler = _start_zpe_scraper_scheduler()
 
     yield
 
     # Shutdown
-    if scheduler:
-        scheduler.shutdown(wait=False)
+    if backup_scheduler:
+        backup_scheduler.shutdown(wait=False)
+    if zpe_scheduler:
+        zpe_scheduler.shutdown(wait=False)
 
 
 app = FastAPI(

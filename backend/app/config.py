@@ -21,10 +21,16 @@ class Settings(BaseSettings):
     MAX_FILE_SIZE_MB: int
     CORS_ORIGINS: str
 
+    RUN_SCRAPER_ON_STARTUP: bool = False
+
     # JWT configuration
     JWT_SECRET_KEY: str
     JWT_ALGORITHM: str
     JWT_EXPIRATION_MINUTES: int
+
+    # Fernet encryption key for API keys stored in DB
+    # Generate: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+    FERNET_KEY: str | None = None
 
     @property
     def cors_origins_list(self) -> List[str]:

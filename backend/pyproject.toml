@@ -27,6 +27,7 @@ dependencies = [
     "xhtml2pdf>=0.2.17",
     "langchain-text-splitters>=0.2.0",
     "pgvector>=0.3.0",
+    "playwright>=1.58.0",
 ]
 
 [project.optional-dependencies]
@@ -42,6 +43,14 @@ pythonpath = ["."]
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "html-to-markdown>=2.28.2",
+    "pdfkit>=1.0.0",
+    "pdfplumber>=0.11.9",
+    "trafilatura>=2.0.0",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["app"]

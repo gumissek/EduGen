@@ -21,6 +21,7 @@ import { alpha, useTheme } from '@mui/material/styles';
 import DeleteIcon from '@mui/icons-material/Delete';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import { useAdminAccess } from '@/hooks/useAdminAccess';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useSnackbar } from '@/components/ui/SnackbarProvider';
@@ -34,7 +35,18 @@ interface CurriculumDocumentsResponse {
   total: number;
 }
 
+interface BulkReprocessMissingEmbeddingsResponse {
+  queued_document_ids: string[];
+  queued_count: number;
+  message: string;
+}
+
 const MAX_CURRICULUM_PDF_SIZE_BYTES = 50 * 1024 * 1024;
+const ZPE_URL_PREFIX = 'https://zpe.gov.pl/podstawa-programowa/';
+
+function isValidZpeUrl(url: string): boolean {
+  return url.startsWith(ZPE_URL_PREFIX) && url.length > ZPE_URL_PREFIX.length;
+}
 
 function getApiErrorMessage(err: unknown, fallback: string): string {
   const axiosErr = err as {
@@ -81,6 +93,7 @@ export default function AdminCurriculumPage() {
   const [curriculumYear, setCurriculumYear] = React.useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const [pendingDeleteId, setPendingDeleteId] = React.useState<string | null>(null);
+  const [bulkEmbeddingsDialogOpen, setBulkEmbeddingsDialogOpen] = React.useState(false);
   const hasSecretKeys = Boolean(user?.has_secret_keys);
 
   const { data, isLoading } = useQuery<CurriculumDocumentsResponse>({
@@ -97,7 +110,11 @@ export default function AdminCurriculumPage() {
     },
   });
 
-  const documents = data?.documents ?? [];
+  const documents = React.useMemo(() => data?.documents ?? [], [data?.documents]);
+  const missingEmbeddingsDocsCount = React.useMemo(
+    () => documents.filter((doc) => doc.has_missing_embeddings).length,
+    [documents],
+  );
 
   const handleDownload = React.useCallback((docId: string, filename: string) => {
     const link = document.createElement('a');
@@ -128,27 +145,21 @@ export default function AdminCurriculumPage() {
         throw new Error('Pole "Link do źródła" jest wymagane.');
       }
 
+      if (!isValidZpeUrl(trimmedSourceUrl)) {
+        throw new Error(
+          `Link do źródła musi zaczynać się od: ${ZPE_URL_PREFIX} (np. ${ZPE_URL_PREFIX}branzowa-szkola-ii-stopnia/wychowanie-fizyczne)`,
+        );
+      }
+
       if (!trimmedCurriculumYear) {
         throw new Error('Pole "Rok podstawy programowej" jest wymagane.');
-      }
-
-      let parsedSourceUrl: URL;
-      try {
-        parsedSourceUrl = new URL(trimmedSourceUrl);
-      } catch {
-        throw new Error('Podaj poprawny link do źródła (http:// lub https://).');
-      }
-
-      if (!['http:', 'https:'].includes(parsedSourceUrl.protocol)) {
-        throw new Error('Link do źródła musi zaczynać się od http:// lub https://.');
       }
 
       const formData = new FormData();
       formData.append('file', file);
       formData.append('education_level', trimmedEducationLevel);
       formData.append('subject_name', trimmedSubjectName);
-      // Backend stores this field in "description", so we keep the API key name.
-      formData.append('description', trimmedSourceUrl);
+      formData.append('source_url', trimmedSourceUrl);
       formData.append('curriculum_year', trimmedCurriculumYear);
 
       const res = await api.post('/api/curriculum/documents', formData, { timeout: 120_000 });
@@ -191,6 +202,22 @@ export default function AdminCurriculumPage() {
     },
     onError: () => {
       showError('Błąd podczas ponownego przetwarzania');
+    },
+  });
+
+  const bulkReprocessMissingEmbeddingsMutation = useMutation({
+    mutationFn: async () => {
+      const res = await api.post<BulkReprocessMissingEmbeddingsResponse>(
+        '/api/curriculum/documents/reprocess-missing-embeddings',
+      );
+      return res.data;
+    },
+    onSuccess: (data) => {
+      success(data.message);
+      queryClient.invalidateQueries({ queryKey: ['admin-curriculum-documents'] });
+    },
+    onError: (err: unknown) => {
+      showError(getApiErrorMessage(err, 'Nie udalo sie uruchomic pobierania embeddingow.'));
     },
   });
 
@@ -336,13 +363,19 @@ export default function AdminCurriculumPage() {
               />
             </Stack>
             <TextField
-              label="Link do źródła"
+              label="Link do źródła (ZPE)"
               size="small"
               value={sourceUrl}
               onChange={(e) => setSourceUrl(e.target.value)}
-              placeholder="np. https://zpe.gov.pl/podstawa-programowa"
+              placeholder="np. https://zpe.gov.pl/podstawa-programowa/branzowa-szkola-ii-stopnia/wychowanie-fizyczne"
               required
               fullWidth
+              error={sourceUrl.trim().length > 0 && !isValidZpeUrl(sourceUrl.trim())}
+              helperText={
+                sourceUrl.trim().length > 0 && !isValidZpeUrl(sourceUrl.trim())
+                  ? `Link musi zaczynać się od: ${ZPE_URL_PREFIX}<ścieżka>`
+                  : undefined
+              }
               sx={{
                 '& .MuiOutlinedInput-root': {
                   backgroundColor: isDark
@@ -374,7 +407,7 @@ export default function AdminCurriculumPage() {
                 !file ||
                 !educationLevel.trim() ||
                 !subjectName.trim() ||
-                !sourceUrl.trim() ||
+                !isValidZpeUrl(sourceUrl.trim()) ||
                 !curriculumYear.trim() ||
                 uploadMutation.isPending ||
                 !hasSecretKeys ||
@@ -392,6 +425,34 @@ export default function AdminCurriculumPage() {
       <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>
         Wgrane dokumenty
       </Typography>
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25} sx={{ mb: 2 }}>
+        <Button
+          variant="outlined"
+          startIcon={
+            bulkReprocessMissingEmbeddingsMutation.isPending ? (
+              <CircularProgress size={18} color="inherit" />
+            ) : (
+              <AutoFixHighIcon />
+            )
+          }
+          disabled={
+            bulkReprocessMissingEmbeddingsMutation.isPending ||
+            missingEmbeddingsDocsCount === 0 ||
+            !hasSecretKeys ||
+            isUserLoading
+          }
+          onClick={() => setBulkEmbeddingsDialogOpen(true)}
+        >
+          {bulkReprocessMissingEmbeddingsMutation.isPending
+            ? 'Uruchamianie...'
+            : `Pobierz embeddingi dla wszystkich (${missingEmbeddingsDocsCount})`}
+        </Button>
+        {!hasSecretKeys && !isUserLoading && (
+          <Alert severity="warning" sx={{ py: 0.5 }}>
+            Brak aktywnego klucza API OpenRouter. Operacja wymaga klucza.
+          </Alert>
+        )}
+      </Stack>
 
       {isLoading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
@@ -460,6 +521,33 @@ export default function AdminCurriculumPage() {
             autoFocus
           >
             Usuń
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={bulkEmbeddingsDialogOpen}
+        onClose={() => setBulkEmbeddingsDialogOpen(false)}
+        aria-labelledby="bulk-embeddings-dialog-title"
+        aria-describedby="bulk-embeddings-dialog-description"
+      >
+        <DialogTitle id="bulk-embeddings-dialog-title">Pobieranie embeddingow dla wszystkich</DialogTitle>
+        <DialogContent>
+          <DialogContentText id="bulk-embeddings-dialog-description">
+            Operacja uruchomi ponowne przetwarzanie dokumentów z brakujacymi embeddingami ({missingEmbeddingsDocsCount}).
+            To może potrwac kilka minut i zużyje tokeny API OpenRouter.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setBulkEmbeddingsDialogOpen(false)}>Anuluj</Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              setBulkEmbeddingsDialogOpen(false);
+              bulkReprocessMissingEmbeddingsMutation.mutate();
+            }}
+          >
+            Rozpocznij
           </Button>
         </DialogActions>
       </Dialog>

@@ -1,9 +1,14 @@
-"""Initial schema (fully consolidated)
+"""Initial schema (fully consolidated — all migrations merged)
 
 Revision ID: 001
 Revises:
 Create Date: 2026-03-14
 
+Consolidates:
+  - 001: initial schema
+  - 002: is_active soft-delete flag on curriculum_documents
+  - 003: curriculum_year column on curriculum_documents
+  - 004: source_url column + nullable file_path on curriculum_documents
 """
 from typing import Sequence, Union
 
@@ -263,23 +268,27 @@ def upgrade() -> None:
         sa.Column("id", sa.String(36), primary_key=True),
         sa.Column("filename", sa.Text(), nullable=False),
         sa.Column("original_filename", sa.Text(), nullable=False),
-        sa.Column("file_path", sa.Text(), nullable=False),
+        sa.Column("file_path", sa.Text(), nullable=True),
         sa.Column("markdown_path", sa.Text(), nullable=True),
         sa.Column("file_size", sa.Integer(), nullable=False),
         sa.Column("file_hash", sa.String(64), nullable=False),
         sa.Column("education_level", sa.String(50), nullable=True),
         sa.Column("subject_name", sa.String(255), nullable=True),
         sa.Column("description", sa.Text(), nullable=True),
+        sa.Column("source_url", sa.Text(), nullable=True),
         sa.Column("status", sa.String(20), nullable=False, server_default="uploaded"),
         sa.Column("error_message", sa.Text(), nullable=True),
         sa.Column("page_count", sa.Integer(), nullable=True),
         sa.Column("chunk_count", sa.Integer(), nullable=False, server_default="0"),
+        sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.true()),
+        sa.Column("curriculum_year", sa.String(20), nullable=True),
         sa.Column("uploaded_by", sa.String(36), sa.ForeignKey("users.id", ondelete="SET NULL"), nullable=True),
         sa.Column("created_at", sa.Text(), nullable=False),
         sa.Column("updated_at", sa.Text(), nullable=False),
     )
     op.create_index("ix_curriculum_documents_status", "curriculum_documents", ["status"])
     op.create_index("ix_curriculum_documents_education_level", "curriculum_documents", ["education_level"])
+    op.create_index("ix_curriculum_documents_is_active", "curriculum_documents", ["is_active"])
 
     op.create_table(
         "curriculum_chunks",
@@ -319,6 +328,7 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.execute("DROP INDEX IF EXISTS ix_curriculum_chunks_embedding")
     op.drop_table("curriculum_chunks")
+    op.drop_index("ix_curriculum_documents_is_active", table_name="curriculum_documents")
     op.drop_table("curriculum_documents")
     op.execute("DROP EXTENSION IF EXISTS vector")
     op.drop_table("diagnostic_logs")

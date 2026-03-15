@@ -11,6 +11,7 @@ from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, UploadFile, File, Form, status
 from fastapi.responses import FileResponse
+from sqlalchemy import text
 from sqlalchemy.orm import Session as DBSession
 
 from app.config import settings
@@ -30,6 +31,7 @@ from app.schemas.curriculum import (
     CurriculumSearchResponse,
     CurriculumStatusResponse,
     ComplianceResponse,
+    BulkEmbeddingsReprocessResponse,
 )
 from app.services.curriculum_service import (
     process_curriculum_document,
@@ -117,9 +119,34 @@ def list_curriculum_documents_admin(
         query = query.filter(CurriculumDocument.status == status_filter)
 
     documents = query.order_by(CurriculumDocument.created_at.desc()).all()
+    doc_ids = [doc.id for doc in documents]
+
+    missing_embeddings_by_doc: dict[str, int] = {}
+    if doc_ids:
+        rows = db.execute(
+            text(
+                """
+                SELECT document_id, COUNT(*)::int AS missing_count
+                FROM curriculum_chunks
+                WHERE document_id = ANY(CAST(:document_ids AS text[]))
+                  AND embedding IS NULL
+                GROUP BY document_id
+                """
+            ),
+            {"document_ids": doc_ids},
+        ).fetchall()
+        missing_embeddings_by_doc = {row[0]: int(row[1]) for row in rows}
+
+    serialized_documents: list[CurriculumDocumentResponse] = []
+    for doc in documents:
+        missing_count = missing_embeddings_by_doc.get(doc.id, 0)
+        payload = CurriculumDocumentResponse.model_validate(doc).model_dump()
+        payload["embeddings_missing_count"] = missing_count
+        payload["has_missing_embeddings"] = missing_count > 0 and doc.chunk_count > 0
+        serialized_documents.append(CurriculumDocumentResponse(**payload))
 
     return CurriculumDocumentListResponse(
-        documents=[CurriculumDocumentResponse.model_validate(d) for d in documents],
+        documents=serialized_documents,
         total=len(documents),
     )
 
@@ -154,6 +181,12 @@ def download_curriculum_document(
     if not document:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dokument nie znaleziony")
 
+    if not document.file_path:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Plik PDF nie jest dostępny lokalnie dla tego dokumentu.",
+        )
+
     file_path = Path(document.file_path)
     if not file_path.exists():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Plik nie znaleziony na dysku")
@@ -175,11 +208,17 @@ async def upload_curriculum_document(
     education_level: str | None = Form(None),
     subject_name: str | None = Form(None),
     description: str | None = Form(None),
+    source_url: str | None = Form(None),
     curriculum_year: str | None = Form(None),
     db: DBSession = Depends(get_db),
     current_user: User = Depends(get_current_superuser),
 ):
-    """Upload a new curriculum PDF (admin only)."""
+    """Upload a new curriculum PDF (admin only).
+
+    If ``source_url`` starts with ``https://zpe.gov.pl/podstawa-programowa/``,
+    the processing pipeline will attempt HTML parsing first and fall back to PDF
+    extraction on failure.
+    """
     # Validate file type
     if file.content_type not in ALLOWED_MIME_TYPES:
         raise HTTPException(
@@ -232,6 +271,7 @@ async def upload_curriculum_document(
         existing.education_level = education_level
         existing.subject_name = subject_name
         existing.description = description
+        existing.source_url = source_url
         existing.curriculum_year = curriculum_year
         existing.uploaded_by = current_user.id
         existing.is_active = True
@@ -284,6 +324,7 @@ async def upload_curriculum_document(
         education_level=education_level,
         subject_name=subject_name,
         description=description,
+        source_url=source_url,
         curriculum_year=curriculum_year,
         status="uploaded",
         is_active=True,
@@ -397,6 +438,68 @@ def reprocess_curriculum_document(
     background_tasks.add_task(process_curriculum_document, db, document_id, api_key)
 
     return CurriculumDocumentResponse.model_validate(document)
+
+
+@router.post(
+    "/documents/reprocess-missing-embeddings",
+    response_model=BulkEmbeddingsReprocessResponse,
+)
+def reprocess_missing_embeddings_for_all_documents(
+    background_tasks: BackgroundTasks,
+    db: DBSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+):
+    """Queue reprocessing for active curriculum documents missing embeddings."""
+    rows = db.execute(
+        text(
+            """
+            SELECT cd.id
+            FROM curriculum_documents cd
+            WHERE cd.is_active = true
+              AND cd.status = 'ready'
+              AND cd.chunk_count > 0
+              AND EXISTS (
+                  SELECT 1
+                  FROM curriculum_chunks cc
+                  WHERE cc.document_id = cd.id
+                    AND cc.embedding IS NULL
+              )
+            ORDER BY cd.created_at DESC
+            """
+        )
+    ).fetchall()
+    document_ids = [row[0] for row in rows]
+
+    if not document_ids:
+        return BulkEmbeddingsReprocessResponse(
+            queued_document_ids=[],
+            queued_count=0,
+            message="Brak dokumentow z brakujacymi embeddingami.",
+        )
+
+    api_key = _get_api_key(db, current_user.id)
+
+    db.query(CurriculumDocument).filter(CurriculumDocument.id.in_(document_ids)).update(
+        {
+            CurriculumDocument.status: "uploaded",
+            CurriculumDocument.error_message: None,
+            CurriculumDocument.updated_at: datetime.now(timezone.utc).isoformat(),
+        },
+        synchronize_session=False,
+    )
+    db.commit()
+
+    for document_id in document_ids:
+        background_tasks.add_task(process_curriculum_document, db, document_id, api_key)
+
+    return BulkEmbeddingsReprocessResponse(
+        queued_document_ids=document_ids,
+        queued_count=len(document_ids),
+        message=(
+            "Uruchomiono ponowne przetwarzanie dokumentow z brakujacymi embeddingami. "
+            "Operacja moze potrwac i zuzyc tokeny API."
+        ),
+    )
 
 
 # === Authenticated Endpoints ===

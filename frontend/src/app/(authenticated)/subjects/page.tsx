@@ -96,7 +96,7 @@ function SubjectsContent() {
                     <Alert severity="warning" sx={{ mb: 2 }}>
                       <AlertTitle>Brak klucza API OpenRouter</AlertTitle>
                       Przetwarzanie plików graficznych (JPG, PNG) oraz skanów PDF wymaga skonfigurowanego klucza OpenRouter API.
-                      Pliki DOCX i tekstowe PDF działają bez klucza.{' '}
+                      Pliki DOCX i tekstowe PDF działają bez klucza. Jeśli został dodany wystarczy kliknąć przycisk "Odśwież stronę" w prawym górnym rogu lub F5 w celu odświeżenia strony.{' '}
                       <MuiLink component={NextLink} href="/settings" underline="hover" fontWeight="bold">
                         Przejdź do Ustawień →
                       </MuiLink>

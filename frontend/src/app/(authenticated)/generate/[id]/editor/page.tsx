@@ -81,6 +81,16 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
   const generationId = prototype?.generation_id ?? '';
   const { runCompliance, complianceData: mutationComplianceData, isLoading: complianceLoading } = useCurriculumCompliance(generationId);
 
+  const handleRunCompliance = React.useCallback(async () => {
+    try {
+      await runCompliance();
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { detail?: string }; status?: number } };
+      const detail = axiosErr?.response?.data?.detail ?? '';
+      error(detail || 'Wystąpił błąd podczas weryfikacji zgodności z Podstawą Programową.');
+    }
+  }, [runCompliance, error]);
+
   // Parse compliance from saved prototype or from fresh mutation result
   let complianceData: ComplianceResult | null = null;
   if (mutationComplianceData) {
@@ -249,7 +259,7 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
           </Button>
           <ComplianceSidebar
             complianceData={complianceData}
-            onRunCompliance={runCompliance}
+            onRunCompliance={handleRunCompliance}
             isLoading={complianceLoading}
             isOpen={complianceOpen}
             onToggle={() => setComplianceOpen((o) => !o)}
